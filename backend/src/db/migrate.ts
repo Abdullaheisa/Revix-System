@@ -30,7 +30,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.exit(1);
   }
 
-  const pool = new pg.Pool({ connectionString: env.databaseUrl });
+  const isRemote =
+    !env.databaseUrl.includes("localhost") &&
+    !env.databaseUrl.includes("127.0.0.1");
+  const pool = new pg.Pool({
+    connectionString: env.databaseUrl,
+    ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+  });
   runMigrations(pool)
     .then(async (files) => {
       console.log(`Applied ${files.length} migration(s): ${files.join(", ")}`);

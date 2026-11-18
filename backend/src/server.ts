@@ -20,7 +20,13 @@ async function startServer(): Promise<void> {
   let store: AuthDataStore;
 
   if (env.databaseUrl) {
-    const pool = new pg.Pool({ connectionString: env.databaseUrl });
+    const isRemote =
+      !env.databaseUrl.includes("localhost") &&
+      !env.databaseUrl.includes("127.0.0.1");
+    const pool = new pg.Pool({
+      connectionString: env.databaseUrl,
+      ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+    });
     await runMigrations(pool);
     store = new PostgresAuthDataStore(pool);
     console.log("[Revix Backend] Connected to PostgreSQL database and applied migrations.");
