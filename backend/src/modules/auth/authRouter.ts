@@ -47,30 +47,20 @@ function setSessionCookie(
   rawToken: string,
   expiresAt: Date,
 ): void {
-  const isCrossSite =
-    env.nodeEnv === "production" &&
-    !env.frontendOrigin.includes("localhost") &&
-    !env.frontendOrigin.includes("127.0.0.1");
-
   res.cookie(env.sessionCookieName, rawToken, {
     httpOnly: true,
-    secure: env.nodeEnv === "production" || isCrossSite,
-    sameSite: isCrossSite ? "none" : "lax",
+    secure: env.nodeEnv === "production",
+    sameSite: "lax",
     path: "/",
     expires: expiresAt,
   });
 }
 
 function clearSessionCookie(res: Response, env: BackendEnvConfig): void {
-  const isCrossSite =
-    env.nodeEnv === "production" &&
-    !env.frontendOrigin.includes("localhost") &&
-    !env.frontendOrigin.includes("127.0.0.1");
-
   res.clearCookie(env.sessionCookieName, {
     httpOnly: true,
-    secure: env.nodeEnv === "production" || isCrossSite,
-    sameSite: isCrossSite ? "none" : "lax",
+    secure: env.nodeEnv === "production",
+    sameSite: "lax",
     path: "/",
   });
 }
