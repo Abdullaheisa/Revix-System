@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: revix-system-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: revix_system
+      POSTGRES_USER: revix_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-revix_local_dev_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - revix_pg_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U revix_admin -d revix_system"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  revix_pg_data:

@@ -1,0 +1,74 @@
+# ==========================================
+# Revix System - Comprehensive .gitignore
+# ==========================================
+
+# Dependencies
+node_modules/
+*/node_modules/
+.pnp
+.pnp.js
+
+# Environment & Secrets (Never commit credentials)
+.env
+.env.*
+!.env.example
+*.env
+*.env.local
+
+# Build Outputs & Next.js cache
+.next/
+*/.next/
+out/
+*/out/
+dist/
+*/dist/
+build/
+*/build/
+.tsbuildinfo
+*.tsbuildinfo
+next-env.d.ts
+
+# Local Database & Dev Storage Snapshots
+.dev-data/
+*/.dev-data/
+
+# Agent / AI Assistant internal directories (not part of codebase)
+.agents/
+.gemini/
+.claude/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Logs & Debugging
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing & Coverage
+coverage/
+*/coverage/
+.nyc_output/
+
+# Reference / Archived backups
+/backend-reference/

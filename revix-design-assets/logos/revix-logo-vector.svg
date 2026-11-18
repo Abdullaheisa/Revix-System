@@ -1,0 +1,8 @@
+<svg width="250" height="55" viewBox="0 0 250 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M 2 18 H 17 V 50 H 2 Z" fill="#0A4A2F" />
+  <path d="M 3 5 C 7 5, 25 5, 43 5 C 51 5, 56 10, 56 19 C 56 26, 51 31.5, 41 34 L 57 50 H 40 L 26 34.5 H 19 V 27.5 H 37 C 41 27.5, 43 24, 43 19 C 43 14, 40 13.5, 36 13.5 H 14 C 9 13.5, 5 9, 3 5 Z" fill="#0A4A2F" />
+  <path d="M 61 4 H 102 V 13.5 H 75 V 22 H 99 V 30.5 H 75 V 41.5 H 105 V 51 H 61 Z" fill="#0A4A2F" />
+  <path d="M 104 4 L 127 51 H 143 L 167 4 H 152 L 135 37 L 119 4 Z" fill="#0A4A2F" />
+  <path d="M 170 4 H 183 V 51 H 170 Z" fill="#0A4A2F" />
+  <path d="M 188 4 L 205 27.5 L 187 51 H 205 L 217 35.5 L 229 51 H 247 L 229 27.5 L 246 4 H 228 L 217 19.5 L 205 4 Z" fill="#0A4A2F" />
+</svg>

@@ -1,0 +1,467 @@
+{
+  "metadata": {
+    "title": "Revix System — Connected rental-management software",
+    "description": "Bring bookings, fleet operations, and financial tracking into one workspace—whether you run an independent rental company or coordinate a network of local partners."
+  },
+  "home": {
+    "nav": {
+      "brandName": "Revix System",
+      "brandDescriptor": "System",
+      "brandAriaLabel": "Revix System home",
+      "platform": "Platform",
+      "networks": "Company networks",
+      "integrations": "Integrations",
+      "plans": "Plans",
+      "faq": "FAQ",
+      "login": "Log in",
+      "createAccount": "Create account",
+      "openMenu": "Open navigation menu",
+      "closeMenu": "Close navigation menu",
+      "mobileDrawerLabel": "Navigation menu",
+      "primaryNavLabel": "Primary navigation"
+    },
+    "hero": {
+      "headlineLineOne": "Your fleet. Your branches.",
+      "headlineLineTwo": "One connected rental platform.",
+      "description": "Bring bookings, fleet operations, and financial tracking into one workspace—whether you run an independent rental company or coordinate a network of local partners.",
+      "primaryCta": "Create account",
+      "secondaryCta": "See how it works",
+      "labels": {
+        "l1": "Sales, operations & finance",
+        "l2": "Branches & company networks",
+        "l3": "English & Arabic interface"
+      }
+    },
+    "heroPreview": {
+      "regionLabel": "Revix System product preview with sample data",
+      "workspacePath": "Revix System / Workspace",
+      "sampleBadge": "Product preview · Sample data",
+      "companyLabel": "Company",
+      "companyValue": "Al Noor Mobility",
+      "branchLabel": "Branch",
+      "branchValue": "Riyadh Airport (SAR)",
+      "sidebar": {
+        "overview": "Overview",
+        "sales": "Sales",
+        "operations": "Operations",
+        "finance": "Finance",
+        "settings": "Settings"
+      },
+      "kpis": {
+        "totalLabel": "Total vehicles",
+        "totalValue": "24",
+        "availableLabel": "Available vehicles",
+        "availableValue": "7",
+        "activeLabel": "Active rentals",
+        "activeValue": "15",
+        "returnsLabel": "Upcoming returns",
+        "returnsValue": "4"
+      },
+      "activityHeading": "Recent branch activity",
+      "activitySubheading": "Riyadh Airport · Sample records",
+      "rows": {
+        "r1Vehicle": "Hyundai Elantra · Plate KSA-4102",
+        "r1Meta": "Booking #RV-1042 · Handover completed",
+        "r1Amount": "1,450 SAR",
+        "r1Status": "On rent",
+        "r2Vehicle": "Toyota Corolla · Plate KSA-2189",
+        "r2Meta": "Booking #RV-1045 · Scheduled pickup Fri 10:00",
+        "r2Amount": "980 SAR",
+        "r2Status": "Reserved",
+        "r3Vehicle": "Kia Sportage · Plate KSA-7730",
+        "r3Meta": "Riyadh Airport · Inspection & insurance current",
+        "r3Amount": "Ready",
+        "r3Status": "Available"
+      },
+      "branchSummaryTitle": "Branch balances (separate branch currencies)",
+      "branchSummaryItems": {
+        "b1Name": "Riyadh Airport · SAR",
+        "b1Meta": "18 vehicles · 3 open balances",
+        "b1Value": "2,150 SAR due",
+        "b2Name": "Amman Downtown · JOD",
+        "b2Meta": "6 vehicles · 1 open balance",
+        "b2Value": "140 JOD due"
+      }
+    },
+    "platform": {
+      "headlineLineOne": "Sales, operations, and finance.",
+      "headlineLineTwo": "Working together.",
+      "description": "Revix System is being built to connect the daily work of your rental business, from the first booking to vehicle readiness and financial follow-up.",
+      "pillars": {
+        "p1Title": "Sales & rentals",
+        "p1Desc": "Organize customers, bookings, rental agreements, and handovers in a clear rental workflow.",
+        "p2Title": "Fleet & operations",
+        "p2Desc": "Track vehicle details, branch locations, maintenance, insurance dates, and readiness for the next rental.",
+        "p3Title": "Finance & reporting",
+        "p3Desc": "Keep invoices, recorded payments, expenses, and outstanding balances connected to the relevant rental and vehicle."
+      }
+    },
+    "timeline": {
+      "eyebrow": "Workflow & Fleet Timeline",
+      "headline": "From booking to return, keep every step connected.",
+      "description": "Follow reservations, vehicle assignment, handovers, returns, and outstanding balances with a shared view of the rental journey.",
+      "steps": {
+        "s1": "1. Create booking",
+        "s2": "2. Assign vehicle",
+        "s3": "3. Agreement & handover",
+        "s4": "4. Return & balance review"
+      },
+      "board": {
+        "title": "Fleet & booking timeline",
+        "subtitle": "Riyadh Airport Branch · Sample week (9–15 Nov)",
+        "sampleBadge": "Product preview · Sample data",
+        "legendAvailable": "Available",
+        "legendReserved": "Reserved",
+        "legendOnRent": "On rent",
+        "legendMaintenance": "Maintenance",
+        "bookingQueueStatus": "Booking status: 1 reservation awaiting vehicle assignment — Compact · Fri 13 Nov, 10:00",
+        "vehicleColLabel": "Vehicle",
+        "sidebar": {
+          "overview": "Overview",
+          "sales": "Sales",
+          "operations": "Operations",
+          "timeline": "Timeline",
+          "finance": "Finance",
+          "settings": "Settings"
+        },
+        "days": {
+          "mon": "Mon 9",
+          "tue": "Tue 10",
+          "wed": "Wed 11",
+          "thu": "Thu 12",
+          "fri": "Fri 13",
+          "sat": "Sat 14",
+          "sun": "Sun 15"
+        },
+        "groups": {
+          "compact": "Compact",
+          "suv": "SUV"
+        },
+        "vehicles": {
+          "g1r1Model": "Hyundai Elantra",
+          "g1r1Plate": "KSA-4102",
+          "g1r1Bar": "On rent · #RV-1042",
+          "g1r2Model": "Toyota Corolla",
+          "g1r2Plate": "KSA-2189",
+          "g1r2BarOne": "Available",
+          "g1r2BarTwo": "Reserved · #RV-1045",
+          "g1r3Model": "Kia Rio",
+          "g1r3Plate": "KSA-3084",
+          "g1r3Bar": "On rent · #RV-1039",
+          "g2r1Model": "Nissan X-Trail",
+          "g2r1Plate": "KSA-5510",
+          "g2r1BarOne": "Reserved · #RV-1048",
+          "g2r1BarTwo": "Maintenance",
+          "g2r2Model": "Kia Sportage",
+          "g2r2Plate": "KSA-7730",
+          "g2r2Bar": "Available"
+        }
+      }
+    },
+    "networks": {
+      "eyebrow": "Business structure",
+      "headline": "One company—or a network of local partners.",
+      "description": "Manage your own branches, or coordinate local rental companies through defined access and sharing permissions.",
+      "supportingCopy": "Each local company manages its own workspace. Network access is limited to the information explicitly shared.",
+      "independent": {
+        "title": "Independent company",
+        "b1": "Your company identity",
+        "b2": "Your branches and fleet",
+        "b3": "Your team and permissions"
+      },
+      "network": {
+        "title": "Company network",
+        "b1": "Connected local companies",
+        "b2": "Separate company workspaces",
+        "b3": "Controlled inventory sharing"
+      },
+      "diagram": {
+        "mainLabel": "Main company",
+        "mainTitle": "Network coordinator",
+        "mainScopeNote": "View-only access to connected local companies’ vehicles and vehicle data",
+        "permissionBadge": "Permitted inventory scope",
+        "privateBadge": "Private workspace",
+        "partnerOneName": "Local Partner A",
+        "partnerOneDetail": "Own identity, staff, customers & finance",
+        "partnerTwoName": "Local Partner B",
+        "partnerTwoDetail": "Own identity, staff, customers & finance"
+      }
+    },
+    "integrations": {
+      "eyebrow": "Distribution & API direction",
+      "headline": "Connect your inventory to your sales channels.",
+      "description": "Planned API access will help connect permitted vehicle inventory with your website and partner platforms.",
+      "plannedBadge": "Planned",
+      "cards": {
+        "c1Title": "Your website",
+        "c1Desc": "Expose permitted vehicle availability and branch details directly on your own booking site.",
+        "c2Title": "Partner platforms",
+        "c2Desc": "Share selected inventory scopes with approved distribution partners or main network channels.",
+        "c3Title": "Permitted inventory",
+        "c3Desc": "Share only the vehicles, branches, and availability rules you explicitly allow."
+      },
+      "notificationsTitle": "Notifications",
+      "notificationsNote": "Email and WhatsApp notifications are planned; availability and service charges will be confirmed before release."
+    },
+    "plans": {
+      "eyebrow": "Subscription direction",
+      "headline": "Monthly plans for the way you operate.",
+      "description": "Separate subscription options are planned for independent rental companies and company networks. Pricing and included limits will be announced before launch.",
+      "priceLabel": "Pricing to be announced",
+      "footnote": "Final features, usage limits, and optional services will be specified with each plan.",
+      "cards": {
+        "independentTitle": "Independent company",
+        "independentDesc": "For a rental business managing its own branches, fleet, and team.",
+        "networkTitle": "Company network",
+        "networkDesc": "For a business coordinating local rental companies and permitted shared inventory."
+      }
+    },
+    "faq": {
+      "headline": "Questions about running your business with Revix.",
+      "subtitle": "Clear answers about the product direction, company structure, and current development stage.",
+      "items": {
+        "q1": "Is Revix System a rental marketplace?",
+        "a1": "No. It is software being developed for rental companies to manage their own operations and connect permitted inventory to their sales channels.",
+        "q2": "Can I use it for one company with multiple branches?",
+        "a2": "Yes. The planned company structure supports one rental business with multiple branches, without requiring a network of local companies.",
+        "q3": "How are local partner companies different from branches?",
+        "a3": "A branch belongs to your company. A local partner company has its own workspace, team, and business data, with specific information shared through permissions.",
+        "q4": "Can companies operate in different countries?",
+        "a4": "The planned structure supports country-specific branch information, currencies, and time zones, independently of the interface language.",
+        "q5": "Is the platform free?",
+        "a5": "Revix System is planned as a monthly subscription service. Final pricing and plan limits will be announced before launch.",
+        "q6": "Can I connect my existing website?",
+        "a6": "API access is planned for connecting permitted inventory with websites and partner platforms. Integration scope and availability will be confirmed before release.",
+        "q7": "Is the platform available now?",
+        "a7": "Revix System is currently under development. The interfaces on this page illustrate the planned experience and contain sample data."
+      }
+    },
+    "ctaBanner": {
+      "headline": "A clearer view of your rental business.",
+      "description": "Explore how Revix System brings your fleet, branches, team, and rental workflow together.",
+      "primaryCta": "Create account",
+      "secondaryCta": "Explore the platform"
+    },
+    "footer": {
+      "brandName": "Revix System",
+      "brandDescriptor": "System",
+      "description": "Rental management software for independent companies and connected local networks.",
+      "copyrightName": "Revix System",
+      "links": {
+        "platform": "Platform",
+        "networks": "Company networks",
+        "integrations": "Integrations",
+        "plans": "Plans",
+        "faq": "FAQ"
+      }
+    }
+  },
+  "auth": {
+    "login": {
+      "metaTitle": "Sign in — Revix System",
+      "metaDescription": "Sign in to manage your rental business.",
+      "title": "Welcome back",
+      "description": "Sign in to manage your rental business.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name@company.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "forgotPasswordLink": "Forgot password?",
+      "noAccountPrompt": "New to Revix System?",
+      "createAccountLink": "Create an account",
+      "backToHome": "Return to homepage",
+      "brandPanelTitle": "Your rental business,\nbetter connected.",
+      "brandPanelDescription": "Bring your fleet, bookings, and team into one workspace.",
+      "brandPanelPoints": {
+        "p1": "Fleet and branch management",
+        "p2": "Bookings and financial tracking",
+        "p3": "Independent companies and partner networks"
+      },
+      "validation": {
+        "emailRequired": "Please enter your email address.",
+        "emailInvalid": "Please enter a valid email address.",
+        "passwordRequired": "Please enter your password."
+      },
+      "errors": {
+        "title": "Unable to sign in",
+        "closeAlert": "Dismiss message",
+        "invalidCredentials": "The email address or password is incorrect.",
+        "emailNotVerified": "Please verify your email address before signing in.",
+        "userDisabled": "This account is currently disabled.",
+        "rateLimited": "Too many sign-in attempts. Please wait a moment and try again.",
+        "serviceUnavailable": "The authentication service is temporarily unavailable. Please check your connection and try again.",
+        "sessionError": "Could not sign you in right now. Please try again."
+      }
+    },
+    "account": {
+      "metaTitle": "Account — Revix System",
+      "metaDescription": "Manage your Revix System account.",
+      "title": "Account",
+      "signedInStatus": "You are signed in",
+      "signedInDescription": "Your Revix System account is active.",
+      "emailLabel": "Email address",
+      "securityLink": "Security & password",
+      "logoutButton": "Log out",
+      "loggingOut": "Logging out...",
+      "logoutError": "Could not complete logout right now. Please try again.",
+      "backToHome": "Return to homepage",
+      "unavailableTitle": "Unable to check your account",
+      "unavailableDescription": "The service is temporarily unavailable. Please try again shortly.",
+      "retry": "Try again"
+    },
+    "signup": {
+      "metaTitle": "Create your account — Revix System",
+      "metaDescription": "Start with your personal details. Set up your company next.",
+      "title": "Create your account",
+      "description": "Start with your personal details. Set up your company next.",
+      "nameLabel": "Full name",
+      "namePlaceholder": "Enter your full name",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name@company.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Create a password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Re-enter your password",
+      "passwordHelper": "Use at least {minLength} characters, including uppercase and lowercase letters and a number.",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "submit": "Create account",
+      "submitting": "Creating account...",
+      "haveAccountPrompt": "Already have an account?",
+      "signInLink": "Sign in",
+      "backToHome": "Return to homepage",
+      "retryDelivery": "Retry sending verification email",
+      "retryingDelivery": "Sending verification email...",
+      "validation": {
+        "nameRequired": "Please enter your full name.",
+        "emailRequired": "Please enter your email address.",
+        "emailInvalid": "Please enter a valid email address.",
+        "passwordTooShort": "Password must be at least {minLength} characters.",
+        "passwordTooLong": "Password is too long. Please choose a shorter password.",
+        "passwordMissingUppercase": "Password must include at least one uppercase letter.",
+        "passwordMissingLowercase": "Password must include at least one lowercase letter.",
+        "passwordMissingNumber": "Password must include at least one number.",
+        "confirmPasswordRequired": "Please confirm your password.",
+        "passwordsMismatch": "Passwords do not match."
+      },
+      "errors": {
+        "title": "Unable to create account",
+        "closeAlert": "Dismiss message",
+        "emailInUse": "We could not complete registration with that email address. If you already have an account, try signing in.",
+        "weakPassword": "Please choose a stronger password that meets the requirements.",
+        "partialDelivery": "Your account was created, but we could not finish sending the verification email. Please retry below.",
+        "sessionLost": "Please sign in to resend your verification email.",
+        "rateLimited": "Too many attempts. Please wait a moment and try again.",
+        "serviceUnavailable": "The authentication service is temporarily unavailable. Please check your connection and try again.",
+        "genericError": "Could not create your account right now. Please try again."
+      }
+    },
+    "verifyEmail": {
+      "metaTitle": "Check your email — Revix System",
+      "metaDescription": "Verify your email address before signing in to Revix System.",
+      "title": "Check your email",
+      "description": "We sent a verification link to your email address. Verify your email before signing in.",
+      "sentToLabel": "Verification sent to",
+      "resendButton": "Resend verification email",
+      "resending": "Sending...",
+      "cooldownLabel": "Resend available in {seconds}s",
+      "resentSuccess": "A fresh verification email has been sent. Check your inbox and spam folder.",
+      "alreadyVerified": "Your email is already verified. You can sign in now.",
+      "sessionLostMessage": "Please sign in again if you need us to send another verification email.",
+      "goToLogin": "Go to sign in",
+      "useAnotherAccount": "Use a different account",
+      "backToHome": "Return to homepage",
+      "errors": {
+        "title": "Verification notice",
+        "rateLimited": "Too many verification email requests. Please wait before trying again.",
+        "serviceUnavailable": "Unable to reach the verification service right now. Please try again shortly."
+      }
+    },
+    "forgotPassword": {
+      "metaTitle": "Forgot password — Revix System",
+      "metaDescription": "Request password-reset instructions for your Revix System account.",
+      "title": "Forgot password",
+      "description": "Enter the email address for your account and we will send reset instructions if an account exists.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name@company.com",
+      "submit": "Send reset link",
+      "submitting": "Sending...",
+      "cooldownLabel": "Send again in {seconds}s",
+      "confirmationTitle": "Check your inbox",
+      "confirmationMessage": "If an account exists for this email, you’ll receive password-reset instructions.",
+      "backToLogin": "Return to sign in",
+      "backToHome": "Return to homepage",
+      "validation": {
+        "emailRequired": "Please enter your email address.",
+        "emailInvalid": "Please enter a valid email address."
+      },
+      "errors": {
+        "title": "Unable to send reset email",
+        "rateLimited": "Too many reset requests. Please wait a moment and try again.",
+        "serviceUnavailable": "The authentication service is temporarily unavailable. Please check your connection and try again."
+      }
+    },
+    "action": {
+      "metaTitle": "Account verification — Revix System",
+      "metaDescription": "Complete email verification or password reset for Revix System.",
+      "loadingTitle": "Checking your link",
+      "loadingDescription": "Please wait while we verify your email link.",
+      "invalidTitle": "Invalid or used link",
+      "invalidDescription": "This link is missing required details or has already been used.",
+      "expiredTitle": "This link has expired",
+      "expiredDescription": "For your security, email links expire after a short time.",
+      "verifySuccessTitle": "Email verified",
+      "verifySuccessDescription": "Your email address is verified. You can now sign in to your Revix System account.",
+      "goToLogin": "Go to sign in",
+      "requestNewReset": "Request a new reset link",
+      "resetTitle": "Set a new password",
+      "resetDescription": "Choose a new password for your Revix System account.",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "Enter a new password",
+      "confirmPasswordLabel": "Confirm new password",
+      "confirmPasswordPlaceholder": "Re-enter your new password",
+      "resetSubmit": "Update password",
+      "resetSubmitting": "Updating password...",
+      "resetSuccessTitle": "Password updated",
+      "resetSuccessDescription": "Your password has been updated. Please sign in with your new password.",
+      "resetErrorTitle": "Unable to reset password",
+      "backToHome": "Return to homepage"
+    },
+    "security": {
+      "metaTitle": "Security & password — Revix System",
+      "metaDescription": "Change your Revix System account password.",
+      "title": "Security & password",
+      "description": "Confirm your current password before setting a new one.",
+      "accountEmailLabel": "Signed-in account",
+      "currentPasswordLabel": "Current password",
+      "currentPasswordPlaceholder": "Enter your current password",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "Enter a new password",
+      "confirmPasswordLabel": "Confirm new password",
+      "confirmPasswordPlaceholder": "Re-enter your new password",
+      "submit": "Change password",
+      "submitting": "Updating password...",
+      "backToAccount": "Back to account",
+      "backToHome": "Return to homepage",
+      "successTitle": "Password updated",
+      "successDescription": "Your password has been changed and you have been signed out. Please sign in again with your new password.",
+      "goToLogin": "Sign in again",
+      "validation": {
+        "currentPasswordRequired": "Please enter your current password."
+      },
+      "errors": {
+        "title": "Unable to change password",
+        "wrongCurrentPassword": "Your current password is incorrect.",
+        "uidMismatch": "Signed-in account verification failed. Please sign in again.",
+        "weakPassword": "Please choose a stronger password that meets the requirements.",
+        "rateLimited": "Too many attempts. Please wait a moment and try again.",
+        "serviceUnavailable": "The authentication service is temporarily unavailable. Please try again shortly.",
+        "genericError": "Could not update your password right now. Please try again."
+      }
+    }
+  }
+}

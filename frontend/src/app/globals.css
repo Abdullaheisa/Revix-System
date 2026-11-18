@@ -1,0 +1,580 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand & Semantic Color Tokens (Revix Identity Foundation) */
+  --revix-primary: #14532D;
+  --revix-primary-hover: #104626;
+  --revix-primary-pressed: #0C3920;
+  --revix-tint: #EDF4EF;
+  --revix-dark: #111827;
+  --revix-secondary: #4B5563;
+  --revix-disabled: #6B7280;
+  --revix-border: #E5E7EB;
+  --revix-surface: #F9FAFB;
+  --revix-white: #FFFFFF;
+  --revix-error: #B42318;
+
+  /* Elevation Policy (no floating card shadows; dialog only) */
+  --revix-shadow-dialog: 0 4px 4px -4px rgba(12, 12, 13, 0.05),
+    0 16px 16px -8px rgba(12, 12, 13, 0.1);
+  --shadow-dialog: var(--revix-shadow-dialog);
+
+  /* Motion Tokens */
+  --duration-fast: 180ms;
+  --duration-standard: 300ms;
+  --duration-reveal: 560ms;
+  --stagger-step: 80ms;
+}
+
+@theme inline {
+  /* Color utilities */
+  --color-revix-primary: var(--revix-primary);
+  --color-revix-primary-hover: var(--revix-primary-hover);
+  --color-revix-primary-pressed: var(--revix-primary-pressed);
+  --color-revix-tint: var(--revix-tint);
+  --color-revix-dark: var(--revix-dark);
+  --color-revix-secondary: var(--revix-secondary);
+  --color-revix-disabled: var(--revix-disabled);
+  --color-revix-border: var(--revix-border);
+  --color-revix-surface: var(--revix-surface);
+  --color-revix-white: var(--revix-white);
+  --color-revix-error: var(--revix-error);
+
+  /* Font families */
+  --font-sans: var(--font-interface), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-interface), ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+
+  /* Proportional Font Scale */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.15rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.35rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.65rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+
+  /* Radius Scale (8px, 12px, 16px, 20px) */
+  --radius-control: 0.5rem;
+  --radius-award: 0.75rem;
+  --radius-card: 1rem;
+  --radius-media: 1.25rem;
+
+  /* Shadow utilities */
+  --shadow-dialog: var(--revix-shadow-dialog);
+}
+
+html {
+  --font-interface: var(--font-jakarta);
+  scroll-behavior: smooth;
+}
+
+html[dir="rtl"] {
+  --font-interface: var(--font-plex-arabic);
+}
+
+body {
+  margin: 0;
+  background: var(--revix-white);
+  color: var(--revix-dark);
+  font-family: var(--font-interface), system-ui, sans-serif;
+}
+
+html[dir="rtl"] .tracking-tight,
+html[dir="rtl"] .tracking-tighter {
+  letter-spacing: 0;
+}
+
+html[dir="rtl"] .font-black,
+html[dir="rtl"] .font-extrabold {
+  font-weight: 700;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--revix-dark);
+  -webkit-box-shadow: 0 0 0 1000px #f6faf7 inset;
+  box-shadow: 0 0 0 1000px #f6faf7 inset;
+  caret-color: var(--revix-dark);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Bilingual Typography Scale Helpers */
+.revix-display-h1 {
+  font-weight: 700;
+  font-size: 2.5rem;
+  /* 40px Mobile */
+  line-height: 1.12;
+  letter-spacing: -1.3px;
+}
+
+@media (min-width: 768px) {
+  .revix-display-h1 {
+    font-size: 3.25rem;
+    /* 52px Tablet */
+  }
+}
+
+@media (min-width: 1280px) {
+  .revix-display-h1 {
+    font-size: 4rem;
+    /* 64px Desktop */
+  }
+}
+
+[dir="rtl"] .revix-display-h1 {
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.revix-heading-h2 {
+  font-weight: 700;
+  font-size: 2rem;
+  /* 32px Mobile */
+  line-height: 1.12;
+  letter-spacing: -1.3px;
+}
+
+@media (min-width: 768px) {
+  .revix-heading-h2 {
+    font-size: 2.75rem;
+    /* 44px Tablet & Desktop */
+  }
+}
+
+[dir="rtl"] .revix-heading-h2 {
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.revix-heading-h3 {
+  font-weight: 600;
+  font-size: 1.5rem;
+  /* 24px Mobile */
+  line-height: 1.55;
+  letter-spacing: 0;
+}
+
+@media (min-width: 768px) {
+  .revix-heading-h3 {
+    font-size: 1.75rem;
+    /* 28px Tablet & Desktop */
+  }
+}
+
+[dir="rtl"] .revix-heading-h3 {
+  line-height: 1.65;
+}
+
+.revix-body-lg {
+  font-weight: 400;
+  font-size: 1.125rem;
+  /* 18px Mobile */
+  line-height: 1.6;
+}
+
+@media (min-width: 768px) {
+  .revix-body-lg {
+    font-size: 1.25rem;
+    /* 20px Tablet & Desktop */
+  }
+}
+
+[dir="rtl"] .revix-body-lg {
+  line-height: 1.7;
+}
+
+.revix-body-md {
+  font-weight: 400;
+  font-size: 1.0625rem;
+  /* 17px */
+  line-height: 1.6;
+}
+
+[dir="rtl"] .revix-body-md {
+  line-height: 1.7;
+}
+
+.revix-body-sm {
+  font-weight: 400;
+  font-size: 0.9375rem;
+  /* 15px */
+  line-height: 1.6;
+}
+
+[dir="rtl"] .revix-body-sm {
+  line-height: 1.7;
+}
+
+.revix-caption {
+  font-weight: 400;
+  font-size: 0.8125rem;
+  /* 13px */
+  line-height: 1.6;
+}
+
+[dir="rtl"] .revix-caption {
+  line-height: 1.7;
+}
+
+select.revix-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+select.revix-select::picker-icon {
+  display: none;
+}
+
+@supports (appearance: base-select) {
+  select.revix-select,
+  select.revix-select::picker(select) {
+    appearance: base-select;
+  }
+
+  select.revix-select {
+    display: flex;
+    align-items: center;
+  }
+
+  select.revix-select::picker-icon {
+    display: none;
+  }
+
+  select.revix-select::picker(select) {
+    margin-block: 4px;
+    min-width: anchor-size(width);
+    max-width: calc(100vw - 2rem);
+    border: 1px solid var(--revix-border);
+    border-radius: var(--radius-control);
+    background: var(--revix-white);
+    padding: 4px;
+    box-shadow: var(--revix-shadow-dialog);
+    color: var(--revix-dark);
+  }
+
+  select.revix-select option {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    border-radius: 6px;
+    padding: 10px 12px;
+    text-align: start;
+    color: var(--revix-dark);
+    background: transparent;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) ease-in-out,
+      color var(--duration-fast) ease-in-out;
+  }
+
+  select.revix-select option[hidden] {
+    display: none;
+  }
+
+  select.revix-select option:hover,
+  select.revix-select option:focus-visible {
+    background: var(--revix-tint);
+    color: var(--revix-primary);
+  }
+
+  select.revix-select option:checked {
+    background: var(--revix-tint);
+    color: var(--revix-primary);
+    font-weight: 600;
+  }
+
+  select.revix-select option::checkmark {
+    order: 1;
+    margin-inline-start: auto;
+    color: var(--revix-primary);
+  }
+
+  select.revix-select option:disabled {
+    color: var(--revix-disabled);
+    cursor: not-allowed;
+  }
+}
+
+/* Marketing Hero Surface, Dispatch Grid & Coordinated Entrance Motion */
+.revix-hero-surface {
+  background-color: #ecf5ef;
+  background-image:
+    radial-gradient(
+      62% 50% at 50% 34%,
+      rgba(255, 255, 255, 0.86) 0%,
+      rgba(255, 255, 255, 0.42) 58%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    radial-gradient(
+      44% 46% at 14% 20%,
+      rgba(20, 83, 45, 0.045) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      44% 46% at 86% 24%,
+      rgba(20, 83, 45, 0.04) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      76% 52% at 50% 94%,
+      rgba(20, 83, 45, 0.075) 0%,
+      rgba(20, 83, 45, 0.025) 55%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      #f4faf6 0%,
+      #ecf5ef 48%,
+      #e3efe7 86%,
+      #eef6f1 100%
+    );
+}
+
+.revix-dispatch-grid {
+  background-image:
+    linear-gradient(to right, rgba(20, 83, 45, 0.048) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 83, 45, 0.048) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 92% 84% at 50% 42%,
+    rgba(0, 0, 0, 0.14) 0%,
+    rgba(0, 0, 0, 0.72) 58%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 92% 84% at 50% 42%,
+    rgba(0, 0, 0, 0.14) 0%,
+    rgba(0, 0, 0, 0.72) 58%,
+    transparent 100%
+  );
+}
+
+.revix-dotted-stage {
+  background-color: #f4f8f5;
+  background-image: radial-gradient(rgba(20, 83, 45, 0.14) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.revix-stripe-bar {
+  background-color: #f3f4f6;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #e5e7eb 0px,
+    #e5e7eb 6px,
+    #f9fafb 6px,
+    #f9fafb 12px
+  );
+}
+
+@keyframes revix-hero-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(-20px, 28px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes revix-hero-rise-rtl {
+  from {
+    opacity: 0;
+    transform: translate3d(20px, 28px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes revix-nav-drop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes revix-hero-frame {
+  from {
+    opacity: 0;
+    transform: perspective(1200px) translate3d(60px, 24px, 0) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1200px) translate3d(0, 0, 0) scale(1);
+  }
+}
+
+[dir="rtl"] .revix-anim-headline,
+[dir="rtl"] .revix-anim-description,
+[dir="rtl"] .revix-anim-actions {
+  animation-name: revix-hero-rise-rtl;
+}
+
+[dir="rtl"] .revix-anim-frame {
+  animation-name: revix-hero-frame-rtl;
+}
+
+@keyframes revix-hero-frame-rtl {
+  from {
+    opacity: 0;
+    transform: perspective(1200px) translate3d(-60px, 24px, 0) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1200px) translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes revix-card-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.revix-anim-nav {
+  animation: revix-nav-drop 680ms cubic-bezier(0.22, 1, 0.36, 1) 0ms both;
+}
+
+.revix-anim-headline {
+  animation: revix-hero-rise 860ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+
+.revix-anim-description {
+  animation: revix-hero-rise 860ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+}
+
+.revix-anim-actions {
+  animation: revix-hero-rise 860ms cubic-bezier(0.22, 1, 0.36, 1) 320ms both;
+}
+
+.revix-anim-frame {
+  animation: revix-hero-frame 980ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both;
+}
+
+.revix-anim-stagger {
+  animation: revix-card-enter 680ms cubic-bezier(0.22, 1, 0.36, 1) var(--stagger-delay, 320ms) both;
+}
+
+/* Scroll-triggered section & card reveals (mirrors cleanly in RTL) */
+.revix-scroll-reveal {
+  opacity: 0;
+  transition-property: opacity, transform;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.revix-scroll-reveal[data-direction="up"] {
+  transform: translate3d(0, var(--reveal-distance, 46px), 0) scale(0.98);
+}
+
+.revix-scroll-reveal[data-direction="down"] {
+  transform: translate3d(0, calc(var(--reveal-distance, 46px) * -1), 0) scale(0.98);
+}
+
+.revix-scroll-reveal[data-direction="start"] {
+  transform: translate3d(calc(var(--reveal-distance, 56px) * -1), 0, 0);
+}
+
+.revix-scroll-reveal[data-direction="end"] {
+  transform: translate3d(var(--reveal-distance, 56px), 0, 0);
+}
+
+[dir="rtl"] .revix-scroll-reveal[data-direction="start"] {
+  transform: translate3d(var(--reveal-distance, 56px), 0, 0);
+}
+
+[dir="rtl"] .revix-scroll-reveal[data-direction="end"] {
+  transform: translate3d(calc(var(--reveal-distance, 56px) * -1), 0, 0);
+}
+
+.revix-scroll-reveal[data-direction="none"] {
+  transform: scale(0.93);
+}
+
+.revix-scroll-reveal[data-visible="true"] {
+  opacity: 1;
+  transform: none;
+  will-change: auto;
+}
+
+/* Choreographed inner-stage elements synchronized with parent ScrollReveal */
+.revix-timeline-bar {
+  opacity: 0;
+  transform: scaleX(0.35);
+  transform-origin: left center;
+  transition:
+    opacity 620ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 760ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--bar-delay, 260ms);
+}
+
+[dir="rtl"] .revix-timeline-bar {
+  transform-origin: right center;
+}
+
+.revix-scroll-reveal[data-visible="true"] .revix-timeline-bar {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.revix-network-node {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0) scale(0.96);
+  transition:
+    opacity 680ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 680ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--node-delay, 180ms);
+}
+
+.revix-scroll-reveal[data-visible="true"] .revix-network-node {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revix-scroll-reveal,
+  .revix-timeline-bar,
+  .revix-network-node {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    will-change: auto !important;
+  }
+}
