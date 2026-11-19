@@ -4,10 +4,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
-  // Prevent worker process exhaustion in container builds
-  experimental: {
-    cpus: 1,
-  },
+  // React Compiler and Cache Components are intentionally kept disabled.
   async headers() {
     return [
       {
