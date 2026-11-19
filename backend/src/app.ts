@@ -24,7 +24,6 @@ export function createApp(options: {
   const app = express();
   app.disable("x-powered-by");
 
-  app.use(helmet());
   app.use(
     cors({
       origin: (requestOrigin, callback) => {
@@ -46,7 +45,15 @@ export function createApp(options: {
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Accept", "X-Requested-With"],
+      allowedHeaders: ["Content-Type", "Accept", "X-Requested-With", "Authorization"],
+    }),
+  );
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      crossOriginOpenerPolicy: false,
     }),
   );
   app.use(cookieParser());
