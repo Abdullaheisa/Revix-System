@@ -182,18 +182,31 @@ export function WorkspaceStudioShell({
       }
 
       if (event.altKey && !event.ctrlKey && !event.metaKey) {
-        const digit = Number.parseInt(event.key, 10);
+        const digitFromKey = Number.parseInt(event.key, 10);
+        const digitFromCode = event.code.startsWith("Digit")
+          ? Number.parseInt(event.code.slice(5), 10)
+          : Number.NaN;
+        const digit = Number.isNaN(digitFromKey) ? digitFromCode : digitFromKey;
         if (digit >= 1 && digit <= availableSections.length) {
           event.preventDefault();
           const targetSection = availableSections[digit - 1];
           if (targetSection) {
-            dispatch(setActiveSection(targetSection.id));
+            const firstSubPage =
+              targetSection.groups[0]?.items[0]?.id || "summary";
+            dispatch(
+              navigateToWorkspacePage({
+                section: targetSection.id,
+                subPage: firstSubPage,
+              }),
+            );
           }
           return;
         }
       }
 
-      const lowerKey = event.key.toLowerCase();
+      const lowerKey = event.code.startsWith("Key")
+        ? event.code.slice(3).toLowerCase()
+        : event.key.toLowerCase();
       if (!event.ctrlKey && !event.metaKey && !event.altKey) {
         if (lowerKey === "g" && !gChordActiveRef.current) {
           gChordActiveRef.current = true;
