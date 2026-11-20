@@ -200,41 +200,43 @@ export function LoginForm({
           required
         />
 
-        <FormInput
-          label={copy.passwordLabel}
-          labelEnd={
+        <div className="space-y-1.5">
+          <FormInput
+            label={copy.passwordLabel}
+            type={showPassword ? "text" : "password"}
+            name="password"
+            autoComplete="current-password"
+            placeholder={copy.passwordPlaceholder}
+            value={password}
+            disabled={isSubmitting}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              if (passwordError) setPasswordError(undefined);
+            }}
+            error={passwordError}
+            required
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? copy.hidePassword : copy.showPassword}
+                aria-pressed={showPassword}
+                disabled={isSubmitting}
+                className="inline-flex h-[44px] w-[44px] cursor-pointer items-center justify-center rounded-control text-revix-secondary transition-colors hover:bg-revix-tint hover:text-revix-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-revix-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <RevixIcon name={showPassword ? "eye-off" : "eye"} size={18} />
+              </button>
+            }
+          />
+          <div className="flex justify-end">
             <Link
               href="/forgot-password"
               className="text-[13px] font-semibold text-revix-primary underline decoration-revix-primary/35 underline-offset-4 transition-colors hover:text-revix-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-revix-primary"
             >
               {copy.forgotPasswordLink}
             </Link>
-          }
-          type={showPassword ? "text" : "password"}
-          name="password"
-          autoComplete="current-password"
-          placeholder={copy.passwordPlaceholder}
-          value={password}
-          disabled={isSubmitting}
-          onChange={(event) => {
-            setPassword(event.target.value);
-            if (passwordError) setPasswordError(undefined);
-          }}
-          error={passwordError}
-          required
-          rightElement={
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={showPassword ? copy.hidePassword : copy.showPassword}
-              aria-pressed={showPassword}
-              disabled={isSubmitting}
-              className="inline-flex h-[44px] w-[44px] cursor-pointer items-center justify-center rounded-control text-revix-secondary transition-colors hover:bg-revix-tint hover:text-revix-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-revix-primary disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <RevixIcon name={showPassword ? "eye-off" : "eye"} size={18} />
-            </button>
-          }
-        />
+          </div>
+        </div>
 
         <div className="pt-1">
           <Button
