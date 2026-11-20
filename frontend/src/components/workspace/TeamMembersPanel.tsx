@@ -74,6 +74,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [invitePhone, setInvitePhone] = useState("");
   const [inviteRoleId, setInviteRoleId] = useState("");
+  const [inviteCountryCode, setInviteCountryCode] = useState<string>("ALL");
   const [inviteBranchIds, setInviteBranchIds] = useState<string[]>([]);
   const [inviteError, setInviteError] = useState<string | undefined>();
   const [latestSentInviteEmail, setLatestSentInviteEmail] = useState<
@@ -178,7 +179,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
         email: inviteEmail.trim(),
         phone: invitePhone.trim(),
         roleId,
-        branchIds: needsBranches ? inviteBranchIds : [],
+        branchIds: inviteBranchIds,
         locale: isRtl ? "ar" : "en",
       }).unwrap();
 
@@ -270,11 +271,6 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
           <h1 className="text-[20px] font-semibold tracking-[-0.015em] text-revix-dark">
             {isRtl ? "الموظفون والدعوات" : "Employees & Invitations"}
           </h1>
-          <p className="mt-0.5 text-[13px] text-revix-secondary">
-            {isRtl
-              ? "إدارة أعضاء فريق شركتك بدور واحد لكل موظف ونطاق فروع محدد، مع تطبيق قاعدة شركة واحدة لكل بريد إلكتروني."
-              : "Manage your company team with one role per employee, scoped branch access, and strict single-company email isolation."}
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -527,7 +523,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
                     {isRtl ? "المدعو" : "Invitee"}
                   </th>
                   <th className="px-4 py-2.5 text-start">
-                    {isRtl ? "الدور والنطاق" : "Role & scope"}
+                    {isRtl ? "الدور" : "Role"}
                   </th>
                   <th className="px-4 py-2.5 text-start">
                     {isRtl ? "الحالة" : "Status"}
@@ -555,20 +551,6 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
                         <StudioBadge variant="neutral">
                           {isRtl ? inv.roleNameAr : inv.roleNameEn}
                         </StudioBadge>
-                        {inv.scopeType === "company_wide" ? (
-                          <span className="text-[11.5px] text-revix-secondary">
-                            {isRtl ? "كل الفروع" : "All branches"}
-                          </span>
-                        ) : (
-                          inv.branchIds.map((id) => {
-                            const branch = branchById.get(id);
-                            return (
-                              <StudioBadge key={id} variant="amber">
-                                {branch ? branch.code : id.slice(0, 6)}
-                              </StudioBadge>
-                            );
-                          })
-                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -681,20 +663,10 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
             onChange={(e) => {
               const nextId = e.target.value;
               setInviteRoleId(nextId);
-              const nextRole = invitableRoles.find((r) => r.id === nextId);
-              if (nextRole?.scopeType === "company_wide") {
-                setInviteBranchIds([]);
-              } else if (inviteBranchIds.length === 0 && branches[0]) {
+              if (inviteBranchIds.length === 0 && branches[0]) {
                 setInviteBranchIds([branches[0].id]);
               }
             }}
-            helperText={
-              selectedInviteRole
-                ? isRtl
-                  ? selectedInviteRole.descriptionAr
-                  : selectedInviteRole.descriptionEn
-                : undefined
-            }
             options={invitableRoles.map((role) => ({
               value: role.id,
               label: `${isRtl ? role.nameAr : role.nameEn} · ${
@@ -709,13 +681,35 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
             }))}
           />
 
-          {selectedInviteRole?.scopeType === "assigned_branches" ? (
-            <div className="space-y-2 rounded-[8px] border border-revix-border bg-revix-surface p-3.5">
-              <p className="text-[13px] font-semibold text-revix-dark">
-                {isRtl ? "الفروع المسموحة للموظف" : "Permitted branches"}
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {branches.map((branch) => {
+          <div className="space-y-3 rounded-[8px] border border-revix-border bg-revix-surface p-3.5">
+            <FormSelect
+              label={isRtl ? "الدولة" : "Country"}
+              value={inviteCountryCode}
+              onChange={(e) => setInviteCountryCode(e.target.value)}
+              options={[
+                {
+                  value: "ALL",
+                  label: isRtl ? "كل الدول" : "All countries",
+                },
+                ...Array.from(new Set(branches.map((b) => b.countryCode))).map(
+                  (code) => ({
+                    value: code,
+                    label: code,
+                  }),
+                ),
+              ]}
+            />
+            <p className="text-[13px] font-semibold text-revix-dark">
+              {isRtl ? "الفروع المسموحة للموظف" : "Permitted branches"}
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {branches
+                .filter(
+                  (b) =>
+                    inviteCountryCode === "ALL" ||
+                    b.countryCode === inviteCountryCode,
+                )
+                .map((branch) => {
                   const checked = inviteBranchIds.includes(branch.id);
                   return (
                     <label
@@ -744,9 +738,8 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
                     </label>
                   );
                 })}
-              </div>
             </div>
-          ) : null}
+          </div>
 
           <div className="flex justify-end gap-2 border-t border-revix-border pt-4">
             <Button

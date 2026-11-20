@@ -276,11 +276,6 @@ export function RolesMatrixPanel({ isRtl, membership }: RolesMatrixPanelProps) {
           <h1 className="text-[20px] font-semibold tracking-[-0.015em] text-revix-dark">
             {isRtl ? "الأدوار ونطاق الصلاحيات" : "Roles & Scope Matrix"}
           </h1>
-          <p className="mt-0.5 text-[13px] text-revix-secondary">
-            {isRtl
-              ? "تحكم مرن في صلاحيات كل دور ونطاقه (على مستوى الشركة بالكامل أو فروع محددة) بدون تعديل قاعدة البيانات."
-              : "Configure each role's scope (company-wide vs. assigned branches) and module permissions enforced on every API call."}
-          </p>
         </div>
 
         {canManageRoles && (
@@ -369,11 +364,6 @@ export function RolesMatrixPanel({ isRtl, membership }: RolesMatrixPanelProps) {
                           : "Assigned branches"}
                     </div>
                   </div>
-                  {role.code === "owner" ? (
-                    <StudioBadge variant="primary">
-                      {isRtl ? "مغلق" : "Locked"}
-                    </StudioBadge>
-                  ) : null}
                 </button>
               );
             })}
@@ -386,9 +376,6 @@ export function RolesMatrixPanel({ isRtl, membership }: RolesMatrixPanelProps) {
                 <h2 className="text-[16px] font-semibold text-revix-dark">
                   {isRtl ? activeRole.nameAr : activeRole.nameEn}
                 </h2>
-                <p className="mt-0.5 text-[12.5px] text-revix-secondary">
-                  {isRtl ? activeRole.descriptionAr : activeRole.descriptionEn}
-                </p>
               </div>
 
               {!isLocked ? (

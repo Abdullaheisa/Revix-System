@@ -630,11 +630,6 @@ export function PurchaseOrdersPanel({
               {isRtl ? "أوامر شراء السيارات (PO)" : "Vehicle Purchase Orders (PO)"}
             </h1>
           </div>
-          <p className="mt-1 text-xs text-revix-secondary sm:text-sm">
-            {isRtl
-              ? "إدارة طلبات شراء الأسطول، المدفوع مقدمًا، أقساط الموردين، والاستلام الفعلي للسيارات."
-              : "Procurement lifecycle: PO commitments, vendor terms, and vehicle physical receiving."}
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5">

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { RevixIcon } from "@/components/ui/RevixIcons";
 import {
   StudioIconRail,
   StudioMobileDrawer,
@@ -90,6 +91,9 @@ export function WorkspaceStudioShell({
   );
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openSidebarSections, setOpenSidebarSections] = useState<
+    Record<string, boolean>
+  >(() => ({ [activeSection]: true }));
   const gChordActiveRef = useRef(false);
   const gChordTimerRef = useRef<number | null>(null);
 
@@ -356,23 +360,100 @@ export function WorkspaceStudioShell({
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <StudioIconRail
-          isRtl={isRtl}
-          sections={availableSections}
-          activeSection={activeSection}
-          isPinned={isIconRailPinned}
-          onSelectSection={(sec) => dispatch(setActiveSection(sec))}
-          onTogglePin={() => dispatch(toggleIconRailPinned())}
-        />
+        <aside
+          aria-label={isRtl ? "القائمة الجانبية" : "Workspace navigation"}
+          className="hidden md:flex w-[240px] shrink-0 flex-col gap-2 overflow-y-auto border-e border-revix-border bg-revix-surface/40 px-2.5 py-3"
+        >
+          {availableSections
+            .filter((sec) => sec.id !== "network" && sec.id !== "team")
+            .map((sec) => {
+              const mergedItems =
+                sec.id === "settings"
+                  ? [
+                      ...sec.groups.flatMap((g) => g.items).map((item) => ({
+                        sectionId: sec.id,
+                        item,
+                      })),
+                      ...availableSections
+                        .filter((s) => s.id === "network" || s.id === "team")
+                        .flatMap((s) =>
+                          s.groups.flatMap((g) =>
+                            g.items.map((item) => ({
+                              sectionId: s.id,
+                              item,
+                            })),
+                          ),
+                        ),
+                    ]
+                  : sec.groups.flatMap((g) => g.items).map((item) => ({
+                      sectionId: sec.id,
+                      item,
+                    }));
 
-        <StudioSubSidebar
-          isRtl={isRtl}
-          section={currentSectionConfig}
-          activeSubPage={activeSubPage}
-          onSelectSubPage={(section, subPage) =>
-            dispatch(navigateToWorkspacePage({ section, subPage }))
-          }
-        />
+              const isSectionActive =
+                activeSection === sec.id ||
+                (sec.id === "settings" &&
+                  (activeSection === "network" || activeSection === "team"));
+              const isExpanded =
+                openSidebarSections[sec.id] ?? isSectionActive;
+
+              return (
+                <div key={sec.id} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenSidebarSections((prev) => ({
+                        ...prev,
+                        [sec.id]: !(prev[sec.id] ?? isSectionActive),
+                      }))
+                    }
+                    className="flex w-full cursor-pointer items-center justify-between rounded-[6px] px-2.5 py-1.5 text-start text-[11px] font-semibold uppercase tracking-wider text-revix-secondary transition-colors hover:bg-revix-surface hover:text-revix-dark"
+                  >
+                    <span className="truncate">
+                      {isRtl ? sec.titleAr : sec.titleEn}
+                    </span>
+                    <RevixIcon
+                      name="chevron-down"
+                      size={12}
+                      className={`shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {isExpanded ? (
+                    <div className="space-y-0.5 ps-1">
+                      {mergedItems.map(({ sectionId, item }) => {
+                        const isActive =
+                          activeSection === sectionId &&
+                          activeSubPage === item.id;
+                        return (
+                          <button
+                            key={`${sectionId}-${item.id}`}
+                            type="button"
+                            onClick={() =>
+                              dispatch(
+                                navigateToWorkspacePage({
+                                  section: sectionId,
+                                  subPage: item.id,
+                                }),
+                              )
+                            }
+                            className={`flex w-full cursor-pointer items-center rounded-[6px] px-2.5 py-1.5 text-start text-[13px] transition-colors ${
+                              isActive
+                                ? "bg-revix-tint font-semibold text-revix-primary"
+                                : "font-medium text-revix-dark hover:bg-revix-surface"
+                            }`}
+                          >
+                            <span className="truncate">
+                              {isRtl ? item.titleAr : item.titleEn}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+        </aside>
 
         <StudioMobileDrawer
           isRtl={isRtl}
