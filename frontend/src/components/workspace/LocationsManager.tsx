@@ -518,6 +518,9 @@ export function LocationsManager({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormInput
               label={isRtl ? "المدينة / المنطقة" : "City / Region"}
+              placeholder={
+                isRtl ? "مثال: القاهرة / التجمع الخامس" : "e.g., Cairo / Downtown"
+              }
               value={city}
               onChange={(e) => handleCityChange(e.target.value)}
               required
@@ -525,6 +528,7 @@ export function LocationsManager({
             <FormInput
               label={isRtl ? "المنطقة الزمنية" : "Time zone"}
               dir="ltr"
+              placeholder="Africa/Cairo"
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
               required
@@ -533,6 +537,11 @@ export function LocationsManager({
 
           <FormInput
             label={isRtl ? "العنوان التفصيلي" : "Address"}
+            placeholder={
+              isRtl
+                ? "مثال: شارع التسعين الشمالي، مبنى 14"
+                : "e.g., 14 North 90th St, Building 2"
+            }
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             required
@@ -543,6 +552,7 @@ export function LocationsManager({
               label={isRtl ? "هاتف الفرع" : "Branch phone"}
               type="tel"
               dir="ltr"
+              placeholder="+20 10 0000 0000"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
@@ -551,6 +561,7 @@ export function LocationsManager({
               label={isRtl ? "بريد الفرع الإلكتروني" : "Branch email"}
               type="email"
               dir="ltr"
+              placeholder="branch@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

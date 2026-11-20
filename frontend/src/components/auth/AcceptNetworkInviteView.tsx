@@ -382,7 +382,9 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
                   <FormInput
                     label={isRtl ? "كلمة المرور" : "Password"}
                     type={showOnboardingPassword ? "text" : "password"}
-                    dir="ltr"
+                    autoComplete={
+                      !preview.accountExists ? "new-password" : "current-password"
+                    }
                     value={onboardingPassword}
                     onChange={(e) => setOnboardingPassword(e.target.value)}
                     placeholder={
@@ -399,7 +401,16 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
                       <button
                         type="button"
                         onClick={() => setShowOnboardingPassword((v) => !v)}
-                        className="inline-flex h-[44px] w-[44px] cursor-pointer items-center justify-center text-revix-secondary hover:text-revix-primary"
+                        aria-label={
+                          showOnboardingPassword
+                            ? isRtl
+                              ? "إخفاء كلمة المرور"
+                              : "Hide password"
+                            : isRtl
+                              ? "إظهار كلمة المرور"
+                              : "Show password"
+                        }
+                        className="inline-flex h-[44px] w-[44px] cursor-pointer items-center justify-center rounded-control text-revix-secondary transition-colors hover:bg-revix-tint hover:text-revix-primary"
                       >
                         <RevixIcon
                           name={showOnboardingPassword ? "eye-off" : "eye"}
@@ -413,7 +424,7 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
                     <FormInput
                       label={isRtl ? "تأكيد كلمة المرور" : "Confirm password"}
                       type={showOnboardingPassword ? "text" : "password"}
-                      dir="ltr"
+                      autoComplete="new-password"
                       value={onboardingConfirmPassword}
                       onChange={(e) => setOnboardingConfirmPassword(e.target.value)}
                       placeholder={
