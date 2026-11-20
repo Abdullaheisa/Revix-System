@@ -340,7 +340,7 @@ export class NetworkService {
     rawSessionToken: string;
     sessionExpiresAt: Date;
   }> {
-    const { invitation, mainCompany } = await this.previewNetworkInvitation(
+    const { invitation } = await this.previewNetworkInvitation(
       input.rawToken,
     );
 
@@ -403,15 +403,15 @@ export class NetworkService {
         name: invitation.localCompanyName,
         legalName: invitation.localCompanyName,
         logoUrl: invitation.logoUrl ?? null,
-        brandColor: mainCompany.brandColor,
+        brandColor: "#14532D",
         phone: invitation.contactPhone || "",
         email: invitation.inviteeEmail,
-        countryCode: mainCompany.countryCode,
-        city: mainCompany.city,
+        countryCode: "EG",
+        city: "",
         address: "",
         postalCode: "",
-        baseCurrency: mainCompany.baseCurrency,
-        timezone: mainCompany.timezone,
+        baseCurrency: "EGP",
+        timezone: "Africa/Cairo",
         businessRegNumber: "",
         taxRegNumber: "",
         operatingMode: "local_partner",

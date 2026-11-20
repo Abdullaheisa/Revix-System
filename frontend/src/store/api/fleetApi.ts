@@ -120,6 +120,8 @@ export interface PurchaseOrderItemDto {
   quantity: number;
   unitPrice: number;
   receivedCount: number;
+  vin?: string | null;
+  color?: string | null;
   notes: string | null;
   createdAt: string;
 }
@@ -153,6 +155,8 @@ export interface CreatePurchaseOrderItemInput {
   variantId: string;
   quantity: number;
   unitPrice: number;
+  vin?: string | null;
+  color?: string | null;
   notes?: string | null;
 }
 

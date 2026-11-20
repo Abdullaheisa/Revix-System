@@ -1,5 +1,7 @@
 "use client";
 
+import { CountrySelectField } from "@/components/shared/workspace";
+
 import React, { useState, useMemo } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import {
@@ -45,6 +47,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   const [inviteCompanyName, setInviteCompanyName] = useState("");
   const [inviteContactName, setInviteContactName] = useState("");
   const [inviteContactPhone, setInviteContactPhone] = useState("");
+  const [inviteCountryCode, setInviteCountryCode] = useState("EG");
   const [inviteLogoUrl, setInviteLogoUrl] = useState("");
   const [sentInviteRecipient, setSentInviteRecipient] = useState<{
     email: string;
@@ -137,6 +140,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
         localCompanyName: inviteCompanyName.trim(),
         contactName: inviteContactName.trim(),
         contactPhone: inviteContactPhone.trim(),
+        countryCode: inviteCountryCode,
         logoUrl: inviteLogoUrl || null,
         locale: "en",
       }).unwrap();
@@ -222,42 +226,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
             <h1 className="text-[20px] sm:text-[22px] font-bold tracking-tight text-revix-dark">
               {isRtl ? "شبكة الشركات المحلية" : "Company Network"}
             </h1>
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold border ${
-                isMainCompany
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                  : isLocalPartner
-                  ? "bg-blue-50 text-blue-800 border-blue-200"
-                  : "bg-slate-100 text-slate-800 border-slate-200"
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  isMainCompany
-                    ? "bg-emerald-600"
-                    : isLocalPartner
-                    ? "bg-blue-600"
-                    : "bg-slate-500"
-                }`}
-              />
-              {isMainCompany
-                ? isRtl
-                  ? "شركة شبكة رئيسية (Main HQ)"
-                  : "Main Network HQ"
-                : isLocalPartner
-                ? isRtl
-                  ? "شركة محلية شريكة (Local Partner)"
-                  : "Local Partner"
-                : isRtl
-                ? "شركة مستقلة (Independent)"
-                : "Independent Company"}
-            </span>
           </div>
-          <p className="mt-1 text-[13px] text-revix-secondary">
-            {isRtl
-              ? "إدارة الشراكات المحلية، ومشاركة الفروع المختارة مع حماية العرض فقط (View-Only) الصارمة."
-              : "Manage local company partnerships and shared branches under strict View-Only isolation."}
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -892,6 +861,12 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                     onChange={(e) => setInviteContactPhone(e.target.value)}
                     placeholder="+966 50 000 0000"
                   />
+                  <CountrySelectField
+                    isRtl={isRtl}
+                    label={isRtl ? "الدولة" : "Country"}
+                    countryCode={inviteCountryCode}
+                    onChange={setInviteCountryCode}
+                  />
                 </div>
 
                 <FormInput
@@ -903,18 +878,6 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="partner-admin@company.com"
                 />
-
-                <div className="rounded-[6px] bg-emerald-50/70 p-3 border border-emerald-200/60 text-[12px] text-emerald-900 space-y-1">
-                  <div className="font-semibold flex items-center gap-1.5 text-emerald-950">
-                    <RevixIcon name="shield-check" size={14} className="text-emerald-700" />
-                    <span>{isRtl ? "مبدأ العزل الصارم (View-Only):" : "Strict View-Only Isolation:"}</span>
-                  </div>
-                  <p className="text-[11.5px] leading-relaxed text-emerald-800">
-                    {isRtl
-                      ? "الشركة الرئيسية ستحصل على صلاحية عرض فقط للفروع والسيارات المسموح بها، بدون أي إمكانية لتعديل حسابات أو مستندات الشريك."
-                      : "Main company receives read-only visibility over permitted branches and fleet. Modification of local partner resources is strictly forbidden."}
-                  </p>
-                </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-revix-border">
                   <button

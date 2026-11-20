@@ -127,7 +127,7 @@ export function PurchaseOrdersPanel({
   const [formPaymentScheduleSummary, setFormPaymentScheduleSummary] = useState<string>("");
   const [formNotes, setFormNotes] = useState("");
   const [formItems, setFormItems] = useState<CreatePurchaseOrderItemInput[]>([
-    { variantId: "", quantity: 1, unitPrice: 0, notes: "" },
+    { variantId: "", quantity: 1, unitPrice: 0, vin: "", color: "", notes: "" },
   ]);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -277,6 +277,8 @@ export function PurchaseOrdersPanel({
           variantId: it.variantId,
           quantity: Number(it.quantity),
           unitPrice: Number(it.unitPrice),
+          vin: it.vin?.trim() || null,
+          color: it.color?.trim() || null,
           notes: it.notes?.trim() || null,
         })),
       }).unwrap();
@@ -306,6 +308,8 @@ export function PurchaseOrdersPanel({
           branchId: po.branchId,
           poNumber: po.poNumber,
           unitPrice: targetItem.unitPrice,
+          vin: targetItem.vin || "",
+          color: targetItem.color || "",
         }),
       );
     }
@@ -1099,6 +1103,30 @@ export function PurchaseOrdersPanel({
                           className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                         />
                       </div>
+                      <div className="sm:col-span-6">
+                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-revix-secondary">
+                          {isRtl ? "رقم الشاصي (VIN)" : "VIN (Chassis)"}
+                        </label>
+                        <input
+                          type="text"
+                          value={item.vin ?? ""}
+                          onChange={(e) => handleItemChange(idx, "vin", e.target.value.toUpperCase())}
+                          placeholder="e.g. 1HGCR2F83HA001234"
+                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-mono text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
+                        />
+                      </div>
+                      <div className="sm:col-span-6">
+                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-revix-secondary">
+                          {isRtl ? "اللون" : "Color"}
+                        </label>
+                        <input
+                          type="text"
+                          value={item.color ?? ""}
+                          onChange={(e) => handleItemChange(idx, "color", e.target.value)}
+                          placeholder={isRtl ? "مثال: أبيض" : "e.g. White"}
+                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
+                        />
+                      </div>
 
                       <div className="col-span-4">
                         <label className="block text-[10px] text-revix-muted">
@@ -1110,6 +1138,30 @@ export function PurchaseOrdersPanel({
                           value={item.unitPrice}
                           onChange={(e) => handleItemChange(idx, "unitPrice", Number(e.target.value))}
                           className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
+                        />
+                      </div>
+                      <div className="sm:col-span-6">
+                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-revix-secondary">
+                          {isRtl ? "رقم الشاصي (VIN)" : "VIN (Chassis)"}
+                        </label>
+                        <input
+                          type="text"
+                          value={item.vin ?? ""}
+                          onChange={(e) => handleItemChange(idx, "vin", e.target.value.toUpperCase())}
+                          placeholder="e.g. 1HGCR2F83HA001234"
+                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-mono text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
+                        />
+                      </div>
+                      <div className="sm:col-span-6">
+                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-revix-secondary">
+                          {isRtl ? "اللون" : "Color"}
+                        </label>
+                        <input
+                          type="text"
+                          value={item.color ?? ""}
+                          onChange={(e) => handleItemChange(idx, "color", e.target.value)}
+                          placeholder={isRtl ? "مثال: أبيض" : "e.g. White"}
+                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                         />
                       </div>
 

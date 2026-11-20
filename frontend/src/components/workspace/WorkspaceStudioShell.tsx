@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { PriceListPanel } from "@/components/fleet/PriceListPanel";
 import {
   StudioIconRail,
   StudioMobileDrawer,
@@ -539,6 +540,12 @@ export function WorkspaceStudioShell({
             <VehiclePhotosPage lang={isRtl ? "ar" : "en"} />
           ) : activeSection === "fleet" && activeSubPage === "rental-inclusions" ? (
             <RentalInclusionsPage lang={isRtl ? "ar" : "en"} />
+          ) : activeSection === "fleet" && activeSubPage === "price-list" ? (
+            <PriceListPanel
+              isRtl={isRtl}
+              branchId={activeBranch?.id}
+              baseCurrency={activeBranch?.currencyCode || company?.baseCurrency}
+            />
           ) : activeSection === "fleet" && activeSubPage === "vehicles" ? (
             <FleetVehiclesPanel
               isRtl={isRtl}

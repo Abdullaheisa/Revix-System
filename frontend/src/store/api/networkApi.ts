@@ -28,6 +28,7 @@ export interface CompanyNetworkInvitationDto {
   localCompanyName: string;
   contactName?: string;
   contactPhone?: string;
+  countryCode?: string;
   logoUrl?: string | null;
   status: "pending" | "accepted" | "revoked" | "expired";
   invitedByUserId?: string;
@@ -62,6 +63,7 @@ export interface InviteLocalPartnerInput {
   localCompanyName: string;
   contactName?: string;
   contactPhone?: string;
+  countryCode?: string;
   logoUrl?: string | null;
   locale?: "en" | "ar";
 }

@@ -29,8 +29,8 @@ export function CountrySelectField({
     return {
       value: c.code,
       label: showCurrencyInOption
-        ? `${flag} ${name} (${c.currencyCode})`
-        : `${flag} ${name}`,
+        ? `${name} (${c.currencyCode})`
+        : name,
     };
   });
 

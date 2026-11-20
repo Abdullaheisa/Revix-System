@@ -319,7 +319,7 @@ export function LocationsManager({
             className="inline-flex h-[34px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-primary bg-revix-primary px-3 text-[13px] font-medium text-revix-white transition-colors hover:bg-revix-primary-hover"
           >
             <RevixIcon name="plus" size={14} />
-            <span>{isRtl ? "إضافة فرع" : "Add location"}</span>
+            <span>{isRtl ? "إضافة فرع" : "Add branch"}</span>
           </button>
         </div>
       </div>
@@ -457,10 +457,10 @@ export function LocationsManager({
           editingBranch
             ? isRtl
               ? "تعديل بيانات الفرع"
-              : "Edit location"
+              : "Edit branch"
             : isRtl
               ? "إضافة فرع جديد"
-              : "Add new location"
+              : "Add new branch"
         }
         headerAction={
           !editingBranch ? (
@@ -487,12 +487,14 @@ export function LocationsManager({
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <CountrySelectField
-              isRtl={isRtl}
-              label={isRtl ? "الدولة" : "Country"}
-              countryCode={countryCode}
-              onChange={handleCountryChange}
-            />
+            {company.operatingMode !== "local_partner" ? (
+              <CountrySelectField
+                isRtl={isRtl}
+                label={isRtl ? "الدولة" : "Country"}
+                countryCode={countryCode}
+                onChange={handleCountryChange}
+              />
+            ) : null}
             <AutoBranchCurrencyField
               isRtl={isRtl}
               countryCode={countryCode}
@@ -509,14 +511,16 @@ export function LocationsManager({
               city={city}
               onChange={handleCityChange}
             />
-            <FormInput
-              label={isRtl ? "المنطقة الزمنية" : "Time zone"}
-              dir="ltr"
-              placeholder="Africa/Cairo"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              required
-            />
+            {company.operatingMode !== "local_partner" ? (
+              <FormInput
+                label={isRtl ? "المنطقة الزمنية" : "Time zone"}
+                dir="ltr"
+                placeholder="Africa/Cairo"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                required
+              />
+            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

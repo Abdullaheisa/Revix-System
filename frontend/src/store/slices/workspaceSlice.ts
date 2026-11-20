@@ -18,6 +18,8 @@ export interface PendingFleetReceiveContext {
   branchId?: string;
   poNumber?: string;
   unitPrice?: number;
+  vin?: string;
+  color?: string;
 }
 
 export interface WorkspaceUiState {

@@ -359,85 +359,86 @@ export function VehicleVariantsPanel({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {paginatedVariants.map((v) => (
-              <div
-                key={v.id}
-                className="flex flex-col justify-between rounded-xl border border-revix-border bg-revix-white p-4 shadow-xs transition hover:border-revix-primary/40 hover:shadow-sm"
-              >
-                <div>
-                  {/* Variant Header */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="rounded-md bg-revix-surface px-1.5 py-0.5 font-mono text-[11px] font-semibold text-revix-primary border border-revix-border">
-                          {v.sippCode}
-                        </span>
-                        <span className="text-[11px] font-medium text-revix-secondary">
-                          {CATEGORY_LABELS[v.category]?.[isRtl ? "ar" : "en"] ?? v.category}
-                        </span>
-                      </div>
-                      <h3 className="mt-1 text-base font-bold text-revix-dark">
-                        {v.make} {v.model} <span className="font-normal text-revix-secondary">{v.modelYear}</span>
-                      </h3>
-                      <p className="text-xs text-revix-secondary">
-                        {v.trim}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        v.status === "active"
-                          ? "bg-revix-accent-soft text-revix-accent"
-                          : "bg-revix-surface text-revix-muted"
-                      }`}
+          <div className="overflow-hidden rounded-[8px] border border-revix-border bg-revix-white">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-start text-[13px]">
+                <thead>
+                  <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
+                    <th className="px-4 py-2.5 text-start">Variant ID</th>
+                    <th className="px-4 py-2.5 text-start">
+                      {isRtl ? "الاسم الكامل" : "Variant full name"}
+                    </th>
+                    <th className="px-4 py-2.5 text-start">
+                      {isRtl ? "الشركة المصنعة" : "Manufacturer"}
+                    </th>
+                    <th className="px-4 py-2.5 text-start">
+                      {isRtl ? "الموديل" : "Model name"}
+                    </th>
+                    <th className="px-4 py-2.5 text-start">
+                      {isRtl ? "السنة" : "Model Year"}
+                    </th>
+                    <th className="px-4 py-2.5 text-start">
+                      {isRtl ? "الفئة" : "Body Style"}
+                    </th>
+                    <th className="px-4 py-2.5 text-start">SIPP</th>
+                    <th className="px-4 py-2.5 text-end">
+                      {isRtl ? "إجراء" : "Action"}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-revix-border/80">
+                  {paginatedVariants.map((v) => (
+                    <tr
+                      key={v.id}
+                      className="transition-colors hover:bg-revix-surface/60"
                     >
-                      {v.status === "active" ? (isRtl ? "نشط بالكتالوج" : "Active") : (isRtl ? "مؤرشف" : "Archived")}
-                    </span>
-                  </div>
-
-                  {/* Technical Specifications Badge Summary */}
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className="rounded-md bg-revix-surface px-2 py-1 font-mono text-[11px] font-semibold text-revix-primary border border-revix-border">
-                      SIPP: {v.sippCode}
-                    </span>
-                    <span className="rounded-md bg-revix-surface px-2 py-1 text-[11px] font-medium text-revix-secondary border border-revix-border">
-                      {CATEGORY_LABELS[v.category]?.[isRtl ? "ar" : "en"] ?? v.category}
-                    </span>
-                    <span className="rounded-md bg-revix-surface px-2 py-1 text-[11px] font-medium text-revix-muted border border-revix-border">
-                      {v.modelYear}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="mt-4 flex items-center justify-between border-t border-revix-border/60 pt-3">
-                  <span className="text-[11px] text-revix-muted">
-                    {isRtl ? "قالب فئة معتمد" : "Catalog Template"}
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(v)}
-                      className="rounded-md border border-revix-border bg-revix-white px-2.5 py-1 text-xs font-medium text-revix-dark transition hover:bg-revix-surface"
-                    >
-                      {isRtl ? "تعديل المواصفات" : "Edit Specs"}
-                    </button>
-                    {v.status === "active" && (
-                      <button
-                        type="button"
-                        onClick={() => setPendingArchiveVariant(v)}
-                        className="rounded-md px-2 py-1 text-xs text-revix-muted transition hover:bg-revix-alert-soft hover:text-revix-alert"
-                        title={isRtl ? "أرشفة الموديل" : "Archive Variant"}
-                      >
-                        <RevixIcon name="trash-2" className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                      <td className="px-4 py-3 font-mono text-[12px] font-semibold text-revix-secondary">
+                        {v.id.slice(0, 8).toUpperCase()}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-revix-dark">
+                        {v.make} {v.model}{" "}
+                        {v.trim && v.trim.toLowerCase() !== "standard"
+                          ? `${v.trim}${v.modelYear}`
+                          : v.modelYear}
+                      </td>
+                      <td className="px-4 py-3 text-revix-dark">{v.make}</td>
+                      <td className="px-4 py-3 text-revix-dark">{v.model}</td>
+                      <td className="px-4 py-3 font-mono text-revix-dark">
+                        {v.modelYear}
+                      </td>
+                      <td className="px-4 py-3 text-revix-secondary">
+                        {CATEGORY_LABELS[v.category]?.[isRtl ? "ar" : "en"] ??
+                          v.category}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-[12px] font-semibold text-revix-primary">
+                        {v.sippCode}
+                      </td>
+                      <td className="px-4 py-3 text-end">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(v)}
+                            className="cursor-pointer rounded-md border border-revix-border bg-revix-white px-2.5 py-1 text-xs font-medium text-revix-dark transition hover:bg-revix-surface"
+                          >
+                            {isRtl ? "تعديل" : "Edit Specs"}
+                          </button>
+                          {v.status === "active" && (
+                            <button
+                              type="button"
+                              onClick={() => setPendingArchiveVariant(v)}
+                              className="cursor-pointer rounded-md px-2 py-1 text-xs text-revix-muted transition hover:bg-revix-alert-soft hover:text-revix-alert"
+                              title={isRtl ? "أرشفة الموديل" : "Archive Variant"}
+                            >
+                              <RevixIcon name="trash-2" className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Unified Pagination */}
@@ -473,11 +474,6 @@ export function VehicleVariantsPanel({
                       ? "تعريف موديل جديد بالكتالوج (الفريان)"
                       : "Define New Vehicle Model (Variant)"}
                 </h3>
-                <p className="mt-0.5 text-xs text-revix-secondary">
-                  {isRtl
-                    ? "توثيق المواصفات الفنية للسيارة بدون أي أسعار أو أرقام شاسيه."
-                    : "Record technical specifications without pricing or chassis data."}
-                </p>
               </div>
               <button
                 type="button"
@@ -501,7 +497,7 @@ export function VehicleVariantsPanel({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "الماركة / الشركة المصنعة" : "Make"} *
+                      {isRtl ? "الشركة المصنعة" : "Manufacturer"} *
                     </label>
                     <input
                       type="text"
@@ -514,7 +510,7 @@ export function VehicleVariantsPanel({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "الموديل" : "Model"} *
+                      {isRtl ? "الموديل" : "Model name"} *
                     </label>
                     <input
                       type="text"
@@ -531,7 +527,7 @@ export function VehicleVariantsPanel({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "سنة الصنع" : "Year"} *
+                      {isRtl ? "سنة الصنع" : "Model Year"} *
                     </label>
                     <input
                       type="number"
@@ -545,7 +541,7 @@ export function VehicleVariantsPanel({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "الفئة / Trim" : "Trim"}
+                      {isRtl ? "الاسم الكامل" : "Variant full name"}
                     </label>
                     <input
                       type="text"
@@ -557,7 +553,7 @@ export function VehicleVariantsPanel({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "التصنيف" : "Category"}
+                      {isRtl ? "الفئة" : "Body Style"}
                     </label>
                     <RevixSelect
                       size="sm"
@@ -577,7 +573,7 @@ export function VehicleVariantsPanel({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "كود SIPP" : "SIPP Code"}
+                      {isRtl ? "SIPP" : "SIPP"}
                     </label>
                     <input
                       type="text"

@@ -163,6 +163,12 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
       if (pendingReceive.variantId) {
         setSelectedVariantId(pendingReceive.variantId);
       }
+      if (pendingReceive.vin) {
+        setVin(pendingReceive.vin);
+      }
+      if (pendingReceive.color) {
+        setColor(pendingReceive.color);
+      }
       if (pendingReceive.branchId) {
         setBranchId(pendingReceive.branchId);
       } else if (selectedBranchId) {
@@ -608,11 +614,6 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             {isAr ? "إضافة سيارة للأصول" : "Add Fleet Vehicle"}
           </h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {isAr
-              ? "تسجيل سيارة في أصول الأسطول، تحديد الهوية والفرع والمواصفات، والتعريفة التشغيلية للتأجير."
-              : "Register vehicle into fleet assets, specify identifiers, branch, rental pricing, and operational policies."}
-          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -688,11 +689,6 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                     className="w-full h-[46px] ps-9 pe-3.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:border-emerald-700 focus:ring-3 focus:ring-emerald-700/15 transition-colors"
                   />
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  {isAr
-                    ? "يُحدد تلقائياً عند اختيار صورة أو أمر شراء، أو يمكنك كتابته يدوياً."
-                    : "Auto-fills when choosing photo or PO, or type manually."}
-                </p>
               </div>
 
               {/* 2. Catalog Variant (only shown when converting from a Purchase Order) */}
@@ -915,11 +911,6 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                 <h4 className="text-sm font-bold text-gray-900">
                   {isAr ? "تأكيد فوري للحجز (Instant Confirmation / Auto-Accept)" : "Instant Confirmation (Auto-Accept)"}
                 </h4>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {isAr
-                    ? "الحجز المباشر بدون الحاجة لموافقة يدوية. يتم تأكيد طلبات التأجير لهذه السيارة فورًا."
-                    : "Reserve without manual confirmation. Bookings for this vehicle are confirmed immediately."}
-                </p>
               </div>
 
               <label className="relative inline-flex items-center cursor-pointer">
@@ -962,11 +953,6 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                 <h2 className="font-bold text-gray-900 text-sm">
                   {isAr ? "بيانات الهوية ورقم الشاسيه واللوحة (Asset Identifiers)" : "Asset Identifiers & Physical Specs"}
                 </h2>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  {isAr
-                    ? "تحديد هوية السيارة، واللوحات، والعداد، وتواريخ صلاحية الوثائق والتراخيص"
-                    : "Vehicle identification, license plates, odometer, and document expiration"}
-                </p>
               </div>
             </div>
             <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
@@ -1225,117 +1211,6 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                 options={transmissionOptions}
                 buttonClassName="w-full h-[46px] rounded-lg"
               />
-            </div>
-          </div>
-        </div>
-
-        {/* ====================================================================== */}
-        {/* SECTION 4: PRICES SECTION (Matches Screenshot 2) */}
-        {/* ====================================================================== */}
-        <div className="bg-white rounded-xl border border-gray-200/80 shadow-xs">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 rounded-t-xl flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100/60 text-emerald-800 flex items-center justify-center">
-                <RevixIcon name="file-text" className="w-4 h-4" />
-              </div>
-              <h2 className="font-bold text-gray-900 text-sm">
-                {isAr ? `قسم الأسعار والتعريفة اليومية (${currencySymbol})` : `Prices Section (${currencySymbol})`}
-              </h2>
-            </div>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
-              {currencySymbol}
-            </span>
-          </div>
-
-          <div className="p-6 space-y-4">
-            <p className="text-xs text-gray-500">
-              {isAr
-                ? `الأسعار لليوم الواحد بعملة فرع الاستلام والتمركز (${currencySymbol}). يتم تطبيق الشريحة المناسبة لمدة الإيجار بالكامل.`
-                : `Rates are per day in the pickup branch currency (${currencySymbol}). One tier applies to the entire rental.`}
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {isAr ? "سعر اليوم لإيجار 1 – 2 يوم *" : "1 – 2 DAYS DAILY RATE *"}
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={dailyRate1to2}
-                    onChange={(e) => setDailyRate1to2(Number(e.target.value))}
-                    className="w-full h-[46px] px-3.5 pe-20 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-semibold focus:outline-none focus:border-emerald-700 focus:ring-3 focus:ring-emerald-700/15 transition-colors"
-                  />
-                  <span className="absolute inset-y-0 end-0 pe-3 flex items-center text-xs font-bold text-gray-400 pointer-events-none">
-                    {currencySymbol}/day
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {isAr ? "سعر اليوم لإيجار 3 – 7 أيام" : "3 – 7 DAYS DAILY RATE"}
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={dailyRate3to7}
-                    onChange={(e) => setDailyRate3to7(Number(e.target.value))}
-                    className="w-full h-[46px] px-3.5 pe-20 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-semibold focus:outline-none focus:border-emerald-700 focus:ring-3 focus:ring-emerald-700/15 transition-colors"
-                  />
-                  <span className="absolute inset-y-0 end-0 pe-3 flex items-center text-xs font-bold text-gray-400 pointer-events-none">
-                    {currencySymbol}/day
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {isAr ? "سعر اليوم لإيجار 8 – 30+ يوم" : "8 – 30 DAYS DAILY RATE"}
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={dailyRate8Plus}
-                    onChange={(e) => setDailyRate8Plus(Number(e.target.value))}
-                    className="w-full h-[46px] px-3.5 pe-20 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-semibold focus:outline-none focus:border-emerald-700 focus:ring-3 focus:ring-emerald-700/15 transition-colors"
-                  />
-                  <span className="absolute inset-y-0 end-0 pe-3 flex items-center text-xs font-bold text-gray-400 pointer-events-none">
-                    {currencySymbol}/day
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                {isAr ? "مبلغ التحمل والتأمين ضد الحوادث (DAMAGE EXCESS)" : "DAMAGE EXCESS"}
-              </label>
-              <div className="relative max-w-sm">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="e.g. 500 or 0 for zero excess"
-                  value={damageExcess}
-                  onChange={(e) => setDamageExcess(Number(e.target.value))}
-                  className="w-full h-[46px] px-3.5 pe-16 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-semibold focus:outline-none focus:border-emerald-700 focus:ring-3 focus:ring-emerald-700/15 transition-colors"
-                />
-                <span className="absolute inset-y-0 end-0 pe-3 flex items-center text-xs font-bold text-gray-400 pointer-events-none">
-                  {currencySymbol}
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1">
-                {isAr
-                  ? "الحد الأقصى للمسؤولية المالية التي يدفعها المستأجر عند وقوع حادث مغطى تأمينيًا."
-                  : "Maximum liability amount paid by customer for damages. Appears in What's Included on the vehicle card."}
-              </p>
             </div>
           </div>
         </div>
