@@ -493,8 +493,19 @@ export function VehicleVariantsPanel({
                   </div>
                 )}
 
-                {/* Make & Model */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-revix-dark mb-1">
+                      {isRtl ? "الاسم الكامل" : "Variant full name"}
+                    </label>
+                    <input
+                      type="text"
+                      value={formTrim}
+                      onChange={(e) => setFormTrim(e.target.value)}
+                      placeholder="GLX, Standard, Executive"
+                      className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
+                    />
+                  </div>
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
                       {isRtl ? "الشركة المصنعة" : "Manufacturer"} *
@@ -523,8 +534,7 @@ export function VehicleVariantsPanel({
                   </div>
                 </div>
 
-                {/* Year, Trim, Category & SIPP */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
                       {isRtl ? "سنة الصنع" : "Model Year"} *
@@ -537,18 +547,6 @@ export function VehicleVariantsPanel({
                       value={formYear}
                       onChange={(e) => setFormYear(Number(e.target.value))}
                       className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "الاسم الكامل" : "Variant full name"}
-                    </label>
-                    <input
-                      type="text"
-                      value={formTrim}
-                      onChange={(e) => setFormTrim(e.target.value)}
-                      placeholder="GLX, Standard, Executive"
-                      className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                     />
                   </div>
                   <div>

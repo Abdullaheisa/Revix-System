@@ -191,13 +191,11 @@ export function PurchaseOrdersPanel({
     }
     setFormPaymentScheduleSummary("");
     setFormNotes("");
+    const defaultVariantId = variants[0]?.id || "";
     setFormItems([
-      {
-        variantId: variants[0]?.id || "",
-        quantity: 1,
-        unitPrice: 0,
-        notes: "",
-      },
+      { variantId: defaultVariantId, quantity: 1, unitPrice: 0, vin: "", color: "", notes: "" },
+      { variantId: defaultVariantId, quantity: 1, unitPrice: 0, vin: "", color: "", notes: "" },
+      { variantId: defaultVariantId, quantity: 1, unitPrice: 0, vin: "", color: "", notes: "" },
     ]);
     setCreateError(null);
     setIsCreateModalOpen(true);
@@ -626,6 +624,8 @@ export function PurchaseOrdersPanel({
 
   return (
     <div className="space-y-6" dir={isRtl ? "rtl" : "ltr"}>
+      {!isCreateModalOpen && (
+        <>
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -947,27 +947,29 @@ export function PurchaseOrdersPanel({
       </>
     )}
 
-      {/* Create PO Modal */}
+        </>
+      )}
+
+      {/* Create PO Full-Page Overlay */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-revix-border bg-white shadow-dialog animate-in zoom-in-95 duration-150">
-            {/* Fixed Header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-revix-border px-6 py-4">
-              <h2 className="text-base font-bold text-revix-dark">
-                {isRtl ? "إنشاء أمر شراء سيارات جديد (PO)" : "Create Vehicle Purchase Order"}
-              </h2>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-revix-border pb-3">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="rounded-lg p-1.5 text-revix-secondary hover:bg-revix-surface hover:text-revix-dark transition-colors"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
               >
-                <RevixIcon name="close" className="h-4 w-4" />
+                <span>{isRtl ? "← رجوع" : "← Back"}</span>
               </button>
+              <h2 className="text-lg font-bold text-revix-dark">
+                {isRtl ? "إنشاء أمر شراء سيارات جديد (PO)" : "Create Vehicle Purchase Order"}
+              </h2>
             </div>
-
-            {/* Scrollable Form Body */}
-            <form onSubmit={handleCreateSubmit} className="flex flex-1 flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          </div>
+          <div className="w-full rounded-xl border border-revix-border bg-white shadow-xs">
+            <form onSubmit={handleCreateSubmit} className="flex flex-col">
+              <div className="p-6 space-y-5">
                 {createError && (
                   <div className="rounded-lg bg-revix-alert-soft p-3 text-xs text-revix-alert">
                     {createError}
@@ -1072,7 +1074,7 @@ export function PurchaseOrdersPanel({
                       key={idx}
                       className="grid grid-cols-12 items-center gap-2 rounded-lg border border-revix-border bg-revix-white p-2.5"
                     >
-                      <div className="col-span-5">
+                      <div className="col-span-3">
                         <label className="block text-[10px] text-revix-muted mb-0.5">
                           {isRtl ? "فئة السيارة" : "Variant"}
                         </label>
@@ -1090,7 +1092,7 @@ export function PurchaseOrdersPanel({
                         />
                       </div>
 
-                      <div className="col-span-2">
+                      <div className="col-span-1">
                         <label className="block text-[10px] text-revix-muted">
                           {isRtl ? "العدد" : "Qty"}
                         </label>
@@ -1103,34 +1105,10 @@ export function PurchaseOrdersPanel({
                           className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                         />
                       </div>
-                      <div className="sm:col-span-6">
-                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-revix-secondary">
-                          {isRtl ? "رقم الشاصي (VIN)" : "VIN (Chassis)"}
-                        </label>
-                        <input
-                          type="text"
-                          value={item.vin ?? ""}
-                          onChange={(e) => handleItemChange(idx, "vin", e.target.value.toUpperCase())}
-                          placeholder="e.g. 1HGCR2F83HA001234"
-                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-mono text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                        />
-                      </div>
-                      <div className="sm:col-span-6">
-                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-revix-secondary">
-                          {isRtl ? "اللون" : "Color"}
-                        </label>
-                        <input
-                          type="text"
-                          value={item.color ?? ""}
-                          onChange={(e) => handleItemChange(idx, "color", e.target.value)}
-                          placeholder={isRtl ? "مثال: أبيض" : "e.g. White"}
-                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                        />
-                      </div>
 
-                      <div className="col-span-4">
+                      <div className="col-span-2">
                         <label className="block text-[10px] text-revix-muted">
-                          {isRtl ? "سعر الشراء للسيارة" : "Unit Price"}
+                          {isRtl ? "سعر الشراء" : "Unit Price"}
                         </label>
                         <input
                           type="number"
@@ -1140,9 +1118,9 @@ export function PurchaseOrdersPanel({
                           className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                         />
                       </div>
-                      <div className="sm:col-span-6">
-                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-revix-secondary">
-                          {isRtl ? "رقم الشاصي (VIN)" : "VIN (Chassis)"}
+                      <div className="col-span-3">
+                        <label className="block text-[10px] text-revix-muted">
+                          {isRtl ? "رقم الشاصي" : "Chassis Number"}
                         </label>
                         <input
                           type="text"
@@ -1152,16 +1130,29 @@ export function PurchaseOrdersPanel({
                           className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-mono text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                         />
                       </div>
-                      <div className="sm:col-span-6">
-                        <label className="block text-[10px] font-semibold uppercase tracking-wider text-revix-secondary">
+                      <div className="col-span-2">
+                        <label className="block text-[10px] text-revix-muted">
                           {isRtl ? "اللون" : "Color"}
                         </label>
-                        <input
-                          type="text"
+                        <RevixSelect
+                          size="sm"
+                          isRtl={isRtl}
                           value={item.color ?? ""}
                           onChange={(e) => handleItemChange(idx, "color", e.target.value)}
-                          placeholder={isRtl ? "مثال: أبيض" : "e.g. White"}
-                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
+                          placeholder={isRtl ? "اختر اللون..." : "Select color..."}
+                          buttonClassName="mt-0.5 h-8 rounded-md text-xs"
+                          options={[
+                            { value: "White", label: isRtl ? "أبيض (White)" : "White" },
+                            { value: "Black", label: isRtl ? "أسود (Black)" : "Black" },
+                            { value: "Silver", label: isRtl ? "فضي (Silver)" : "Silver" },
+                            { value: "Gray", label: isRtl ? "رمادي (Gray)" : "Gray" },
+                            { value: "Blue", label: isRtl ? "أزرق (Blue)" : "Blue" },
+                            { value: "Red", label: isRtl ? "أحمر (Red)" : "Red" },
+                            { value: "Green", label: isRtl ? "أخضر (Green)" : "Green" },
+                            { value: "Gold", label: isRtl ? "ذهبي (Gold)" : "Gold" },
+                            { value: "Brown", label: isRtl ? "بني (Brown)" : "Brown" },
+                            { value: "Beige", label: isRtl ? "بيج (Beige)" : "Beige" },
+                          ]}
                         />
                       </div>
 
