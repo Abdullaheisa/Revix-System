@@ -88,28 +88,26 @@ export function LanguageSwitcher({
             role="menuitem"
             lang="en"
             onClick={() => switchLocale("en")}
-            className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-[12.5px] transition-colors ${
+            className={`flex w-full cursor-pointer items-center px-3 py-2 text-[12.5px] transition-colors ${
               !isArabic
                 ? "bg-revix-tint/60 font-semibold text-revix-primary"
                 : "text-revix-dark hover:bg-revix-surface"
             }`}
           >
             <span>English</span>
-            <span className="font-mono text-[11px] text-revix-secondary">EN</span>
           </button>
           <button
             type="button"
             role="menuitem"
             lang="ar"
             onClick={() => switchLocale("ar")}
-            className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-[12.5px] transition-colors ${
+            className={`flex w-full cursor-pointer items-center px-3 py-2 text-[12.5px] transition-colors ${
               isArabic
                 ? "bg-revix-tint/60 font-semibold text-revix-primary"
                 : "text-revix-dark hover:bg-revix-surface"
             }`}
           >
             <span>العربية</span>
-            <span className="font-mono text-[11px] text-revix-secondary">AR</span>
           </button>
         </div>
       ) : null}
