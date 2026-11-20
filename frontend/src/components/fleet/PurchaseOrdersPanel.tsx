@@ -479,6 +479,22 @@ export function PurchaseOrdersPanel({
                 </span>
               </span>
             )}
+            {(po as any).paymentMethod !== "cash" &&
+              (po as any).paymentMethod !== "down_payment_installments" &&
+              (po as any).paymentMethod !== "deferred_credit" && (
+                <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 font-bold text-sky-700 border border-sky-200">
+                  <RevixIcon name="clock" className="h-3 w-3" />
+                  <span>
+                    {Number(po.remainingAmount) === 0
+                      ? isRtl
+                        ? "مدفوع بالكامل"
+                        : "Paid in Full"
+                      : isRtl
+                        ? `آجل تجاري (المتبقي: ${Number(po.remainingAmount).toLocaleString()} ${po.currency})`
+                        : `Credit Terms (Remaining: ${Number(po.remainingAmount).toLocaleString()} ${po.currency})`}
+                  </span>
+                </span>
+              )}
           </div>
           {po.notes && <span className="text-revix-secondary">{po.notes}</span>}
         </div>
