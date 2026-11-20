@@ -394,10 +394,14 @@ export class AuthService {
       entityId: user.id,
     });
 
-    const company = await this.store.findCompanyByOwnerUserId(user.id);
+    const membership = await this.store.findMembershipByUserId(user.id);
+    const company = membership
+      ? null
+      : await this.store.findCompanyByOwnerUserId(user.id);
+    const companyId = membership?.companyId ?? company?.id ?? null;
 
     return {
-      user: toPublicUser(user, company ? company.id : null),
+      user: toPublicUser(user, companyId),
       rawSessionToken,
       sessionExpiresAt,
     };
@@ -425,8 +429,12 @@ export class AuthService {
       return null;
     }
 
-    const company = await this.store.findCompanyByOwnerUserId(user.id);
-    return toPublicUser(user, company ? company.id : null);
+    const membership = await this.store.findMembershipByUserId(user.id);
+    const company = membership
+      ? null
+      : await this.store.findCompanyByOwnerUserId(user.id);
+    const companyId = membership?.companyId ?? company?.id ?? null;
+    return toPublicUser(user, companyId);
   }
 
   async logout(rawSessionToken: string | undefined): Promise<void> {

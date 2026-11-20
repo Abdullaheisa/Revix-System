@@ -4,12 +4,21 @@ import type {
   BranchRecord,
   CompanyOperatingMode,
   CompanyRecord,
+  MembershipStatus,
+  PermissionMatrix,
+  PermissionResource,
+  RoleScopeType,
 } from "../../db/store.ts";
+import { hasPermission } from "../team/defaultRoles.ts";
+import type { TeamService } from "../team/teamService.ts";
 import { findCountryMetadata } from "./countryCatalog.ts";
 
 export type WorkspaceErrorCode =
   | "UNAUTHORIZED"
   | "EMAIL_NOT_VERIFIED"
+  | "FORBIDDEN"
+  | "MEMBERSHIP_SUSPENDED"
+  | "BRANCH_SCOPE_DENIED"
   | "COMPANY_ALREADY_EXISTS"
   | "COMPANY_NOT_FOUND"
   | "BRANCH_NOT_FOUND"
@@ -28,34 +37,182 @@ export class WorkspaceServiceError extends Error {
   }
 }
 
+export interface WorkspaceMembershipSummary {
+  id: string;
+  roleId: string;
+  roleCode: string;
+  roleNameEn: string;
+  roleNameAr: string;
+  scopeType: RoleScopeType;
+  permissions: PermissionMatrix;
+  branchIds: string[];
+  status: MembershipStatus;
+}
+
 export interface WorkspaceContextPayload {
   company: CompanyRecord | null;
   branches: BranchRecord[];
+  membership: WorkspaceMembershipSummary | null;
   onboardingState: "needs_company" | "needs_first_branch" | "ready";
 }
 
 export class WorkspaceService {
   private readonly store: AuthDataStore;
+  private readonly teamService?: TeamService;
 
-  constructor(store: AuthDataStore) {
+  constructor(store: AuthDataStore, teamService?: TeamService) {
     this.store = store;
+    this.teamService = teamService;
+  }
+
+  private async resolveCompanyAndAuthorize(
+    userId: string,
+    required?: {
+      resource: PermissionResource;
+      action: string;
+      branchId?: string;
+    },
+  ): Promise<{
+    company: CompanyRecord;
+    membershipSummary: WorkspaceMembershipSummary | null;
+  }> {
+    let membership = await this.store.findMembershipByUserId(userId);
+    let company: CompanyRecord | null = null;
+
+    if (membership) {
+      company = await this.store.findCompanyById(membership.companyId);
+    } else {
+      company = await this.store.findCompanyByOwnerUserId(userId);
+      if (company && this.teamService) {
+        await this.teamService.ensureCompanyRolesAndOwnerMembership(company);
+        membership = await this.store.findMembershipByUserId(userId);
+      }
+    }
+
+    if (!company) {
+      throw new WorkspaceServiceError(
+        "COMPANY_NOT_FOUND",
+        "Company setup is required first.",
+        404,
+      );
+    }
+
+    let membershipSummary: WorkspaceMembershipSummary | null = null;
+    if (membership) {
+      if (membership.status === "suspended") {
+        throw new WorkspaceServiceError(
+          "MEMBERSHIP_SUSPENDED",
+          "Your access to this company workspace has been suspended.",
+          403,
+        );
+      }
+
+      const role = await this.store.findCompanyRoleById(membership.roleId);
+      if (role) {
+        membershipSummary = {
+          id: membership.id,
+          roleId: role.id,
+          roleCode: role.code,
+          roleNameEn: role.nameEn,
+          roleNameAr: role.nameAr,
+          scopeType: role.scopeType,
+          permissions: role.permissions,
+          branchIds:
+            role.scopeType === "company_wide" ? [] : [...membership.branchIds],
+          status: membership.status,
+        };
+
+        if (required) {
+          if (
+            !hasPermission(role.permissions, required.resource, required.action)
+          ) {
+            throw new WorkspaceServiceError(
+              "FORBIDDEN",
+              "You do not have permission to perform this action.",
+              403,
+            );
+          }
+
+          if (
+            required.branchId &&
+            role.scopeType === "assigned_branches" &&
+            !membership.branchIds.includes(required.branchId)
+          ) {
+            throw new WorkspaceServiceError(
+              "BRANCH_SCOPE_DENIED",
+              "You do not have access to this branch.",
+              403,
+            );
+          }
+        }
+      }
+    }
+
+    return { company, membershipSummary };
   }
 
   async getWorkspaceContext(userId: string): Promise<WorkspaceContextPayload> {
-    const company = await this.store.findCompanyByOwnerUserId(userId);
+    let membership = await this.store.findMembershipByUserId(userId);
+    let company: CompanyRecord | null = null;
+
+    if (membership) {
+      company = await this.store.findCompanyById(membership.companyId);
+    } else {
+      company = await this.store.findCompanyByOwnerUserId(userId);
+    }
+
     if (!company) {
       return {
         company: null,
         branches: [],
+        membership: null,
         onboardingState: "needs_company",
       };
     }
 
-    const branches = await this.store.listBranchesByCompanyId(company.id);
+    if (this.teamService) {
+      await this.teamService.ensureCompanyRolesAndOwnerMembership(company);
+      membership = await this.store.findMembershipByUserId(userId);
+    }
+
+    if (membership && membership.status === "suspended") {
+      throw new WorkspaceServiceError(
+        "MEMBERSHIP_SUSPENDED",
+        "Your access to this company workspace has been suspended.",
+        403,
+      );
+    }
+
+    let membershipSummary: WorkspaceMembershipSummary | null = null;
+    if (membership) {
+      const role = await this.store.findCompanyRoleById(membership.roleId);
+      if (role) {
+        membershipSummary = {
+          id: membership.id,
+          roleId: role.id,
+          roleCode: role.code,
+          roleNameEn: role.nameEn,
+          roleNameAr: role.nameAr,
+          scopeType: role.scopeType,
+          permissions: role.permissions,
+          branchIds:
+            role.scopeType === "company_wide" ? [] : [...membership.branchIds],
+          status: membership.status,
+        };
+      }
+    }
+
+    const allBranches = await this.store.listBranchesByCompanyId(company.id);
+    const visibleBranches =
+      membershipSummary?.scopeType === "assigned_branches"
+        ? allBranches.filter((b) => membershipSummary.branchIds.includes(b.id))
+        : allBranches;
+
     return {
       company,
-      branches,
-      onboardingState: branches.length === 0 ? "needs_first_branch" : "ready",
+      branches: visibleBranches,
+      membership: membershipSummary,
+      onboardingState: allBranches.length === 0 ? "needs_first_branch" : "ready",
     };
   }
 
@@ -77,8 +234,11 @@ export class WorkspaceService {
     taxRegNumber: string;
     operatingMode: CompanyOperatingMode;
   }): Promise<CompanyRecord> {
+    const existingMembership = await this.store.findMembershipByUserId(
+      input.userId,
+    );
     const existing = await this.store.findCompanyByOwnerUserId(input.userId);
-    if (existing) {
+    if (existing || existingMembership) {
       throw new WorkspaceServiceError(
         "COMPANY_ALREADY_EXISTS",
         "This account already belongs to a registered company.",
@@ -128,6 +288,10 @@ export class WorkspaceService {
       throw err;
     }
 
+    if (this.teamService) {
+      await this.teamService.ensureCompanyRolesAndOwnerMembership(company);
+    }
+
     await this.store.recordAuditLog({
       companyId: company.id,
       actorUserId: input.userId,
@@ -162,14 +326,10 @@ export class WorkspaceService {
     taxRegNumber: string;
     operatingMode: CompanyOperatingMode;
   }): Promise<CompanyRecord> {
-    const company = await this.store.findCompanyByOwnerUserId(input.userId);
-    if (!company) {
-      throw new WorkspaceServiceError(
-        "COMPANY_NOT_FOUND",
-        "Company setup is required first.",
-        404,
-      );
-    }
+    const { company } = await this.resolveCompanyAndAuthorize(input.userId, {
+      resource: "company",
+      action: "update",
+    });
 
     const country = findCountryMetadata(input.countryCode);
     if (!country) {
@@ -230,14 +390,10 @@ export class WorkspaceService {
     workingDays: string;
     workingHours: string;
   }): Promise<BranchRecord> {
-    const company = await this.store.findCompanyByOwnerUserId(input.userId);
-    if (!company) {
-      throw new WorkspaceServiceError(
-        "COMPANY_NOT_FOUND",
-        "Please complete company setup before adding a branch.",
-        404,
-      );
-    }
+    const { company } = await this.resolveCompanyAndAuthorize(input.userId, {
+      resource: "branches",
+      action: "create",
+    });
 
     const country = findCountryMetadata(input.countryCode);
     if (!country) {
@@ -313,14 +469,11 @@ export class WorkspaceService {
     workingHours: string;
     isActive: boolean;
   }): Promise<BranchRecord> {
-    const company = await this.store.findCompanyByOwnerUserId(input.userId);
-    if (!company) {
-      throw new WorkspaceServiceError(
-        "COMPANY_NOT_FOUND",
-        "Company not found.",
-        404,
-      );
-    }
+    const { company } = await this.resolveCompanyAndAuthorize(input.userId, {
+      resource: "branches",
+      action: "update",
+      branchId: input.branchId,
+    });
 
     const country = findCountryMetadata(input.countryCode);
     if (!country) {

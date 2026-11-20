@@ -7,7 +7,7 @@ import {
 } from "next-intl/server";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { arabic, jakarta } from "@/lib/fonts";
+import { arabic, inter, jakarta } from "@/lib/fonts";
 import {
   SUPPORTED_LOCALES,
   getLocaleDirection,
@@ -58,7 +58,7 @@ export default async function LocaleRootLayout({
     <html
       lang={locale}
       dir={dir}
-      className={`${jakarta.variable} ${arabic.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${inter.variable} ${arabic.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-revix-white text-revix-dark antialiased">
         <StoreProvider>

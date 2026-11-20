@@ -8,9 +8,8 @@ export const DEFAULT_LOCALE: AppLocale = "en";
 export const routing = defineRouting({
   locales: SUPPORTED_LOCALES,
   defaultLocale: DEFAULT_LOCALE,
-  localePrefix: "always",
-  // Keep `/` deterministic on English regardless of browser Accept-Language or locale cookies.
-  localeDetection: false,
+  localePrefix: "never",
+  localeDetection: true,
 });
 
 export function isAppLocale(value: string | undefined): value is AppLocale {

@@ -9,15 +9,18 @@ import { FormInput } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import {
   AutoBranchCurrencyField,
+  CompanyLogoUploader,
   CountrySelectField,
   OperatingModeSelector,
   StudioBadge,
+  WorkingSchedulePicker,
 } from "@/components/shared/workspace";
-import { findCountryMetadata } from "@/lib/workspace/countryCatalog";
+import { deriveBranchCode, findCountryMetadata } from "@/lib/workspace/countryCatalog";
 import {
   useCreateBranchMutation,
   useCreateCompanyMutation,
   useGetWorkspaceContextQuery,
+  useUpdateCompanyMutation,
 } from "@/store/api/workspaceApi";
 import { extractApiErrorCode } from "@/store/api/baseApi";
 
@@ -30,8 +33,14 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
   const { data, isLoading, error } = useGetWorkspaceContextQuery();
   const [createCompany, { isLoading: isCreatingCompany }] =
     useCreateCompanyMutation();
+  const [updateCompany, { isLoading: isUpdatingCompany }] =
+    useUpdateCompanyMutation();
   const [createBranch, { isLoading: isCreatingBranch }] =
     useCreateBranchMutation();
+
+  const [activeStepOverride, setActiveStepOverride] = useState<number | null>(
+    null,
+  );
 
   const onboardingState = data?.data.onboardingState;
   const company = data?.data.company ?? null;
@@ -71,9 +80,33 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
     "independent" | "network_main"
   >("independent");
 
+  // Pre-fill company state when company already exists (so user can freely edit)
+  useEffect(() => {
+    if (company) {
+      setCompanyName(company.name);
+      setLegalName(company.legalName);
+      setBrandColor(company.brandColor || "#14532D");
+      setLogoUrl(company.logoUrl || "");
+      setCompanyPhone(company.phone);
+      setCompanyEmail(company.email);
+      setCompanyCountry(company.countryCode);
+      setCompanyCity(company.city);
+      setCompanyAddress(company.address);
+      setPostalCode(company.postalCode || "");
+      setBaseCurrency(company.baseCurrency);
+      setCompanyTimezone(company.timezone);
+      setBusinessRegNumber(company.businessRegNumber || "");
+      setTaxRegNumber(company.taxRegNumber || "");
+      setOperatingMode(
+        company.operatingMode === "network_main" ? "network_main" : "independent",
+      );
+    }
+  }, [company]);
+
   // Step 2: First Location Form State
   const [branchName, setBranchName] = useState("");
-  const [branchCode, setBranchCode] = useState("HQ-01");
+  const [branchCode, setBranchCode] = useState("");
+  const [isCodeTouched, setIsCodeTouched] = useState(false);
   const [branchCountry, setBranchCountry] = useState("SA");
   const [branchCity, setBranchCity] = useState("");
   const [branchAddress, setBranchAddress] = useState("");
@@ -86,6 +119,20 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
   const [workingHours, setWorkingHours] = useState("08:00 - 22:00");
 
   const [formError, setFormError] = useState<string | undefined>();
+
+  // Initialize or align first branch code when company loads
+  useEffect(() => {
+    if (company && !isCodeTouched) {
+      if (!branchCountry || branchCountry === "SA") {
+        setBranchCountry(company.countryCode);
+      }
+      if (!branchCity) {
+        setBranchCity(company.city);
+      }
+      const initialCode = deriveBranchCode(company.city, company.countryCode, 1);
+      setBranchCode(initialCode);
+    }
+  }, [company, isCodeTouched]);
 
   function handleCompanyCountryChange(nextCode: string) {
     setCompanyCountry(nextCode);
@@ -102,6 +149,16 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
     if (meta) {
       setBranchTimezone(meta.defaultTimezone);
     }
+    if (!isCodeTouched) {
+      setBranchCode(deriveBranchCode(branchCity, nextCode, 1));
+    }
+  }
+
+  function handleBranchCityChange(val: string) {
+    setBranchCity(val);
+    if (!isCodeTouched) {
+      setBranchCode(deriveBranchCode(val, branchCountry, 1));
+    }
   }
 
   function handleUseCompanyAddress() {
@@ -113,30 +170,40 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
     setBranchEmail(company.email);
     const meta = findCountryMetadata(company.countryCode);
     setBranchTimezone(meta?.defaultTimezone ?? company.timezone);
+    const code = deriveBranchCode(company.city, company.countryCode, 1);
+    setBranchCode(code);
+    setIsCodeTouched(false);
   }
 
   async function handleCompanySubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormError(undefined);
 
+    const payload = {
+      name: companyName.trim(),
+      legalName: legalName.trim() || companyName.trim(),
+      logoUrl: logoUrl.trim() || null,
+      brandColor,
+      phone: companyPhone.trim(),
+      email: companyEmail.trim(),
+      countryCode: companyCountry,
+      city: companyCity.trim(),
+      address: companyAddress.trim(),
+      postalCode: postalCode.trim(),
+      baseCurrency,
+      timezone: companyTimezone.trim(),
+      businessRegNumber: businessRegNumber.trim(),
+      taxRegNumber: taxRegNumber.trim(),
+      operatingMode,
+    };
+
     try {
-      await createCompany({
-        name: companyName.trim(),
-        legalName: legalName.trim() || companyName.trim(),
-        logoUrl: logoUrl.trim() || null,
-        brandColor,
-        phone: companyPhone.trim(),
-        email: companyEmail.trim(),
-        countryCode: companyCountry,
-        city: companyCity.trim(),
-        address: companyAddress.trim(),
-        postalCode: postalCode.trim(),
-        baseCurrency,
-        timezone: companyTimezone.trim(),
-        businessRegNumber: businessRegNumber.trim(),
-        taxRegNumber: taxRegNumber.trim(),
-        operatingMode,
-      }).unwrap();
+      if (company) {
+        await updateCompany(payload).unwrap();
+      } else {
+        await createCompany(payload).unwrap();
+      }
+      setActiveStepOverride(2);
     } catch (err) {
       const code = extractApiErrorCode(err);
       setFormError(
@@ -184,7 +251,8 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
     }
   }
 
-  const currentStep = onboardingState === "needs_first_branch" ? 2 : 1;
+  const defaultStep = onboardingState === "needs_first_branch" ? 2 : 1;
+  const currentStep = activeStepOverride ?? defaultStep;
 
   return (
     <div className="min-h-screen bg-revix-surface text-revix-dark">
@@ -209,34 +277,50 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
       <main className="mx-auto max-w-[920px] px-4 py-8 sm:px-6">
         {/* Progress Steps */}
         <div className="mb-7 grid grid-cols-2 gap-3">
-          <div
-            className={`rounded-[10px] border p-3.5 ${
+          <button
+            type="button"
+            onClick={() => setActiveStepOverride(1)}
+            className={`rounded-[10px] border p-3.5 text-start transition-all cursor-pointer ${
               currentStep === 1
-                ? "border-revix-primary bg-revix-white"
-                : "border-emerald-200 bg-revix-tint/60"
+                ? "border-revix-primary bg-revix-white ring-2 ring-revix-primary/20 shadow-xs"
+                : "border-emerald-200 bg-revix-tint/60 hover:bg-revix-tint"
             }`}
           >
-            <div className="flex items-center gap-2">
-              <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold ${
-                  currentStep === 1
-                    ? "bg-revix-primary text-revix-white"
-                    : "bg-emerald-600 text-white"
-                }`}
-              >
-                {currentStep > 1 ? "✓" : "1"}
-              </span>
-              <span className="text-[13.5px] font-semibold text-revix-dark">
-                {isRtl ? "بيانات الشركة والهوية" : "Company profile & structure"}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold ${
+                    currentStep === 1
+                      ? "bg-revix-primary text-revix-white"
+                      : "bg-emerald-600 text-white"
+                  }`}
+                >
+                  {company ? "✓" : "1"}
+                </span>
+                <span className="text-[13.5px] font-semibold text-revix-dark">
+                  {isRtl ? "بيانات الشركة والهوية" : "Company profile & structure"}
+                </span>
+              </div>
+              {company && currentStep === 2 ? (
+                <span className="text-[12px] font-medium text-revix-primary underline hover:text-revix-primary-hover">
+                  {isRtl ? "تعديل" : "Edit"}
+                </span>
+              ) : null}
             </div>
-          </div>
+          </button>
 
-          <div
-            className={`rounded-[10px] border p-3.5 ${
+          <button
+            type="button"
+            disabled={!company}
+            onClick={() => {
+              if (company) setActiveStepOverride(2);
+            }}
+            className={`rounded-[10px] border p-3.5 text-start transition-all ${
               currentStep === 2
-                ? "border-revix-primary bg-revix-white"
-                : "border-revix-border bg-revix-white/60 opacity-70"
+                ? "border-revix-primary bg-revix-white ring-2 ring-revix-primary/20 shadow-xs"
+                : company
+                  ? "border-revix-border bg-revix-white cursor-pointer hover:border-revix-primary/40"
+                  : "border-revix-border bg-revix-white/60 opacity-60 cursor-not-allowed"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -253,7 +337,7 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
                 {isRtl ? "إنشاء أول فرع / لوكيشن" : "Create your first location"}
               </span>
             </div>
-          </div>
+          </button>
         </div>
 
         {isLoading ? (
@@ -303,30 +387,37 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <CompanyLogoUploader
+                  isRtl={isRtl}
+                  value={logoUrl}
+                  brandColor={brandColor}
+                  companyName={companyName}
+                  onChange={setLogoUrl}
+                />
+
                 <div className="space-y-1.5">
                   <label className="block text-[13.5px] font-semibold text-revix-dark">
                     {isRtl ? "لون البراند" : "Brand color"}
                   </label>
-                  <div className="flex h-[46px] items-center gap-3 rounded-control border border-revix-border bg-revix-white px-3">
+                  <div className="flex h-[70px] items-center gap-3 rounded-control border border-revix-border bg-revix-white px-3.5">
                     <input
                       type="color"
                       value={brandColor}
                       onChange={(e) => setBrandColor(e.target.value)}
-                      className="h-7 w-9 cursor-pointer rounded border-0 bg-transparent"
+                      className="h-9 w-11 cursor-pointer rounded border-0 bg-transparent"
                     />
-                    <span dir="ltr" className="font-mono text-[13px]">
-                      {brandColor}
-                    </span>
+                    <div className="min-w-0">
+                      <span dir="ltr" className="block font-mono text-[13px] font-semibold text-revix-dark">
+                        {brandColor}
+                      </span>
+                      <span className="text-[11.5px] text-revix-secondary">
+                        {isRtl
+                          ? "يُستخدم في شريط مساحة العمل وبطاقة الدعوات"
+                          : "Used in your workspace header and team invites"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-
-                <FormInput
-                  label={isRtl ? "رابط شعار الشركة (اختياري)" : "Company logo URL (optional)"}
-                  dir="ltr"
-                  placeholder="https://..."
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -433,20 +524,34 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
                 }
               />
 
-              <div className="flex justify-end border-t border-revix-border pt-5">
+              <div className="flex flex-col-reverse gap-3 border-t border-revix-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                {company ? (
+                  <button
+                    type="button"
+                    onClick={() => setActiveStepOverride(2)}
+                    className="cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-[8px] border border-revix-border bg-revix-white px-4 py-2.5 text-[13.5px] font-medium text-revix-secondary hover:text-revix-dark hover:bg-revix-surface transition-colors"
+                  >
+                    {isRtl ? "المتابعة لإعداد الفرع الأول ←" : "Continue to first location →"}
+                  </button>
+                ) : <div />}
+
                 <Button
                   type="submit"
                   variant="primary"
-                  disabled={isCreatingCompany}
+                  disabled={isCreatingCompany || isUpdatingCompany}
                   className="rounded-[8px]"
                 >
-                  {isCreatingCompany
+                  {isCreatingCompany || isUpdatingCompany
                     ? isRtl
                       ? "جاري الحفظ..."
                       : "Saving..."
-                    : isRtl
-                      ? "حفظ والمتابعة لإضافة أول فرع"
-                      : "Save & create first location"}
+                    : company
+                      ? isRtl
+                        ? "حفظ التعديلات ومتابعة إعداد الفرع"
+                        : "Save changes & continue to location"
+                      : isRtl
+                        ? "حفظ ومتابعة لإعداد الفرع الأول"
+                        : "Save & create first location"}
                 </Button>
               </div>
             </form>
@@ -497,9 +602,12 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
                 <FormInput
                   label={isRtl ? "كود الفرع" : "Branch code"}
                   dir="ltr"
-                  placeholder="HQ-01"
+                  placeholder="CAI-01"
                   value={branchCode}
-                  onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    setIsCodeTouched(true);
+                    setBranchCode(e.target.value.toUpperCase());
+                  }}
                   required
                 />
               </div>
@@ -526,7 +634,7 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
                 <FormInput
                   label={isRtl ? "المدينة / المنطقة" : "City / Region"}
                   value={branchCity}
-                  onChange={(e) => setBranchCity(e.target.value)}
+                  onChange={(e) => handleBranchCityChange(e.target.value)}
                   required
                 />
                 <FormInput
@@ -548,6 +656,7 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormInput
                   label={isRtl ? "هاتف الفرع" : "Branch phone"}
+                  type="tel"
                   dir="ltr"
                   value={branchPhone}
                   onChange={(e) => setBranchPhone(e.target.value)}
@@ -563,23 +672,26 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormInput
-                  label={isRtl ? "أيام العمل" : "Working days"}
-                  value={workingDays}
-                  onChange={(e) => setWorkingDays(e.target.value)}
-                  required
-                />
-                <FormInput
-                  label={isRtl ? "ساعات العمل" : "Working hours"}
-                  dir="ltr"
-                  value={workingHours}
-                  onChange={(e) => setWorkingHours(e.target.value)}
-                  required
-                />
-              </div>
+              <WorkingSchedulePicker
+                isRtl={isRtl}
+                workingDays={workingDays}
+                workingHours={workingHours}
+                onChange={({ workingDays: nextDays, workingHours: nextHours }) => {
+                  setWorkingDays(nextDays);
+                  setWorkingHours(nextHours);
+                }}
+              />
 
-              <div className="flex justify-end border-t border-revix-border pt-5">
+              <div className="flex flex-col-reverse gap-3 border-t border-revix-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  type="button"
+                  onClick={() => setActiveStepOverride(1)}
+                  className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-[8px] border border-revix-border bg-revix-white px-4 py-2.5 text-[13.5px] font-semibold text-revix-dark hover:border-revix-primary hover:bg-revix-surface transition-colors"
+                >
+                  <span className={isRtl ? "rotate-180" : ""}>←</span>
+                  {isRtl ? "الرجوع لتعديل بيانات الشركة" : "Back to company details"}
+                </button>
+
                 <Button
                   type="submit"
                   variant="primary"

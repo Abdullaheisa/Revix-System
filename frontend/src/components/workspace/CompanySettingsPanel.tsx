@@ -5,6 +5,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormField";
 import {
+  CompanyLogoUploader,
   CountrySelectField,
   OperatingModeSelector,
 } from "@/components/shared/workspace";
@@ -137,30 +138,30 @@ export function CompanySettingsPanel({
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <CompanyLogoUploader
+            isRtl={isRtl}
+            value={logoUrl}
+            brandColor={brandColor}
+            companyName={name}
+            onChange={setLogoUrl}
+          />
+
           <div className="space-y-1.5">
             <label className="block text-[13.5px] font-semibold text-revix-dark">
               {isRtl ? "لون البراند" : "Brand color"}
             </label>
-            <div className="flex h-[46px] items-center gap-3 rounded-control border border-revix-border bg-revix-white px-3">
+            <div className="flex h-[70px] items-center gap-3 rounded-control border border-revix-border bg-revix-white px-3.5">
               <input
                 type="color"
                 value={brandColor}
                 onChange={(e) => setBrandColor(e.target.value)}
-                className="h-7 w-9 cursor-pointer rounded border-0 bg-transparent"
+                className="h-9 w-11 cursor-pointer rounded border-0 bg-transparent"
               />
-              <span dir="ltr" className="font-mono text-[13px] text-revix-dark">
+              <span dir="ltr" className="font-mono text-[13px] font-semibold text-revix-dark">
                 {brandColor}
               </span>
             </div>
           </div>
-
-          <FormInput
-            label={isRtl ? "رابط الشعار (اختياري)" : "Logo URL (optional)"}
-            dir="ltr"
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder="https://..."
-          />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

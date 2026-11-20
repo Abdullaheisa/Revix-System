@@ -37,6 +37,7 @@
   --color-revix-disabled: var(--revix-disabled);
   --color-revix-border: var(--revix-border);
   --color-revix-surface: var(--revix-surface);
+  --color-revix-card: var(--revix-white);
   --color-revix-white: var(--revix-white);
   --color-revix-error: var(--revix-error);
 
@@ -44,6 +45,7 @@
   --font-sans: var(--font-interface), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-interface), ui-sans-serif, system-ui, sans-serif;
   --font-arabic: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Proportional Font Scale */
   --text-2xs: 0.6875rem;
@@ -87,6 +89,33 @@ body {
   background: var(--revix-white);
   color: var(--revix-dark);
   font-family: var(--font-interface), system-ui, sans-serif;
+}
+
+/* Numeric typography: uniform height and width (tabular figures), clean modern curves */
+input,
+select,
+textarea,
+button,
+table,
+.tabular-nums {
+  font-variant-numeric: tabular-nums lining-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+input[type="tel"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+.font-numeric {
+  font-family: var(--font-inter), var(--font-interface), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0.02em;
+}
+
+/* Override font-mono to use clean, high-clarity sans numerals instead of Consolas typewriter slashed-zero */
+.font-mono {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 html[dir="rtl"] .tracking-tight,

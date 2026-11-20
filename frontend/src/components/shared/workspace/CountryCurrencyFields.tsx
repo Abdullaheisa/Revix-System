@@ -1,5 +1,6 @@
 "use client";
 
+import { FormSelect } from "@/components/ui/FormField";
 import {
   SUPPORTED_COUNTRIES,
   resolveCurrencyForCountry,
@@ -20,29 +21,25 @@ export function CountrySelectField({
   onChange,
   showCurrencyInOption = true,
 }: CountrySelectFieldProps) {
+  const options = SUPPORTED_COUNTRIES.map((c) => ({
+    value: c.code,
+    label: showCurrencyInOption
+      ? isRtl
+        ? `${c.nameAr} (${c.currencyCode})`
+        : `${c.nameEn} (${c.currencyCode})`
+      : isRtl
+        ? c.nameAr
+        : c.nameEn,
+  }));
+
   return (
-    <div className="space-y-1.5">
-      <label className="block text-[13.5px] font-semibold text-revix-dark">
-        {label}
-      </label>
-      <select
-        value={countryCode}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-[46px] w-full cursor-pointer rounded-control border border-revix-border bg-revix-white px-3 text-[14px] text-revix-dark focus:border-revix-primary focus:outline-none"
-      >
-        {SUPPORTED_COUNTRIES.map((c) => (
-          <option key={c.code} value={c.code}>
-            {showCurrencyInOption
-              ? isRtl
-                ? `${c.nameAr} (${c.currencyCode})`
-                : `${c.nameEn} (${c.currencyCode})`
-              : isRtl
-                ? c.nameAr
-                : c.nameEn}
-          </option>
-        ))}
-      </select>
-    </div>
+    <FormSelect
+      label={label}
+      value={countryCode}
+      onChange={(e) => onChange(e.target.value)}
+      options={options}
+      isRtl={isRtl}
+    />
   );
 }
 

@@ -5,13 +5,17 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { RevixSelect } from "@/components/ui/RevixSelect";
+import { RevixPagination } from "@/components/ui/RevixPagination";
+import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import {
   AutoBranchCurrencyField,
   CountrySelectField,
   StudioBadge,
   StudioModal,
+  WorkingSchedulePicker,
 } from "@/components/shared/workspace";
-import { findCountryMetadata } from "@/lib/workspace/countryCatalog";
+import { deriveBranchCode, findCountryMetadata } from "@/lib/workspace/countryCatalog";
 import {
   useCreateBranchMutation,
   useUpdateBranchMutation,
@@ -40,12 +44,15 @@ export function LocationsManager({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState("ALL");
+  const [page, setPage] = usePersistedPage("settings/locations");
+  const pageSize = 15;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<BranchDto | null>(null);
 
   // Modal Form State
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [isCodeTouched, setIsCodeTouched] = useState(false);
   const [countryCode, setCountryCode] = useState(company.countryCode || "SA");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
@@ -77,10 +84,14 @@ export function LocationsManager({
     });
   }, [branches, currencyFilter, searchQuery]);
 
+  const paginatedBranches = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredBranches.slice(start, start + pageSize);
+  }, [filteredBranches, page, pageSize]);
+
   function openCreateModal() {
     setEditingBranch(null);
     setName("");
-    setCode("");
     const defaultCountry = company.countryCode || "SA";
     setCountryCode(defaultCountry);
     setCity("");
@@ -93,6 +104,8 @@ export function LocationsManager({
     setWorkingHours("08:00 - 22:00");
     setIsActive(true);
     setFormError(undefined);
+    setCode(deriveBranchCode(company.city, defaultCountry, branches.length + 1));
+    setIsCodeTouched(false);
     setIsModalOpen(true);
   }
 
@@ -100,6 +113,7 @@ export function LocationsManager({
     setEditingBranch(branch);
     setName(branch.name);
     setCode(branch.code);
+    setIsCodeTouched(true);
     setCountryCode(branch.countryCode);
     setCity(branch.city);
     setAddress(branch.address);
@@ -121,6 +135,9 @@ export function LocationsManager({
     setEmail(company.email);
     const meta = findCountryMetadata(company.countryCode);
     setTimezone(meta?.defaultTimezone ?? company.timezone);
+    const nextSeq = editingBranch ? 1 : branches.length + 1;
+    setCode(deriveBranchCode(company.city, company.countryCode, nextSeq));
+    setIsCodeTouched(false);
   }
 
   function handleCountryChange(nextCountry: string) {
@@ -128,6 +145,16 @@ export function LocationsManager({
     const meta = findCountryMetadata(nextCountry);
     if (meta) {
       setTimezone(meta.defaultTimezone);
+    }
+    if (!isCodeTouched && !editingBranch) {
+      setCode(deriveBranchCode(city, nextCountry, branches.length + 1));
+    }
+  }
+
+  function handleCityChange(nextCity: string) {
+    setCity(nextCity);
+    if (!isCodeTouched && !editingBranch) {
+      setCode(deriveBranchCode(nextCity, countryCode, branches.length + 1));
     }
   }
 
@@ -223,7 +250,10 @@ export function LocationsManager({
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
               placeholder={
                 isRtl
                   ? "بحث باسم الفرع أو الكود أو المدينة..."
@@ -233,21 +263,29 @@ export function LocationsManager({
             />
           </div>
 
-          <select
-            aria-label={isRtl ? "تصفية حسب العملة" : "Filter by currency"}
-            value={currencyFilter}
-            onChange={(e) => setCurrencyFilter(e.target.value)}
-            className="h-[34px] cursor-pointer rounded-[6px] border border-revix-border bg-revix-white px-2.5 text-[12.5px] font-medium text-revix-dark focus:border-revix-primary focus:outline-none"
-          >
-            <option value="ALL">
-              {isRtl ? "كل العملات" : "All currencies"}
-            </option>
-            {distinctCurrencies.map((curr) => (
-              <option key={curr} value={curr}>
-                {curr}
-              </option>
-            ))}
-          </select>
+          <div className="w-[150px]">
+            <RevixSelect
+              size="sm"
+              searchable={distinctCurrencies.length > 5}
+              isRtl={isRtl}
+              aria-label={isRtl ? "تصفية حسب العملة" : "Filter by currency"}
+              value={currencyFilter}
+              onChange={(e) => {
+                setCurrencyFilter(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                {
+                  value: "ALL",
+                  label: isRtl ? "كل العملات" : "All currencies",
+                },
+                ...distinctCurrencies.map((curr) => ({
+                  value: curr,
+                  label: curr,
+                })),
+              ]}
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -318,7 +356,7 @@ export function LocationsManager({
                   </td>
                 </tr>
               ) : (
-                filteredBranches.map((branch) => {
+                paginatedBranches.map((branch) => {
                   const countryMeta = findCountryMetadata(branch.countryCode);
                   return (
                     <tr
@@ -391,19 +429,15 @@ export function LocationsManager({
           </table>
         </div>
 
-        {/* Table Footer */}
-        <div className="flex items-center justify-between border-t border-revix-border bg-revix-surface/50 px-4 py-2 text-[12px] text-revix-secondary">
-          <span>
-            {isRtl
-              ? `إجمالي الفروع: ${filteredBranches.length}`
-              : `Total: ${filteredBranches.length} location${filteredBranches.length === 1 ? "" : "s"}`}
-          </span>
-          <span>
-            {isRtl
-              ? `العملة المرجعية للشركة: ${company.baseCurrency}`
-              : `Company reference currency: ${company.baseCurrency}`}
-          </span>
-        </div>
+        {/* Unified Pagination */}
+        <RevixPagination
+          currentPage={page}
+          totalItems={filteredBranches.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          lang={isRtl ? "ar" : "en"}
+          itemLabel={isRtl ? "فرع" : "locations"}
+        />
       </div>
 
       {/* Add / Edit Branch Modal (Shared StudioModal) */}
@@ -462,8 +496,11 @@ export function LocationsManager({
               label={isRtl ? "كود الفرع" : "Branch code"}
               dir="ltr"
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="RUH-01"
+              onChange={(e) => {
+                setIsCodeTouched(true);
+                setCode(e.target.value.toUpperCase());
+              }}
+              placeholder="CAI-01"
               required
             />
           </div>
@@ -482,7 +519,7 @@ export function LocationsManager({
             <FormInput
               label={isRtl ? "المدينة / المنطقة" : "City / Region"}
               value={city}
-              onChange={(e) => setCity(e.target.value)}
+              onChange={(e) => handleCityChange(e.target.value)}
               required
             />
             <FormInput
@@ -504,6 +541,7 @@ export function LocationsManager({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormInput
               label={isRtl ? "هاتف الفرع" : "Branch phone"}
+              type="tel"
               dir="ltr"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -519,21 +557,15 @@ export function LocationsManager({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormInput
-              label={isRtl ? "أيام العمل" : "Working days"}
-              value={workingDays}
-              onChange={(e) => setWorkingDays(e.target.value)}
-              required
-            />
-            <FormInput
-              label={isRtl ? "ساعات العمل" : "Working hours"}
-              dir="ltr"
-              value={workingHours}
-              onChange={(e) => setWorkingHours(e.target.value)}
-              required
-            />
-          </div>
+          <WorkingSchedulePicker
+            isRtl={isRtl}
+            workingDays={workingDays}
+            workingHours={workingHours}
+            onChange={({ workingDays: nextDays, workingHours: nextHours }) => {
+              setWorkingDays(nextDays);
+              setWorkingHours(nextHours);
+            }}
+          />
 
           {editingBranch ? (
             <label className="flex cursor-pointer items-center gap-2.5 pt-1 text-[13.5px] font-medium text-revix-dark">

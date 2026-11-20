@@ -1,5 +1,18 @@
 export { StudioBadge, type StudioBadgeProps, type StudioBadgeVariant } from "./StudioBadge";
 export { StudioModal, type StudioModalProps } from "./StudioModal";
+export { StudioTooltip, type StudioTooltipProps } from "./StudioTooltip";
+export {
+  CompanyLogoUploader,
+  type CompanyLogoUploaderProps,
+} from "./CompanyLogoUploader";
+export {
+  CompanyBrandLogo,
+  type CompanyBrandLogoProps,
+} from "./CompanyBrandLogo";
+export {
+  WorkingSchedulePicker,
+  type WorkingSchedulePickerProps,
+} from "./WorkingSchedulePicker";
 export {
   CountrySelectField,
   AutoBranchCurrencyField,

@@ -5,13 +5,15 @@ import {
   type InputHTMLAttributes,
   type ReactNode,
   type Ref,
-  type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { RevixSelect, type SelectOption } from "@/components/ui/RevixSelect";
+
+export type { SelectOption };
 
 const baseControlClasses =
-  "w-full min-w-0 appearance-none rounded-control border text-[16px] sm:text-[15px] text-revix-dark placeholder:text-revix-secondary/75 transition-colors duration-[var(--duration-fast)] ease-in-out focus:bg-revix-white focus:outline-none disabled:cursor-not-allowed disabled:bg-revix-surface disabled:text-revix-disabled";
+  "w-full min-w-0 appearance-none rounded-control border text-[16px] sm:text-[15px] text-revix-dark placeholder:text-revix-secondary/75 transition-colors duration-[var(--duration-fast)] ease-in-out focus:bg-revix-white focus:outline-none disabled:cursor-not-allowed disabled:bg-revix-surface disabled:text-revix-disabled tabular-nums";
 
 function getControlStateClasses(hasError: boolean): string {
   return hasError
@@ -138,20 +140,24 @@ export function FormInput({
   );
 }
 
-export interface SelectOption {
-  value: string;
-  label: string;
-  disabled?: boolean;
-}
-
-export interface FormSelectProps
-  extends SelectHTMLAttributes<HTMLSelectElement> {
+export interface FormSelectProps {
   label: string;
   placeholder?: string;
-  options: SelectOption[];
+  options: readonly SelectOption[] | SelectOption[];
   helperText?: string;
   error?: string;
-  ref?: Ref<HTMLSelectElement>;
+  id?: string;
+  name?: string;
+  value?: string;
+  defaultValue?: string;
+  disabled?: boolean;
+  required?: boolean;
+  searchable?: boolean;
+  className?: string;
+  menuClassName?: string;
+  isRtl?: boolean;
+  onChange?: (event: { target: { value: string; name?: string } }) => void;
+  onBlur?: () => void;
 }
 
 export function FormSelect({
@@ -161,25 +167,20 @@ export function FormSelect({
   helperText,
   error,
   id,
+  name,
   className = "",
+  menuClassName = "",
   value,
   defaultValue,
-  ref,
-  ...props
+  disabled = false,
+  required = false,
+  searchable,
+  isRtl,
+  onChange,
+  onBlur,
 }: FormSelectProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
-  const hasError = Boolean(error);
-  const resolvedDefaultValue =
-    value === undefined && defaultValue === undefined && placeholder
-      ? ""
-      : defaultValue;
-  const placeholderToneClass =
-    value !== undefined
-      ? value === ""
-        ? "text-revix-secondary"
-        : "text-revix-dark"
-      : 'has-[option[value=""]:checked]:text-revix-secondary text-revix-dark';
 
   return (
     <FieldShell
@@ -189,47 +190,23 @@ export function FormSelect({
       error={error}
       className={className}
     >
-      <div className="relative">
-        <select
-          ref={ref}
-          id={fieldId}
-          value={value}
-          defaultValue={resolvedDefaultValue}
-          aria-invalid={hasError}
-          aria-describedby={getDescribedBy(fieldId, error, helperText)}
-          className={`revix-select h-[48px] cursor-pointer appearance-none ps-4 pe-10 py-0 leading-[1.5] ${baseControlClasses} ${placeholderToneClass} ${getControlStateClasses(
-            hasError,
-          )}`}
-          {...props}
-        >
-          {placeholder ? (
-            <option value="" disabled hidden>
-              {placeholder}
-            </option>
-          ) : null}
-          {options.map((opt) => (
-            <option
-              key={opt.value}
-              value={opt.value}
-              disabled={opt.disabled}
-              className="text-revix-dark"
-            >
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <span
-          className={`pointer-events-none absolute inset-y-0 end-3 flex items-center ${
-            props.disabled ? "text-revix-disabled" : "text-revix-dark"
-          }`}
-        >
-          <RevixIcon
-            name="chevron-down"
-            size={16}
-            className="text-current"
-          />
-        </span>
-      </div>
+      <RevixSelect
+        id={fieldId}
+        name={name}
+        value={value}
+        defaultValue={defaultValue}
+        options={options}
+        placeholder={placeholder}
+        disabled={disabled}
+        error={Boolean(error)}
+        helperText={helperText}
+        searchable={searchable}
+        isRtl={isRtl}
+        menuClassName={menuClassName}
+        onChange={onChange}
+        onBlur={onBlur}
+        required={required}
+      />
     </FieldShell>
   );
 }

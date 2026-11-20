@@ -10,11 +10,28 @@ import {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
+const SAFE_LOGO_DATA_URL_REGEX =
+  /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+
+function isValidLogoUrl(value: string): boolean {
+  if (value.length === 0) return true;
+  if (value.startsWith("https://") || value.startsWith("http://")) {
+    return value.length <= 1024;
+  }
+  return value.length <= 350_000 && SAFE_LOGO_DATA_URL_REGEX.test(value);
+}
 
 const companyPayloadSchema = z.object({
   name: z.string().trim().min(1).max(160),
   legalName: z.string().trim().min(1).max(200),
-  logoUrl: z.string().trim().max(1024).nullable().optional(),
+  logoUrl: z
+    .string()
+    .trim()
+    .refine(isValidLogoUrl, {
+      message: "Logo must be a valid PNG, JPEG, or WebP image or HTTPS URL.",
+    })
+    .nullable()
+    .optional(),
   brandColor: z
     .string()
     .trim()

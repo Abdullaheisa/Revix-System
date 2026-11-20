@@ -11,12 +11,24 @@ export type WorkspaceSectionId =
   | "team"
   | "settings";
 
+export interface PendingFleetReceiveContext {
+  purchaseOrderId: string;
+  itemId: string;
+  variantId: string;
+  branchId?: string;
+  poNumber?: string;
+  unitPrice?: number;
+}
+
 export interface WorkspaceUiState {
   activeSection: WorkspaceSectionId;
   activeSubPage: string;
   selectedBranchId: string | null;
   isCommandPaletteOpen: boolean;
   isIconRailPinned: boolean;
+  pendingFleetReceiveContext: PendingFleetReceiveContext | null;
+  pageByRoute: Record<string, number>;
+  pendingUrlPush: boolean;
 }
 
 const DEFAULT_SUBPAGE_BY_SECTION: Record<WorkspaceSectionId, string> = {
@@ -36,6 +48,9 @@ const initialState: WorkspaceUiState = {
   selectedBranchId: null,
   isCommandPaletteOpen: false,
   isIconRailPinned: false,
+  pendingFleetReceiveContext: null,
+  pageByRoute: {},
+  pendingUrlPush: false,
 };
 
 export const workspaceSlice = createSlice({
@@ -45,6 +60,7 @@ export const workspaceSlice = createSlice({
     setActiveSection(state, action: PayloadAction<WorkspaceSectionId>) {
       state.activeSection = action.payload;
       state.activeSubPage = DEFAULT_SUBPAGE_BY_SECTION[action.payload];
+      state.pendingUrlPush = true;
     },
     navigateToWorkspacePage(
       state,
@@ -53,6 +69,18 @@ export const workspaceSlice = createSlice({
       state.activeSection = action.payload.section;
       state.activeSubPage = action.payload.subPage;
       state.isCommandPaletteOpen = false;
+      state.pendingUrlPush = true;
+    },
+    syncRouteFromUrl(
+      state,
+      action: PayloadAction<{ section: WorkspaceSectionId; subPage: string }>,
+    ) {
+      state.activeSection = action.payload.section;
+      state.activeSubPage = action.payload.subPage;
+      state.pendingUrlPush = false;
+    },
+    clearPendingUrlPush(state) {
+      state.pendingUrlPush = false;
     },
     setSelectedBranchId(state, action: PayloadAction<string | null>) {
       state.selectedBranchId = action.payload;
@@ -62,6 +90,24 @@ export const workspaceSlice = createSlice({
     },
     toggleIconRailPinned(state) {
       state.isIconRailPinned = !state.isIconRailPinned;
+    },
+    setPendingFleetReceiveContext(
+      state,
+      action: PayloadAction<PendingFleetReceiveContext | null>,
+    ) {
+      state.pendingFleetReceiveContext = action.payload;
+    },
+    clearPendingFleetReceiveContext(state) {
+      state.pendingFleetReceiveContext = null;
+    },
+    setRoutePage(
+      state,
+      action: PayloadAction<{ routeKey: string; page: number }>,
+    ) {
+      state.pageByRoute[action.payload.routeKey] = Math.max(
+        1,
+        Math.floor(action.payload.page),
+      );
     },
   },
   extraReducers: (builder) => {
@@ -93,6 +139,11 @@ export const {
   setSelectedBranchId,
   setCommandPaletteOpen,
   toggleIconRailPinned,
+  setPendingFleetReceiveContext,
+  clearPendingFleetReceiveContext,
+  setRoutePage,
+  syncRouteFromUrl,
+  clearPendingUrlPush,
 } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

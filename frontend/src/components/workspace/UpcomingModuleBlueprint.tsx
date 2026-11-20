@@ -35,11 +35,6 @@ export function UpcomingModuleBlueprint({
             {subPage ? (isRtl ? subPage.descAr : subPage.descEn) : ""}
           </p>
         </div>
-        {subPage ? (
-          <StudioBadge variant="kbd" className="px-2.5 py-1 text-[12px]">
-            {subPage.shortcut}
-          </StudioBadge>
-        ) : null}
       </div>
 
       <div className="rounded-[8px] border border-revix-border bg-revix-surface/55 p-5">

@@ -1,6 +1,7 @@
 "use client";
 
 import { StudioBadge } from "@/components/shared/workspace/StudioBadge";
+import { StudioTooltip } from "@/components/shared/workspace/StudioTooltip";
 import type { WorkspaceSectionConfig } from "@/lib/workspace/navigationCatalog";
 import type { WorkspaceSectionId } from "@/store/slices/workspaceSlice";
 
@@ -39,29 +40,31 @@ export function StudioSubSidebar({
                 const isSubActive = item.id === activeSubPage;
                 return (
                   <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => onSelectSubPage(section.id, item.id)}
-                      className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-[6px] px-2.5 py-1.5 text-start text-[13px] transition-colors ${
-                        isSubActive
-                          ? "bg-[#EBEBEB] font-semibold text-revix-dark"
-                          : "font-medium text-revix-secondary hover:bg-revix-border/45 hover:text-revix-dark"
-                      }`}
+                    <StudioTooltip
+                      isRtl={isRtl}
+                      side="end"
+                      label={isRtl ? item.titleAr : item.titleEn}
+                      shortcut={item.shortcut}
                     >
-                      <span className="truncate">
-                        {isRtl ? item.titleAr : item.titleEn}
-                      </span>
-                      <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onSelectSubPage(section.id, item.id)}
+                        className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-[8px] px-2.5 py-1.5 text-start text-[13px] border-s-[3px] transition-all duration-150 ${
+                          isSubActive
+                            ? "border-[#14532D] bg-[#DCF2E4] font-bold text-[#14532D] shadow-xs"
+                            : "border-transparent font-medium text-revix-secondary hover:border-[#10B981] hover:bg-[#EBF7EE] hover:text-[#14532D]"
+                        }`}
+                      >
+                        <span className="truncate">
+                          {isRtl ? item.titleAr : item.titleEn}
+                        </span>
                         {item.badgeEn ? (
                           <StudioBadge variant="amber" className="text-[9.5px] px-1.5 py-0">
                             {isRtl ? item.badgeAr : item.badgeEn}
                           </StudioBadge>
                         ) : null}
-                        <StudioBadge variant="kbd" className="text-[9.5px] px-1 py-0 text-revix-disabled">
-                          {item.shortcut}
-                        </StudioBadge>
-                      </div>
-                    </button>
+                      </button>
+                    </StudioTooltip>
                   </li>
                 );
               })}

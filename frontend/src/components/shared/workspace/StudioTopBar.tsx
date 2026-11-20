@@ -2,7 +2,10 @@
 
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { RevixSelect } from "@/components/ui/RevixSelect";
 import { StudioBadge } from "@/components/shared/workspace/StudioBadge";
+import { StudioTooltip } from "@/components/shared/workspace/StudioTooltip";
+import { CompanyBrandLogo } from "@/components/shared/workspace/CompanyBrandLogo";
 import type { AuthUserDto } from "@/store/api/authApi";
 import type { BranchDto, CompanyDto } from "@/store/api/workspaceApi";
 
@@ -18,7 +21,7 @@ export interface StudioTopBarProps {
   onGoCompanySettings: () => void;
   onSelectBranch: (branchId: string) => void;
   onOpenCommandPalette: () => void;
-  onGoSecurity: () => void;
+  onGoSecurity?: () => void;
   onLogout: () => void;
 }
 
@@ -34,87 +37,95 @@ export function StudioTopBar({
   onGoCompanySettings,
   onSelectBranch,
   onOpenCommandPalette,
-  onGoSecurity,
   onLogout,
 }: StudioTopBarProps) {
-  const userInitial = (user.fullName || user.email || "R")
-    .trim()
-    .charAt(0)
-    .toUpperCase();
-
   return (
-    <header className="z-40 flex h-[48px] shrink-0 items-center justify-between gap-3 border-b border-revix-border bg-revix-white px-3">
-      {/* Start: Brand / Company / Branch Breadcrumb */}
-      <div className="flex min-w-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={onToggleMobileMenu}
-          aria-label={isRtl ? "فتح القائمة" : "Toggle menu"}
-          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-[6px] text-revix-secondary hover:bg-revix-surface md:hidden"
-        >
-          <RevixIcon name="menu" size={18} />
-        </button>
+    <header className="z-40 flex h-[48px] shrink-0 items-center justify-between border-b border-revix-border bg-revix-white px-3 sm:px-4">
+      {/* =================================================== */}
+      {/* MOBILE HEADER (< md)                                */}
+      {/* =================================================== */}
+      <div className="flex w-full items-center justify-between gap-2 md:hidden">
+        {/* Left: Menu trigger & Company Brand */}
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            aria-label={isRtl ? "فتح القائمة" : "Toggle menu"}
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[7px] border border-revix-border bg-revix-white text-revix-dark active:bg-revix-surface"
+          >
+            <RevixIcon name="menu" size={17} />
+          </button>
 
+          <button
+            type="button"
+            onClick={onGoHome}
+            aria-label={company.name}
+            className="flex min-w-0 cursor-pointer items-center text-start transition-opacity hover:opacity-90"
+          >
+            <CompanyBrandLogo
+              company={company}
+              heightClassName="h-[28px]"
+              maxWidthClassName="max-w-[140px] sm:max-w-[170px]"
+              isRtl={isRtl}
+            />
+          </button>
+        </div>
+
+        {/* Right: Quick Search Button */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onOpenCommandPalette}
+            aria-label={isRtl ? "بحث سريع" : "Quick search"}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-revix-border bg-revix-surface/75 text-revix-secondary hover:text-revix-dark hover:bg-revix-white"
+          >
+            <RevixIcon name="search" size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* =================================================== */}
+      {/* DESKTOP HEADER (>= md)                              */}
+      {/* =================================================== */}
+      <div className="hidden min-w-0 items-center gap-2.5 md:flex">
         <button
           type="button"
           onClick={onGoHome}
-          aria-label="Revix System"
-          className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-[6px] bg-revix-primary text-revix-white transition-opacity hover:opacity-90"
-          style={{ backgroundColor: company.brandColor || "#14532D" }}
+          aria-label={company.name || "Revix System"}
+          className="flex min-w-0 cursor-pointer items-center transition-opacity hover:opacity-90"
         >
-          <RevixIcon name="car-front" size={15} />
+          <CompanyBrandLogo
+            company={company}
+            heightClassName="h-[28px]"
+            maxWidthClassName="max-w-[180px] lg:max-w-[220px]"
+            isRtl={isRtl}
+          />
         </button>
 
         <span className="select-none text-[14px] text-revix-border">/</span>
 
-        <button
-          type="button"
-          onClick={onGoCompanySettings}
-          className="flex min-w-0 cursor-pointer items-center gap-1.5 rounded-[6px] px-2 py-1 text-[13px] font-semibold text-revix-dark transition-colors hover:bg-revix-surface"
-        >
-          <RevixIcon
-            name="building-2"
-            size={14}
-            className="shrink-0 text-revix-secondary"
-          />
-          <span className="max-w-[150px] truncate">{company.name}</span>
-          <StudioBadge
-            variant="neutral"
-            className="hidden uppercase tracking-wide sm:inline-flex"
-          >
-            {company.operatingMode === "network_main"
-              ? isRtl
-                ? "شبكة شركات"
-                : "NETWORK"
-              : isRtl
-                ? "مستقلة"
-                : "INDEPENDENT"}
-          </StudioBadge>
-        </button>
-
-        <span className="hidden select-none text-[14px] text-revix-border sm:inline">
-          /
-        </span>
-
         {activeBranch ? (
-          <div className="hidden items-center gap-1.5 sm:flex">
+          <div className="flex items-center gap-1.5">
             <RevixIcon
               name="map-pin"
               size={14}
               className="shrink-0 text-revix-primary"
             />
-            <select
-              aria-label={isRtl ? "اختيار الفرع النشط" : "Select active branch"}
-              value={activeBranch.id}
-              onChange={(e) => onSelectBranch(e.target.value)}
-              className="h-[30px] max-w-[210px] cursor-pointer rounded-[6px] border border-transparent bg-transparent pe-1 text-[13px] font-medium text-revix-dark transition-colors hover:border-revix-border hover:bg-revix-surface focus:border-revix-primary focus:outline-none"
-            >
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name} ({branch.code}) · {branch.currencyCode}
-                </option>
-              ))}
-            </select>
+            <div className="w-[180px]">
+              <RevixSelect
+                size="sm"
+                searchable={branches.length > 5}
+                isRtl={isRtl}
+                aria-label={isRtl ? "اختيار الفرع النشط" : "Select active branch"}
+                value={activeBranch.id}
+                onChange={(e) => onSelectBranch(e.target.value)}
+                options={branches.map((b) => ({
+                  value: b.id,
+                  label: `${b.name} (${b.code})`,
+                  description: `${b.city} · ${b.currencyCode}`,
+                }))}
+              />
+            </div>
             <StudioBadge variant="amber" dir="ltr" className="font-mono">
               {activeBranch.currencyCode}
             </StudioBadge>
@@ -122,30 +133,25 @@ export function StudioTopBar({
         ) : null}
       </div>
 
-      {/* End: Search (Ctrl+K), Language Switcher, Profile & Logout */}
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={onOpenCommandPalette}
-          className="flex h-[32px] cursor-pointer items-center gap-2 rounded-full border border-revix-border bg-revix-surface/75 px-3 text-[12.5px] text-revix-secondary transition-colors hover:border-revix-primary/40 hover:bg-revix-white hover:text-revix-dark"
+      {/* Desktop End Controls */}
+      <div className="hidden shrink-0 items-center gap-2 md:flex">
+        <StudioTooltip
+          isRtl={isRtl}
+          side="bottom"
+          label={isRtl ? "بحث سريع" : "Quick search"}
+          shortcut="Ctrl K"
         >
-          <RevixIcon name="search" size={13} />
-          <span className="hidden sm:inline">
-            {isRtl ? "بحث أو اختصار..." : "Search..."}
-          </span>
-          <StudioBadge variant="kbd">Ctrl K</StudioBadge>
-        </button>
+          <button
+            type="button"
+            onClick={onOpenCommandPalette}
+            className="flex h-[32px] cursor-pointer items-center gap-2 rounded-full border border-revix-border bg-revix-surface/75 px-3 text-[12.5px] text-revix-secondary transition-colors hover:border-revix-primary/40 hover:bg-revix-white hover:text-revix-dark"
+          >
+            <RevixIcon name="search" size={13} />
+            <span>{isRtl ? "بحث..." : "Search..."}</span>
+          </button>
+        </StudioTooltip>
 
         <LanguageSwitcher />
-
-        <button
-          type="button"
-          onClick={onGoSecurity}
-          title={user.email}
-          className="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-full border border-revix-primary/25 bg-revix-tint text-[12px] font-bold text-revix-primary transition-colors hover:bg-revix-primary hover:text-revix-white"
-        >
-          {userInitial}
-        </button>
 
         <button
           type="button"

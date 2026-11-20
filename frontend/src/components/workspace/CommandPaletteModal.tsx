@@ -2,10 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { StudioTooltip } from "@/components/shared/workspace";
 import {
-  WORKSPACE_NAVIGATION_SECTIONS,
+  getReadyWorkspaceNavigationSections,
+  READY_WORKSPACE_NAVIGATION_SECTIONS,
   type WorkspaceSubPageItem,
 } from "@/lib/workspace/navigationCatalog";
+import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   navigateToWorkspacePage,
@@ -17,7 +20,7 @@ interface FlatCommandEntry {
   sectionId: WorkspaceSectionId;
   sectionTitleEn: string;
   sectionTitleAr: string;
-  icon: (typeof WORKSPACE_NAVIGATION_SECTIONS)[number]["icon"];
+  icon: (typeof READY_WORKSPACE_NAVIGATION_SECTIONS)[number]["icon"];
   item: WorkspaceSubPageItem;
 }
 
@@ -32,9 +35,16 @@ export function CommandPaletteModal({ isRtl }: CommandPaletteModalProps) {
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  const { data } = useGetWorkspaceContextQuery();
+  const company = data?.data.company;
+
+  const availableSections = useMemo(() => {
+    return getReadyWorkspaceNavigationSections(company?.operatingMode);
+  }, [company?.operatingMode]);
+
   const allEntries = useMemo<FlatCommandEntry[]>(() => {
     const entries: FlatCommandEntry[] = [];
-    for (const section of WORKSPACE_NAVIGATION_SECTIONS) {
+    for (const section of availableSections) {
       for (const group of section.groups) {
         for (const item of group.items) {
           entries.push({
@@ -48,7 +58,7 @@ export function CommandPaletteModal({ isRtl }: CommandPaletteModalProps) {
       }
     }
     return entries;
-  }, []);
+  }, [availableSections]);
 
   const filteredEntries = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -106,7 +116,7 @@ export function CommandPaletteModal({ isRtl }: CommandPaletteModalProps) {
       onClick={closeModal}
     >
       <div
-        className="w-full max-w-[580px] overflow-hidden rounded-[12px] border border-revix-border bg-revix-white shadow-dialog"
+        className="w-full max-w-[580px] overflow-hidden rounded-[12px] border border-revix-border bg-white shadow-dialog"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input Row */}
@@ -174,52 +184,51 @@ export function CommandPaletteModal({ isRtl }: CommandPaletteModalProps) {
                 const isActive = idx === safeIndex;
                 return (
                   <li key={`${entry.sectionId}-${entry.item.id}`}>
-                    <button
-                      type="button"
-                      onMouseEnter={() => setHighlightedIndex(idx)}
-                      onClick={() => selectEntry(entry)}
-                      className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-2.5 text-start transition-colors ${
-                        isActive
-                          ? "bg-revix-tint text-revix-primary"
-                          : "text-revix-dark hover:bg-revix-surface"
-                      }`}
+                    <StudioTooltip
+                      isRtl={isRtl}
+                      side="end"
+                      label={isRtl ? "اختصار" : "Shortcut"}
+                      shortcut={entry.item.shortcut}
                     >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border ${
-                            isActive
-                              ? "border-revix-primary/25 bg-revix-white text-revix-primary"
-                              : "border-revix-border bg-revix-surface text-revix-secondary"
-                          }`}
-                        >
-                          <RevixIcon name={entry.icon} size={14} />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-[13.5px] font-semibold">
-                            {isRtl ? entry.item.titleAr : entry.item.titleEn}
-                          </p>
-                          <p className="truncate text-[11.5px] text-revix-secondary">
-                            {isRtl
-                              ? entry.sectionTitleAr
-                              : entry.sectionTitleEn}
-                          </p>
+                      <button
+                        type="button"
+                        onMouseEnter={() => setHighlightedIndex(idx)}
+                        onClick={() => selectEntry(entry)}
+                        className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-2.5 text-start transition-colors ${
+                          isActive
+                            ? "bg-revix-tint text-revix-primary"
+                            : "text-revix-dark hover:bg-revix-surface"
+                        }`}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border ${
+                              isActive
+                                ? "border-revix-primary/25 bg-revix-white text-revix-primary"
+                                : "border-revix-border bg-revix-surface text-revix-secondary"
+                            }`}
+                          >
+                            <RevixIcon name={entry.icon} size={14} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-[13.5px] font-semibold">
+                              {isRtl ? entry.item.titleAr : entry.item.titleEn}
+                            </p>
+                            <p className="truncate text-[11.5px] text-revix-secondary">
+                              {isRtl
+                                ? entry.sectionTitleAr
+                                : entry.sectionTitleEn}
+                            </p>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex shrink-0 items-center gap-2">
                         {entry.item.badgeEn ? (
-                          <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                          <span className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                             {isRtl ? entry.item.badgeAr : entry.item.badgeEn}
                           </span>
                         ) : null}
-                        <kbd
-                          dir="ltr"
-                          className="rounded border border-revix-border bg-revix-white px-1.5 py-0.5 font-mono text-[11px] font-semibold text-revix-secondary"
-                        >
-                          {entry.item.shortcut}
-                        </kbd>
-                      </div>
-                    </button>
+                      </button>
+                    </StudioTooltip>
                   </li>
                 );
               })}

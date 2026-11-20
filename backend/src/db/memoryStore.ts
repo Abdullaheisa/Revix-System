@@ -8,14 +8,53 @@ import type {
   AuditLogRecord,
   AuthDataStore,
   BranchRecord,
+  CompanyMembershipRecord,
+  CompanyNetworkInvitationRecord,
+  CompanyNetworkLinkRecord,
+  CompanyOperatingMode,
   CompanyRecord,
+  CompanyRoleRecord,
   CreateBranchInput,
   CreateCompanyInput,
+  CreateCompanyMembershipInput,
+  CreateCompanyRoleInput,
+  CreateEmployeeInvitationInput,
+  CreateFleetVehicleInput,
+  CreateNetworkInvitationInput,
+  CreateNetworkLinkInput,
+  CreatePurchaseOrderInput,
+  CreateRentalInclusionInput,
+  CreateVehiclePhotoInput,
+  CreateVehicleVariantInput,
+  CreateVendorInput,
+  EmployeeInvitationRecord,
+  FleetVehicleFilterOptions,
+  FleetVehicleRecord,
+  FleetVehicleStatus,
+  NetworkInvitationStatus,
+  NetworkLinkStatus,
+  NetworkPermittedBranchRecord,
+  PurchaseOrderItemRecord,
+  PurchaseOrderRecord,
+  PurchaseOrderStatus,
+  ReceiveVehicleFromPoInput,
+  RentalInclusionRecord,
   SessionRecord,
   UpdateBranchInput,
   UpdateCompanyInput,
+  UpdateCompanyMembershipInput,
+  UpdateCompanyRoleInput,
+  UpdateFleetVehicleInput,
+  UpdateRentalInclusionInput,
+  UpdateVehicleVariantInput,
+  UpdateVendorInput,
   UserRecord,
   UserStatus,
+  VehicleCategory,
+  VehiclePhotoRecord,
+  VehicleVariantRecord,
+  VendorCategory,
+  VendorRecord,
 } from "./store.ts";
 
 interface SerializedStoreSnapshot {
@@ -24,6 +63,16 @@ interface SerializedStoreSnapshot {
   actionTokens: ActionTokenRecord[];
   companies: CompanyRecord[];
   branches: BranchRecord[];
+  roles: CompanyRoleRecord[];
+  memberships: CompanyMembershipRecord[];
+  invitations: EmployeeInvitationRecord[];
+  variants?: VehicleVariantRecord[];
+  vendors?: VendorRecord[];
+  purchaseOrders?: PurchaseOrderRecord[];
+  purchaseOrderItems?: PurchaseOrderItemRecord[];
+  vehicles?: FleetVehicleRecord[];
+  vehiclePhotos?: VehiclePhotoRecord[];
+  rentalInclusions?: RentalInclusionRecord[];
   auditLogs: AuditLogRecord[];
 }
 
@@ -35,6 +84,22 @@ export class InMemoryAuthDataStore implements AuthDataStore {
   private readonly companiesById = new Map<string, CompanyRecord>();
   private readonly companyIdByOwnerUserId = new Map<string, string>();
   private readonly branchesById = new Map<string, BranchRecord>();
+  private readonly rolesById = new Map<string, CompanyRoleRecord>();
+  private readonly membershipsById = new Map<string, CompanyMembershipRecord>();
+  private readonly membershipIdByUserId = new Map<string, string>();
+  private readonly invitationsById = new Map<string, EmployeeInvitationRecord>();
+  private readonly invitationIdByTokenHash = new Map<string, string>();
+  private readonly networkLinksById = new Map<string, CompanyNetworkLinkRecord>();
+  private readonly permittedBranchesByLinkId = new Map<string, NetworkPermittedBranchRecord[]>();
+  private readonly networkInvitationsById = new Map<string, CompanyNetworkInvitationRecord>();
+  private readonly networkInvitationIdByTokenHash = new Map<string, string>();
+  private readonly variantsById = new Map<string, VehicleVariantRecord>();
+  private readonly vendorsById = new Map<string, VendorRecord>();
+  private readonly purchaseOrdersById = new Map<string, PurchaseOrderRecord>();
+  private readonly purchaseOrderItemsByPoId = new Map<string, PurchaseOrderItemRecord[]>();
+  private readonly vehiclesById = new Map<string, FleetVehicleRecord>();
+  private readonly vehiclePhotosById = new Map<string, VehiclePhotoRecord>();
+  private readonly rentalInclusionsById = new Map<string, RentalInclusionRecord>();
   public readonly auditLogs: AuditLogRecord[] = [];
   private readonly persistFilePath: string | null;
 
@@ -42,6 +107,65 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     this.persistFilePath = options?.persistFilePath ?? null;
     if (this.persistFilePath) {
       this.loadFromDisk();
+    }
+    this.seedDefaultVehiclePhotos();
+    this.seedDefaultRentalInclusions();
+  }
+
+  private seedDefaultVehiclePhotos(): void {
+    if (this.vehiclePhotosById.size > 0) return;
+    const defaults = [
+      { name: "Hyundai i20 Automatic", url: "https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "Hyundai i10 Manual", url: "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "Hyundai i10 Automatic", url: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "Hyundai H1 Automatic", url: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "Toyota Yaris 2024", url: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "Toyota Corolla 2024", url: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "Toyota Camry 2024", url: "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "Nissan Sunny 2024", url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "BMW 5 Series", url: "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80", category: "General" },
+      { name: "Kia Sportage 2024", url: "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800&q=80", category: "General" },
+    ];
+    for (const d of defaults) {
+      const id = crypto.randomUUID();
+      this.vehiclePhotosById.set(id, {
+        id,
+        companyId: "global",
+        vehicleName: d.name,
+        photoUrl: d.url,
+        category: d.category,
+        createdAt: new Date(),
+      });
+    }
+  }
+
+  private seedDefaultRentalInclusions(): void {
+    if (this.rentalInclusionsById.size > 0) return;
+    const defaults = [
+      { name: "Free Cancellation (24)", description: "Free cancellation up to 24-48 hours before pickup" },
+      { name: "Free Amendment", description: "Modify dates and details without extra fees" },
+      { name: "Third Party Liability (TPL)", description: "Mandatory third party liability protection" },
+      { name: "Unlimited Mileage", description: "No daily distance limitations" },
+      { name: "24/7 Customer Support", description: "Round-the-clock road and concierge assistance" },
+      { name: "Collision Damage Waiver (CDW)", description: "Reduces financial liability in case of vehicle body damage" },
+      { name: "Theft Protection (TP)", description: "Protection against full or partial vehicle theft" },
+      { name: "Airport Surcharge Included", description: "Airport terminal concession fees and taxes included" },
+      { name: "Sanitized & Clean Vehicle", description: "Deeply cleaned and sanitized before every handover" },
+      { name: "Free Additional Driver", description: "One supplementary authorized driver included at zero charge" },
+      { name: "GPS Navigation System", description: "Satellite GPS unit or integrated smart car navigation" },
+      { name: "Roadside Assistance 24/7", description: "Emergency breakdown, towing, and tire replacement assistance" },
+    ];
+    for (const d of defaults) {
+      const id = crypto.randomUUID();
+      this.rentalInclusionsById.set(id, {
+        id,
+        companyId: "global",
+        name: d.name,
+        description: d.description,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
     }
   }
 
@@ -106,10 +230,100 @@ export class InMemoryAuthDataStore implements AuthDataStore {
         this.branchesById.set(record.id, record);
       }
 
+      for (const r of parsed.roles ?? []) {
+        const record: CompanyRoleRecord = {
+          ...r,
+          createdAt: new Date(r.createdAt),
+          updatedAt: new Date(r.updatedAt),
+        };
+        this.rolesById.set(record.id, record);
+      }
+
+      for (const m of parsed.memberships ?? []) {
+        const record: CompanyMembershipRecord = {
+          ...m,
+          branchIds: Array.isArray(m.branchIds) ? [...m.branchIds] : [],
+          createdAt: new Date(m.createdAt),
+          updatedAt: new Date(m.updatedAt),
+        };
+        this.membershipsById.set(record.id, record);
+        this.membershipIdByUserId.set(record.userId, record.id);
+      }
+
+      for (const inv of parsed.invitations ?? []) {
+        const record: EmployeeInvitationRecord = {
+          ...inv,
+          branchIds: Array.isArray(inv.branchIds) ? [...inv.branchIds] : [],
+          expiresAt: new Date(inv.expiresAt),
+          acceptedAt: inv.acceptedAt ? new Date(inv.acceptedAt) : null,
+          revokedAt: inv.revokedAt ? new Date(inv.revokedAt) : null,
+          createdAt: new Date(inv.createdAt),
+        };
+        this.invitationsById.set(record.id, record);
+        this.invitationIdByTokenHash.set(record.tokenHash, record.id);
+      }
+
       for (const a of parsed.auditLogs ?? []) {
         this.auditLogs.push({
           ...a,
           createdAt: new Date(a.createdAt),
+        });
+      }
+
+      for (const v of parsed.variants ?? []) {
+        this.variantsById.set(v.id, {
+          ...v,
+          createdAt: new Date(v.createdAt),
+          updatedAt: new Date(v.updatedAt),
+        });
+      }
+
+      for (const vd of parsed.vendors ?? []) {
+        this.vendorsById.set(vd.id, {
+          ...vd,
+          createdAt: new Date(vd.createdAt),
+          updatedAt: new Date(vd.updatedAt),
+        });
+      }
+
+      for (const po of parsed.purchaseOrders ?? []) {
+        this.purchaseOrdersById.set(po.id, {
+          ...po,
+          approvedAt: po.approvedAt ? new Date(po.approvedAt) : null,
+          createdAt: new Date(po.createdAt),
+          updatedAt: new Date(po.updatedAt),
+        });
+      }
+
+      for (const item of parsed.purchaseOrderItems ?? []) {
+        const list = this.purchaseOrderItemsByPoId.get(item.purchaseOrderId) ?? [];
+        list.push({
+          ...item,
+          createdAt: new Date(item.createdAt),
+        });
+        this.purchaseOrderItemsByPoId.set(item.purchaseOrderId, list);
+      }
+
+      for (const vh of parsed.vehicles ?? []) {
+        this.vehiclesById.set(vh.id, {
+          ...vh,
+          createdAt: new Date(vh.createdAt),
+          updatedAt: new Date(vh.updatedAt),
+        });
+      }
+
+      for (const vp of parsed.vehiclePhotos ?? []) {
+        this.vehiclePhotosById.set(vp.id, {
+          ...vp,
+          createdAt: new Date(vp.createdAt),
+        });
+      }
+
+      for (const ri of parsed.rentalInclusions ?? []) {
+        this.rentalInclusionsById.set(ri.id, {
+          ...ri,
+          createdAt: new Date(ri.createdAt),
+          updatedAt: new Date(ri.updatedAt),
         });
       }
     } catch {
@@ -131,6 +345,16 @@ export class InMemoryAuthDataStore implements AuthDataStore {
         actionTokens: Array.from(this.actionTokensByHash.values()),
         companies: Array.from(this.companiesById.values()),
         branches: Array.from(this.branchesById.values()),
+        roles: Array.from(this.rolesById.values()),
+        memberships: Array.from(this.membershipsById.values()),
+        invitations: Array.from(this.invitationsById.values()),
+        variants: Array.from(this.variantsById.values()),
+        vendors: Array.from(this.vendorsById.values()),
+        purchaseOrders: Array.from(this.purchaseOrdersById.values()),
+        purchaseOrderItems: Array.from(this.purchaseOrderItemsByPoId.values()).flat(),
+        vehicles: Array.from(this.vehiclesById.values()),
+        vehiclePhotos: Array.from(this.vehiclePhotosById.values()),
+        rentalInclusions: Array.from(this.rentalInclusionsById.values()),
         auditLogs: this.auditLogs,
       };
       fs.writeFileSync(
@@ -445,6 +669,28 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     return { ...updated };
   }
 
+  async updateCompanyOperatingMode(
+    companyId: string,
+    operatingMode: CompanyOperatingMode,
+    parentCompanyId?: string | null,
+  ): Promise<CompanyRecord | null> {
+    const existing = this.companiesById.get(companyId);
+    if (!existing) {
+      return null;
+    }
+
+    const updated: CompanyRecord = {
+      ...existing,
+      operatingMode,
+      parentCompanyId: parentCompanyId ?? null,
+      updatedAt: new Date(),
+    };
+
+    this.companiesById.set(companyId, updated);
+    this.saveToDisk();
+    return { ...updated };
+  }
+
   async listBranchesByCompanyId(companyId: string): Promise<BranchRecord[]> {
     const list: BranchRecord[] = [];
     for (const branch of this.branchesById.values()) {
@@ -547,6 +793,468 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     return { ...updated };
   }
 
+  // Phase 3: Team Roles, Memberships, Branch Scopes & Invitations
+  async listCompanyRoles(companyId: string): Promise<CompanyRoleRecord[]> {
+    const roles: CompanyRoleRecord[] = [];
+    for (const r of this.rolesById.values()) {
+      if (r.companyId === companyId) {
+        roles.push({ ...r, permissions: { ...r.permissions } });
+      }
+    }
+    return roles.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
+  async findCompanyRoleById(roleId: string): Promise<CompanyRoleRecord | null> {
+    const r = this.rolesById.get(roleId);
+    return r ? { ...r, permissions: { ...r.permissions } } : null;
+  }
+
+  async findCompanyRoleByCode(
+    companyId: string,
+    code: string,
+  ): Promise<CompanyRoleRecord | null> {
+    const normalized = code.trim().toLowerCase();
+    for (const r of this.rolesById.values()) {
+      if (r.companyId === companyId && r.code.toLowerCase() === normalized) {
+        return { ...r, permissions: { ...r.permissions } };
+      }
+    }
+    return null;
+  }
+
+  async createCompanyRole(
+    input: CreateCompanyRoleInput,
+  ): Promise<CompanyRoleRecord> {
+    const normalizedCode = input.code.trim().toLowerCase();
+    const existing = await this.findCompanyRoleByCode(
+      input.companyId,
+      normalizedCode,
+    );
+    if (existing) {
+      const err = new Error("Role code already exists in company") as Error & {
+        code?: string;
+      };
+      err.code = "23505";
+      throw err;
+    }
+
+    const now = new Date();
+    const record: CompanyRoleRecord = {
+      id: input.id,
+      companyId: input.companyId,
+      code: normalizedCode,
+      nameEn: input.nameEn.trim(),
+      nameAr: input.nameAr.trim(),
+      descriptionEn: input.descriptionEn.trim(),
+      descriptionAr: input.descriptionAr.trim(),
+      scopeType: input.scopeType,
+      permissions: { ...input.permissions },
+      isSystem: input.isSystem,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.rolesById.set(record.id, record);
+    this.saveToDisk();
+    return { ...record, permissions: { ...record.permissions } };
+  }
+
+  async updateCompanyRole(
+    roleId: string,
+    companyId: string,
+    input: UpdateCompanyRoleInput,
+  ): Promise<CompanyRoleRecord | null> {
+    const existing = this.rolesById.get(roleId);
+    if (!existing || existing.companyId !== companyId) {
+      return null;
+    }
+
+    const updated: CompanyRoleRecord = {
+      ...existing,
+      nameEn: input.nameEn?.trim() ?? existing.nameEn,
+      nameAr: input.nameAr?.trim() ?? existing.nameAr,
+      descriptionEn: input.descriptionEn?.trim() ?? existing.descriptionEn,
+      descriptionAr: input.descriptionAr?.trim() ?? existing.descriptionAr,
+      scopeType: input.scopeType,
+      permissions: { ...input.permissions },
+      updatedAt: new Date(),
+    };
+
+    this.rolesById.set(roleId, updated);
+    this.saveToDisk();
+    return { ...updated, permissions: { ...updated.permissions } };
+  }
+
+  async findMembershipByUserId(
+    userId: string,
+  ): Promise<CompanyMembershipRecord | null> {
+    const id = this.membershipIdByUserId.get(userId);
+    if (!id) return null;
+    const m = this.membershipsById.get(id);
+    return m ? { ...m, branchIds: [...m.branchIds] } : null;
+  }
+
+  async findMembershipById(
+    membershipId: string,
+  ): Promise<CompanyMembershipRecord | null> {
+    const m = this.membershipsById.get(membershipId);
+    return m ? { ...m, branchIds: [...m.branchIds] } : null;
+  }
+
+  async listCompanyMemberships(
+    companyId: string,
+  ): Promise<CompanyMembershipRecord[]> {
+    const list: CompanyMembershipRecord[] = [];
+    for (const m of this.membershipsById.values()) {
+      if (m.companyId === companyId) {
+        list.push({ ...m, branchIds: [...m.branchIds] });
+      }
+    }
+    return list.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
+  async createCompanyMembership(
+    input: CreateCompanyMembershipInput,
+  ): Promise<CompanyMembershipRecord> {
+    if (this.membershipIdByUserId.has(input.userId)) {
+      const err = new Error(
+        "User already belongs to a company",
+      ) as Error & { code?: string };
+      err.code = "23505";
+      throw err;
+    }
+
+    const now = new Date();
+    const record: CompanyMembershipRecord = {
+      id: input.id,
+      userId: input.userId,
+      companyId: input.companyId,
+      roleId: input.roleId,
+      phone: input.phone.trim(),
+      status: input.status ?? "active",
+      branchIds: Array.from(new Set(input.branchIds)),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.membershipsById.set(record.id, record);
+    this.membershipIdByUserId.set(record.userId, record.id);
+    this.saveToDisk();
+    return { ...record, branchIds: [...record.branchIds] };
+  }
+
+  async updateCompanyMembership(
+    membershipId: string,
+    companyId: string,
+    input: UpdateCompanyMembershipInput,
+  ): Promise<CompanyMembershipRecord | null> {
+    const existing = this.membershipsById.get(membershipId);
+    if (!existing || existing.companyId !== companyId) {
+      return null;
+    }
+
+    const updated: CompanyMembershipRecord = {
+      ...existing,
+      roleId: input.roleId,
+      phone: input.phone.trim(),
+      status: input.status,
+      branchIds: Array.from(new Set(input.branchIds)),
+      updatedAt: new Date(),
+    };
+
+    this.membershipsById.set(membershipId, updated);
+    this.saveToDisk();
+    return { ...updated, branchIds: [...updated.branchIds] };
+  }
+
+  async createEmployeeInvitation(
+    input: CreateEmployeeInvitationInput,
+  ): Promise<EmployeeInvitationRecord> {
+    const record: EmployeeInvitationRecord = {
+      id: input.id,
+      companyId: input.companyId,
+      email: input.email.trim().toLowerCase(),
+      fullName: input.fullName.trim(),
+      phone: input.phone.trim(),
+      roleId: input.roleId,
+      branchIds: Array.from(new Set(input.branchIds)),
+      tokenHash: input.tokenHash,
+      invitedByUserId: input.invitedByUserId,
+      expiresAt: input.expiresAt,
+      acceptedAt: null,
+      revokedAt: null,
+      createdAt: new Date(),
+    };
+
+    this.invitationsById.set(record.id, record);
+    this.invitationIdByTokenHash.set(record.tokenHash, record.id);
+    this.saveToDisk();
+    return { ...record, branchIds: [...record.branchIds] };
+  }
+
+  async findInvitationById(
+    invitationId: string,
+  ): Promise<EmployeeInvitationRecord | null> {
+    const inv = this.invitationsById.get(invitationId);
+    return inv ? { ...inv, branchIds: [...inv.branchIds] } : null;
+  }
+
+  async findInvitationByTokenHash(
+    tokenHash: string,
+  ): Promise<EmployeeInvitationRecord | null> {
+    const id = this.invitationIdByTokenHash.get(tokenHash);
+    if (!id) return null;
+    const inv = this.invitationsById.get(id);
+    return inv ? { ...inv, branchIds: [...inv.branchIds] } : null;
+  }
+
+  async listCompanyInvitations(
+    companyId: string,
+  ): Promise<EmployeeInvitationRecord[]> {
+    const list: EmployeeInvitationRecord[] = [];
+    for (const inv of this.invitationsById.values()) {
+      if (inv.companyId === companyId) {
+        list.push({ ...inv, branchIds: [...inv.branchIds] });
+      }
+    }
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async revokePendingInvitationsForEmail(
+    companyId: string,
+    email: string,
+    revokedAt: Date,
+  ): Promise<void> {
+    const normalized = email.trim().toLowerCase();
+    for (const inv of this.invitationsById.values()) {
+      if (
+        inv.companyId === companyId &&
+        inv.email === normalized &&
+        !inv.acceptedAt &&
+        !inv.revokedAt
+      ) {
+        inv.revokedAt = revokedAt;
+      }
+    }
+    this.saveToDisk();
+  }
+
+  async revokeInvitationById(
+    invitationId: string,
+    companyId: string,
+    revokedAt: Date,
+  ): Promise<EmployeeInvitationRecord | null> {
+    const inv = this.invitationsById.get(invitationId);
+    if (!inv || inv.companyId !== companyId) {
+      return null;
+    }
+    if (!inv.acceptedAt && !inv.revokedAt) {
+      inv.revokedAt = revokedAt;
+      this.saveToDisk();
+    }
+    return { ...inv, branchIds: [...inv.branchIds] };
+  }
+
+  async markInvitationAccepted(
+    invitationId: string,
+    acceptedAt: Date,
+  ): Promise<void> {
+    const inv = this.invitationsById.get(invitationId);
+    if (inv) {
+      inv.acceptedAt = acceptedAt;
+      this.saveToDisk();
+    }
+  }
+
+  // Phase 4: Company Network Implementation
+  async createNetworkLink(
+    input: CreateNetworkLinkInput,
+  ): Promise<CompanyNetworkLinkRecord> {
+    const existing = await this.findNetworkLink(
+      input.mainCompanyId,
+      input.localCompanyId,
+    );
+    if (existing) {
+      const err = new Error("Network link already exists") as Error & {
+        code?: string;
+      };
+      err.code = "23505";
+      throw err;
+    }
+
+    const now = new Date();
+    const record: CompanyNetworkLinkRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      mainCompanyId: input.mainCompanyId,
+      localCompanyId: input.localCompanyId,
+      status: input.status ?? "active",
+      permittedCountries: [...(input.permittedCountries ?? [])],
+      notes: input.notes,
+      createdByUserId: input.createdByUserId,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.networkLinksById.set(record.id, record);
+    this.saveToDisk();
+    return { ...record, permittedCountries: [...record.permittedCountries] };
+  }
+
+  async findNetworkLinkById(
+    linkId: string,
+  ): Promise<CompanyNetworkLinkRecord | null> {
+    const link = this.networkLinksById.get(linkId);
+    return link
+      ? { ...link, permittedCountries: [...link.permittedCountries] }
+      : null;
+  }
+
+  async findNetworkLink(
+    mainCompanyId: string,
+    localCompanyId: string,
+  ): Promise<CompanyNetworkLinkRecord | null> {
+    for (const link of this.networkLinksById.values()) {
+      if (
+        link.mainCompanyId === mainCompanyId &&
+        link.localCompanyId === localCompanyId
+      ) {
+        return { ...link, permittedCountries: [...link.permittedCountries] };
+      }
+    }
+    return null;
+  }
+
+  async listNetworkLinksForMain(
+    mainCompanyId: string,
+  ): Promise<CompanyNetworkLinkRecord[]> {
+    const list: CompanyNetworkLinkRecord[] = [];
+    for (const link of this.networkLinksById.values()) {
+      if (link.mainCompanyId === mainCompanyId) {
+        list.push({ ...link, permittedCountries: [...link.permittedCountries] });
+      }
+    }
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async listNetworkLinksForLocal(
+    localCompanyId: string,
+  ): Promise<CompanyNetworkLinkRecord[]> {
+    const list: CompanyNetworkLinkRecord[] = [];
+    for (const link of this.networkLinksById.values()) {
+      if (link.localCompanyId === localCompanyId) {
+        list.push({ ...link, permittedCountries: [...link.permittedCountries] });
+      }
+    }
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updateNetworkLinkStatus(
+    linkId: string,
+    status: NetworkLinkStatus,
+  ): Promise<CompanyNetworkLinkRecord | null> {
+    const link = this.networkLinksById.get(linkId);
+    if (!link) return null;
+    link.status = status;
+    link.updatedAt = new Date();
+    this.saveToDisk();
+    return { ...link, permittedCountries: [...link.permittedCountries] };
+  }
+
+  async deleteNetworkLink(linkId: string): Promise<void> {
+    this.networkLinksById.delete(linkId);
+    this.permittedBranchesByLinkId.delete(linkId);
+    this.saveToDisk();
+  }
+
+  async setNetworkPermittedBranches(
+    linkId: string,
+    localCompanyId: string,
+    branchIds: string[],
+  ): Promise<NetworkPermittedBranchRecord[]> {
+    const uniqueIds = Array.from(new Set(branchIds));
+    const records: NetworkPermittedBranchRecord[] = uniqueIds.map((bId) => ({
+      id: crypto.randomUUID(),
+      linkId,
+      localCompanyId,
+      branchId: bId,
+      createdAt: new Date(),
+    }));
+
+    this.permittedBranchesByLinkId.set(linkId, records);
+    this.saveToDisk();
+    return records.map((r) => ({ ...r }));
+  }
+
+  async listNetworkPermittedBranches(
+    linkId: string,
+  ): Promise<NetworkPermittedBranchRecord[]> {
+    const list = this.permittedBranchesByLinkId.get(linkId) ?? [];
+    return list.map((r) => ({ ...r }));
+  }
+
+  async createNetworkInvitation(
+    input: CreateNetworkInvitationInput,
+  ): Promise<CompanyNetworkInvitationRecord> {
+    const record: CompanyNetworkInvitationRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      mainCompanyId: input.mainCompanyId,
+      inviteeEmail: input.inviteeEmail.trim().toLowerCase(),
+      localCompanyName: input.localCompanyName.trim(),
+      tokenHash: input.tokenHash,
+      status: "pending",
+      invitedByUserId: input.invitedByUserId,
+      expiresAt: input.expiresAt,
+      acceptedAt: null,
+      createdAt: new Date(),
+    };
+
+    this.networkInvitationsById.set(record.id, record);
+    this.networkInvitationIdByTokenHash.set(record.tokenHash, record.id);
+    this.saveToDisk();
+    return { ...record };
+  }
+
+  async findNetworkInvitationById(
+    invitationId: string,
+  ): Promise<CompanyNetworkInvitationRecord | null> {
+    const inv = this.networkInvitationsById.get(invitationId);
+    return inv ? { ...inv } : null;
+  }
+
+  async findNetworkInvitationByTokenHash(
+    tokenHash: string,
+  ): Promise<CompanyNetworkInvitationRecord | null> {
+    const id = this.networkInvitationIdByTokenHash.get(tokenHash);
+    if (!id) return null;
+    const inv = this.networkInvitationsById.get(id);
+    return inv ? { ...inv } : null;
+  }
+
+  async listNetworkInvitationsForMain(
+    mainCompanyId: string,
+  ): Promise<CompanyNetworkInvitationRecord[]> {
+    const list: CompanyNetworkInvitationRecord[] = [];
+    for (const inv of this.networkInvitationsById.values()) {
+      if (inv.mainCompanyId === mainCompanyId) {
+        list.push({ ...inv });
+      }
+    }
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updateNetworkInvitationStatus(
+    invitationId: string,
+    status: NetworkInvitationStatus,
+    acceptedAt?: Date,
+  ): Promise<CompanyNetworkInvitationRecord | null> {
+    const inv = this.networkInvitationsById.get(invitationId);
+    if (!inv) return null;
+    inv.status = status;
+    if (acceptedAt) inv.acceptedAt = acceptedAt;
+    this.saveToDisk();
+    return { ...inv };
+  }
+
   async recordAuditLog(input: AuditLogInput): Promise<void> {
     this.auditLogs.push({
       id: crypto.randomUUID(),
@@ -560,5 +1268,714 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       createdAt: new Date(),
     });
     this.saveToDisk();
+  }
+
+  // --- Phase 5: Vehicle Variants ---
+  async createVehicleVariant(
+    input: CreateVehicleVariantInput,
+  ): Promise<VehicleVariantRecord> {
+    const record: VehicleVariantRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      companyId: input.companyId,
+      make: input.make.trim(),
+      model: input.model.trim(),
+      modelYear: input.modelYear,
+      trim: input.trim?.trim() || "Standard",
+      category: input.category ?? "sedan",
+      transmission: input.transmission ?? "automatic",
+      fuelType: input.fuelType ?? "petrol",
+      seatingCapacity: input.seatingCapacity ?? 5,
+      sippCode: input.sippCode?.trim() || "ICAR",
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.variantsById.set(record.id, record);
+    this.saveToDisk();
+    return { ...record };
+  }
+
+  async findVehicleVariantById(
+    variantId: string,
+  ): Promise<VehicleVariantRecord | null> {
+    const v = this.variantsById.get(variantId);
+    return v ? { ...v } : null;
+  }
+
+  async listVehicleVariants(
+    companyId: string,
+    filter?: { category?: VehicleCategory; search?: string },
+  ): Promise<VehicleVariantRecord[]> {
+    const list: VehicleVariantRecord[] = [];
+    const search = filter?.search?.toLowerCase().trim();
+    for (const v of this.variantsById.values()) {
+      if (v.companyId !== companyId) continue;
+      if (filter?.category && v.category !== filter.category) continue;
+      if (search) {
+        const match =
+          v.make.toLowerCase().includes(search) ||
+          v.model.toLowerCase().includes(search) ||
+          v.trim.toLowerCase().includes(search) ||
+          v.sippCode.toLowerCase().includes(search);
+        if (!match) continue;
+      }
+      list.push({ ...v });
+    }
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updateVehicleVariant(
+    variantId: string,
+    input: UpdateVehicleVariantInput,
+  ): Promise<VehicleVariantRecord | null> {
+    const v = this.variantsById.get(variantId);
+    if (!v) return null;
+    if (input.make !== undefined) v.make = input.make.trim();
+    if (input.model !== undefined) v.model = input.model.trim();
+    if (input.modelYear !== undefined) v.modelYear = input.modelYear;
+    if (input.trim !== undefined) v.trim = input.trim.trim();
+    if (input.category !== undefined) v.category = input.category;
+    if (input.transmission !== undefined) v.transmission = input.transmission;
+    if (input.fuelType !== undefined) v.fuelType = input.fuelType;
+    if (input.seatingCapacity !== undefined) v.seatingCapacity = input.seatingCapacity;
+    if (input.sippCode !== undefined) v.sippCode = input.sippCode.trim();
+    if (input.status !== undefined) v.status = input.status;
+    v.updatedAt = new Date();
+    this.saveToDisk();
+    return { ...v };
+  }
+
+  async deleteVehicleVariant(variantId: string): Promise<boolean> {
+    const v = this.variantsById.get(variantId);
+    if (!v) return false;
+    v.status = "archived";
+    v.updatedAt = new Date();
+    this.saveToDisk();
+    return true;
+  }
+
+  // --- Phase 5: Vendors Directory ---
+  async createVendor(input: CreateVendorInput): Promise<VendorRecord> {
+    const record: VendorRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      companyId: input.companyId,
+      name: input.name.trim(),
+      legalName: input.legalName?.trim() || null,
+      category: input.category ?? "dealership",
+      contactPerson: input.contactPerson.trim(),
+      phone: input.phone.trim(),
+      email: input.email ? input.email.trim().toLowerCase() : null,
+      countryCode: input.countryCode.trim().toUpperCase(),
+      city: input.city.trim(),
+      address: input.address?.trim() || null,
+      taxNumber: input.taxNumber?.trim() || null,
+      commercialRegister: input.commercialRegister?.trim() || null,
+      bankName: input.bankName?.trim() || null,
+      iban: input.iban?.trim() || null,
+      paymentTermsDays: input.paymentTermsDays ?? 30,
+      paymentTermsType: input.paymentTermsType ?? (input.paymentTermsDays === 0 ? "cash" : "net_terms"),
+      paymentTermsConfig: input.paymentTermsConfig ? input.paymentTermsConfig.trim() : null,
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.vendorsById.set(record.id, record);
+    this.saveToDisk();
+    return { ...record };
+  }
+
+  async findVendorById(vendorId: string): Promise<VendorRecord | null> {
+    const vd = this.vendorsById.get(vendorId);
+    return vd ? { ...vd } : null;
+  }
+
+  async listVendors(
+    companyId: string,
+    filter?: { category?: VendorCategory; search?: string },
+  ): Promise<VendorRecord[]> {
+    const list: VendorRecord[] = [];
+    const search = filter?.search?.toLowerCase().trim();
+    for (const vd of this.vendorsById.values()) {
+      if (vd.companyId !== companyId) continue;
+      if (filter?.category && vd.category !== filter.category) continue;
+      if (search) {
+        const match =
+          vd.name.toLowerCase().includes(search) ||
+          (vd.legalName && vd.legalName.toLowerCase().includes(search)) ||
+          vd.contactPerson.toLowerCase().includes(search) ||
+          vd.phone.toLowerCase().includes(search);
+        if (!match) continue;
+      }
+      list.push({ ...vd });
+    }
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updateVendor(
+    vendorId: string,
+    input: UpdateVendorInput,
+  ): Promise<VendorRecord | null> {
+    const vd = this.vendorsById.get(vendorId);
+    if (!vd) return null;
+    if (input.name !== undefined) vd.name = input.name.trim();
+    if (input.legalName !== undefined) vd.legalName = input.legalName ? input.legalName.trim() : null;
+    if (input.category !== undefined) vd.category = input.category;
+    if (input.contactPerson !== undefined) vd.contactPerson = input.contactPerson.trim();
+    if (input.phone !== undefined) vd.phone = input.phone.trim();
+    if (input.email !== undefined) vd.email = input.email ? input.email.trim().toLowerCase() : null;
+    if (input.countryCode !== undefined) vd.countryCode = input.countryCode.trim().toUpperCase();
+    if (input.city !== undefined) vd.city = input.city.trim();
+    if (input.address !== undefined) vd.address = input.address ? input.address.trim() : null;
+    if (input.taxNumber !== undefined) vd.taxNumber = input.taxNumber ? input.taxNumber.trim() : null;
+    if (input.commercialRegister !== undefined) vd.commercialRegister = input.commercialRegister ? input.commercialRegister.trim() : null;
+    if (input.bankName !== undefined) vd.bankName = input.bankName ? input.bankName.trim() : null;
+    if (input.iban !== undefined) vd.iban = input.iban ? input.iban.trim() : null;
+    if (input.paymentTermsDays !== undefined) vd.paymentTermsDays = input.paymentTermsDays;
+    if (input.paymentTermsType !== undefined) vd.paymentTermsType = input.paymentTermsType;
+    if (input.paymentTermsConfig !== undefined) vd.paymentTermsConfig = input.paymentTermsConfig ? input.paymentTermsConfig.trim() : null;
+    if (input.status !== undefined) vd.status = input.status;
+    vd.updatedAt = new Date();
+    this.saveToDisk();
+    return { ...vd };
+  }
+
+  // --- Phase 5: Purchase Orders (PO) ---
+  async createPurchaseOrder(
+    input: CreatePurchaseOrderInput,
+  ): Promise<PurchaseOrderRecord> {
+    const totalAmount =
+      input.totalAmount ??
+      input.items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+    const upfrontPaid = input.upfrontPaid ?? 0;
+    const remainingAmount = Math.max(0, totalAmount - upfrontPaid);
+
+    const poNumber =
+      input.poNumber?.trim() ||
+      `PO-${new Date().getFullYear()}-${String(this.purchaseOrdersById.size + 1).padStart(4, "0")}`;
+
+    const poRecord: PurchaseOrderRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      companyId: input.companyId,
+      branchId: input.branchId,
+      vendorId: input.vendorId,
+      poNumber,
+      status: "draft",
+      orderDate: input.orderDate ?? new Date().toISOString().slice(0, 10),
+      expectedDeliveryDate: input.expectedDeliveryDate ?? null,
+      currency: input.currency ?? "EGP",
+      totalAmount,
+      upfrontPaid,
+      remainingAmount,
+      installmentsCount: input.installmentsCount ?? 1,
+      notes: input.notes?.trim() || null,
+      createdByUserId: input.createdByUserId ?? null,
+      approvedByUserId: null,
+      approvedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const items: PurchaseOrderItemRecord[] = input.items.map((it) => ({
+      id: crypto.randomUUID(),
+      purchaseOrderId: poRecord.id,
+      variantId: it.variantId,
+      quantity: it.quantity,
+      unitPrice: it.unitPrice,
+      receivedCount: 0,
+      notes: it.notes?.trim() || null,
+      createdAt: new Date(),
+    }));
+
+    this.purchaseOrdersById.set(poRecord.id, poRecord);
+    this.purchaseOrderItemsByPoId.set(poRecord.id, items);
+    this.saveToDisk();
+
+    return {
+      ...poRecord,
+      items: items.map((i) => ({ ...i })),
+      vendorName: this.vendorsById.get(poRecord.vendorId)?.name,
+      branchName: this.branchesById.get(poRecord.branchId)?.name,
+    };
+  }
+
+  async findPurchaseOrderById(poId: string): Promise<PurchaseOrderRecord | null> {
+    const po = this.purchaseOrdersById.get(poId);
+    if (!po) return null;
+    const items = (this.purchaseOrderItemsByPoId.get(poId) ?? []).map((i) => ({
+      ...i,
+    }));
+    return {
+      ...po,
+      items,
+      vendorName: this.vendorsById.get(po.vendorId)?.name,
+      branchName: this.branchesById.get(po.branchId)?.name,
+    };
+  }
+
+  async listPurchaseOrders(
+    companyId: string,
+    filter?: {
+      branchId?: string;
+      vendorId?: string;
+      status?: PurchaseOrderStatus;
+    },
+  ): Promise<PurchaseOrderRecord[]> {
+    const list: PurchaseOrderRecord[] = [];
+    for (const po of this.purchaseOrdersById.values()) {
+      if (po.companyId !== companyId) continue;
+      if (filter?.branchId && po.branchId !== filter.branchId) continue;
+      if (filter?.vendorId && po.vendorId !== filter.vendorId) continue;
+      if (filter?.status && po.status !== filter.status) continue;
+      const items = (this.purchaseOrderItemsByPoId.get(po.id) ?? []).map((i) => ({
+        ...i,
+      }));
+      list.push({
+        ...po,
+        items,
+        vendorName: this.vendorsById.get(po.vendorId)?.name,
+        branchName: this.branchesById.get(po.branchId)?.name,
+      });
+    }
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updatePurchaseOrderStatus(
+    poId: string,
+    status: PurchaseOrderStatus,
+    approvedByUserId?: string,
+  ): Promise<PurchaseOrderRecord | null> {
+    const po = this.purchaseOrdersById.get(poId);
+    if (!po) return null;
+    po.status = status;
+    if (status === "approved") {
+      po.approvedByUserId = approvedByUserId ?? null;
+      po.approvedAt = new Date();
+    }
+    po.updatedAt = new Date();
+    this.saveToDisk();
+    return this.findPurchaseOrderById(poId);
+  }
+
+  async receiveVehicleFromPo(
+    input: ReceiveVehicleFromPoInput,
+  ): Promise<{ vehicle: FleetVehicleRecord; po: PurchaseOrderRecord }> {
+    const po = this.purchaseOrdersById.get(input.purchaseOrderId);
+    if (!po) throw new Error("Purchase order not found");
+    const items = this.purchaseOrderItemsByPoId.get(input.purchaseOrderId) ?? [];
+    const item = items.find((it) => it.id === input.itemId);
+    if (!item) throw new Error("Purchase order line item not found");
+    if (item.receivedCount >= item.quantity) {
+      throw new Error("All vehicles for this purchase line have already been received");
+    }
+
+    // Create the vehicle asset
+    const vehicle = await this.createFleetVehicle({
+      companyId: po.companyId,
+      branchId: input.branchId || po.branchId,
+      variantId: item.variantId,
+      purchaseOrderId: po.id,
+      vin: input.vin,
+      licensePlate: input.licensePlate,
+      keyNumber: input.keyNumber,
+      color: input.color,
+      mileageOdometer: input.mileageOdometer ?? 0,
+      registrationExpiry: input.registrationExpiry,
+      insuranceExpiry: input.insuranceExpiry,
+      notes: input.notes,
+      photoUrl: input.photoUrl,
+      locationType: input.locationType,
+      fuelPolicy: input.fuelPolicy,
+      instantConfirmation: input.instantConfirmation,
+      description: input.description,
+      deliveryPolicy: input.deliveryPolicy,
+      dailyRate1to2: input.dailyRate1to2,
+      dailyRate3to7: input.dailyRate3to7,
+      dailyRate8Plus: input.dailyRate8Plus,
+      damageExcess: input.damageExcess,
+      mileagePolicy: input.mileagePolicy,
+      dailyKmLimit: input.dailyKmLimit,
+      extraKmRate: input.extraKmRate,
+      inclusions: input.inclusions,
+      seats: input.seats,
+      doors: input.doors,
+      airConditioning: input.airConditioning,
+      fuelType: input.fuelType,
+      luggageCapacity: input.luggageCapacity,
+      transmission: input.transmission,
+      status: "available",
+    });
+
+    item.receivedCount += 1;
+
+    // Check if entire PO is completed
+    const totalQty = items.reduce((sum, it) => sum + it.quantity, 0);
+    const totalRcv = items.reduce((sum, it) => sum + it.receivedCount, 0);
+    if (totalRcv >= totalQty) {
+      po.status = "completed";
+    } else {
+      po.status = "partially_received";
+    }
+    po.updatedAt = new Date();
+    this.saveToDisk();
+
+    const fullPo = await this.findPurchaseOrderById(po.id);
+    return { vehicle, po: fullPo! };
+  }
+
+  // --- Phase 5: Fleet Vehicles Asset Register ---
+  async createFleetVehicle(
+    input: CreateFleetVehicleInput,
+  ): Promise<FleetVehicleRecord> {
+    const vin = input.vin.trim().toUpperCase();
+    const licensePlate = input.licensePlate.trim().toUpperCase();
+
+    // Check duplicate VIN in company
+    for (const existing of this.vehiclesById.values()) {
+      if (existing.companyId === input.companyId) {
+        if (existing.vin.toUpperCase() === vin) {
+          throw new Error("VIN/Chassis already registered in company");
+        }
+        if (existing.licensePlate.toUpperCase() === licensePlate) {
+          throw new Error("License plate already registered in company");
+        }
+      }
+    }
+
+    const record: FleetVehicleRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      companyId: input.companyId,
+      branchId: input.branchId,
+      variantId: input.variantId,
+      purchaseOrderId: input.purchaseOrderId ?? null,
+      vin,
+      licensePlate,
+      keyNumber: input.keyNumber?.trim() || null,
+      color: input.color.trim(),
+      mileageOdometer: input.mileageOdometer ?? 0,
+      status: input.status ?? "available",
+      registrationExpiry: input.registrationExpiry ?? null,
+      insuranceExpiry: input.insuranceExpiry ?? null,
+      notes: input.notes?.trim() || null,
+      photoUrl: input.photoUrl?.trim() || null,
+      locationType: input.locationType || "airport_terminal",
+      fuelPolicy: input.fuelPolicy || "full_to_full",
+      instantConfirmation: Boolean(input.instantConfirmation),
+      description: input.description?.trim() || null,
+      deliveryPolicy: input.deliveryPolicy?.trim() || null,
+      dailyRate1to2: Number(input.dailyRate1to2) || 0,
+      dailyRate3to7: Number(input.dailyRate3to7) || 0,
+      dailyRate8Plus: Number(input.dailyRate8Plus) || 0,
+      damageExcess: Number(input.damageExcess) || 0,
+      mileagePolicy: input.mileagePolicy || "unlimited",
+      dailyKmLimit: Number(input.dailyKmLimit) || 0,
+      extraKmRate: Number(input.extraKmRate) || 0,
+      inclusions: input.inclusions || [],
+      seats: Number(input.seats) || 5,
+      doors: Number(input.doors) || 4,
+      airConditioning: input.airConditioning ?? true,
+      fuelType: input.fuelType || "petrol",
+      luggageCapacity: input.luggageCapacity || "2 Bags",
+      transmission: input.transmission || "automatic",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.vehiclesById.set(record.id, record);
+    this.saveToDisk();
+
+    const variant = this.variantsById.get(record.variantId);
+    const branch = this.branchesById.get(record.branchId);
+    return {
+      ...record,
+      variant: variant ? { ...variant } : undefined,
+      branchName: branch?.name,
+    };
+  }
+
+  async findFleetVehicleById(
+    vehicleId: string,
+  ): Promise<FleetVehicleRecord | null> {
+    const v = this.vehiclesById.get(vehicleId);
+    if (!v) return null;
+    const variant = this.variantsById.get(v.variantId);
+    const branch = this.branchesById.get(v.branchId);
+    const company = this.companiesById.get(v.companyId);
+    return {
+      ...v,
+      variant: variant ? { ...variant } : undefined,
+      branchName: branch?.name,
+      companyName: company?.name,
+    };
+  }
+
+  async findFleetVehicleByVin(
+    companyId: string,
+    vin: string,
+  ): Promise<FleetVehicleRecord | null> {
+    const upper = vin.trim().toUpperCase();
+    for (const v of this.vehiclesById.values()) {
+      if (v.companyId === companyId && v.vin.toUpperCase() === upper) {
+        return this.findFleetVehicleById(v.id);
+      }
+    }
+    return null;
+  }
+
+  async findFleetVehicleByLicensePlate(
+    companyId: string,
+    licensePlate: string,
+  ): Promise<FleetVehicleRecord | null> {
+    const upper = licensePlate.trim().toUpperCase();
+    for (const v of this.vehiclesById.values()) {
+      if (v.companyId === companyId && v.licensePlate.toUpperCase() === upper) {
+        return this.findFleetVehicleById(v.id);
+      }
+    }
+    return null;
+  }
+
+  async listFleetVehicles(
+    companyId: string,
+    filter?: FleetVehicleFilterOptions,
+    permittedBranchIds?: string[],
+  ): Promise<FleetVehicleRecord[]> {
+    const list: FleetVehicleRecord[] = [];
+    const search = filter?.search?.toLowerCase().trim();
+
+    // 1. Direct company vehicles
+    for (const v of this.vehiclesById.values()) {
+      if (v.companyId !== companyId) continue;
+      if (permittedBranchIds && !permittedBranchIds.includes(v.branchId)) continue;
+      if (filter?.branchId && v.branchId !== filter.branchId) continue;
+      if (filter?.status && v.status !== filter.status) continue;
+      if (filter?.variantId && v.variantId !== filter.variantId) continue;
+
+      const variant = this.variantsById.get(v.variantId);
+      if (search) {
+        const match =
+          v.vin.toLowerCase().includes(search) ||
+          v.licensePlate.toLowerCase().includes(search) ||
+          v.color.toLowerCase().includes(search) ||
+          (variant &&
+            (variant.make.toLowerCase().includes(search) ||
+              variant.model.toLowerCase().includes(search)));
+        if (!match) continue;
+      }
+
+      const branch = this.branchesById.get(v.branchId);
+      list.push({
+        ...v,
+        variant: variant ? { ...variant } : undefined,
+        branchName: branch?.name,
+        isPartnerVehicle: false,
+      });
+    }
+
+    // 2. Network partner vehicles if requested and permitted
+    if (filter?.includeNetwork) {
+      const company = this.companiesById.get(companyId);
+      if (company && company.operatingMode === "network_main") {
+        for (const link of this.networkLinksById.values()) {
+          if (link.mainCompanyId === companyId && link.status === "active") {
+            const permittedBranches = this.permittedBranchesByLinkId.get(link.id) ?? [];
+            const permittedPartnerBranchIds = new Set(permittedBranches.map((pb) => pb.branchId));
+            const partnerCompany = this.companiesById.get(link.localCompanyId);
+
+            for (const v of this.vehiclesById.values()) {
+              if (v.companyId !== link.localCompanyId) continue;
+              if (!permittedPartnerBranchIds.has(v.branchId)) continue;
+              if (filter?.status && v.status !== filter.status) continue;
+
+              const variant = this.variantsById.get(v.variantId);
+              if (search) {
+                const match =
+                  v.vin.toLowerCase().includes(search) ||
+                  v.licensePlate.toLowerCase().includes(search) ||
+                  (variant &&
+                    (variant.make.toLowerCase().includes(search) ||
+                      variant.model.toLowerCase().includes(search)));
+                if (!match) continue;
+              }
+
+              const branch = this.branchesById.get(v.branchId);
+              list.push({
+                ...v,
+                variant: variant ? { ...variant } : undefined,
+                branchName: branch?.name,
+                companyName: partnerCompany?.name,
+                isPartnerVehicle: true,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updateFleetVehicle(
+    vehicleId: string,
+    input: UpdateFleetVehicleInput,
+  ): Promise<FleetVehicleRecord | null> {
+    const v = this.vehiclesById.get(vehicleId);
+    if (!v) return null;
+    if (input.branchId !== undefined) v.branchId = input.branchId;
+    if (input.keyNumber !== undefined) v.keyNumber = input.keyNumber ? input.keyNumber.trim() : null;
+    if (input.color !== undefined) v.color = input.color.trim();
+    if (input.mileageOdometer !== undefined) v.mileageOdometer = input.mileageOdometer;
+    if (input.status !== undefined) v.status = input.status;
+    if (input.registrationExpiry !== undefined) v.registrationExpiry = input.registrationExpiry;
+    if (input.insuranceExpiry !== undefined) v.insuranceExpiry = input.insuranceExpiry;
+    if (input.notes !== undefined) v.notes = input.notes ? input.notes.trim() : null;
+    if (input.photoUrl !== undefined) v.photoUrl = input.photoUrl ? input.photoUrl.trim() : null;
+    if (input.locationType !== undefined) v.locationType = input.locationType;
+    if (input.fuelPolicy !== undefined) v.fuelPolicy = input.fuelPolicy;
+    if (input.instantConfirmation !== undefined) v.instantConfirmation = input.instantConfirmation;
+    if (input.description !== undefined) v.description = input.description ? input.description.trim() : null;
+    if (input.deliveryPolicy !== undefined) v.deliveryPolicy = input.deliveryPolicy ? input.deliveryPolicy.trim() : null;
+    if (input.dailyRate1to2 !== undefined) v.dailyRate1to2 = Number(input.dailyRate1to2);
+    if (input.dailyRate3to7 !== undefined) v.dailyRate3to7 = Number(input.dailyRate3to7);
+    if (input.dailyRate8Plus !== undefined) v.dailyRate8Plus = Number(input.dailyRate8Plus);
+    if (input.damageExcess !== undefined) v.damageExcess = Number(input.damageExcess);
+    if (input.mileagePolicy !== undefined) v.mileagePolicy = input.mileagePolicy;
+    if (input.dailyKmLimit !== undefined) v.dailyKmLimit = Number(input.dailyKmLimit);
+    if (input.extraKmRate !== undefined) v.extraKmRate = Number(input.extraKmRate);
+    if (input.inclusions !== undefined) v.inclusions = input.inclusions;
+    if (input.seats !== undefined) v.seats = Number(input.seats);
+    if (input.doors !== undefined) v.doors = Number(input.doors);
+    if (input.airConditioning !== undefined) v.airConditioning = input.airConditioning;
+    if (input.fuelType !== undefined) v.fuelType = input.fuelType;
+    if (input.luggageCapacity !== undefined) v.luggageCapacity = input.luggageCapacity;
+    if (input.transmission !== undefined) v.transmission = input.transmission;
+    v.updatedAt = new Date();
+    this.saveToDisk();
+    return this.findFleetVehicleById(vehicleId);
+  }
+
+  async updateFleetVehicleStatus(
+    vehicleId: string,
+    status: FleetVehicleStatus,
+  ): Promise<FleetVehicleRecord | null> {
+    const v = this.vehiclesById.get(vehicleId);
+    if (!v) return null;
+    v.status = status;
+    v.updatedAt = new Date();
+    this.saveToDisk();
+    return this.findFleetVehicleById(vehicleId);
+  }
+
+  // --- Vehicle Photos Library ---
+  async createVehiclePhoto(
+    input: CreateVehiclePhotoInput,
+  ): Promise<VehiclePhotoRecord> {
+    const record: VehiclePhotoRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      companyId: input.companyId,
+      vehicleName: input.vehicleName.trim(),
+      photoUrl: input.photoUrl.trim(),
+      category: input.category?.trim() || "General",
+      createdAt: new Date(),
+    };
+    this.vehiclePhotosById.set(record.id, record);
+    this.saveToDisk();
+    return { ...record };
+  }
+
+  async listVehiclePhotos(
+    companyId: string,
+    search?: string,
+  ): Promise<VehiclePhotoRecord[]> {
+    const list: VehiclePhotoRecord[] = [];
+    const q = search?.toLowerCase().trim();
+    for (const p of this.vehiclePhotosById.values()) {
+      if (p.companyId !== companyId && p.companyId !== "global") continue;
+      if (
+        q &&
+        !p.vehicleName.toLowerCase().includes(q) &&
+        !p.category.toLowerCase().includes(q)
+      ) {
+        continue;
+      }
+      list.push({ ...p });
+    }
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async deleteVehiclePhoto(id: string): Promise<boolean> {
+    const exists = this.vehiclePhotosById.has(id);
+    if (exists) {
+      this.vehiclePhotosById.delete(id);
+      this.saveToDisk();
+    }
+    return exists;
+  }
+
+  // --- Rental Inclusions (What is Included) ---
+  async createRentalInclusion(
+    input: CreateRentalInclusionInput,
+  ): Promise<RentalInclusionRecord> {
+    const record: RentalInclusionRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      companyId: input.companyId,
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+      isActive: input.isActive ?? true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.rentalInclusionsById.set(record.id, record);
+    this.saveToDisk();
+    return { ...record };
+  }
+
+  async getRentalInclusionById(id: string): Promise<RentalInclusionRecord | null> {
+    const record = this.rentalInclusionsById.get(id);
+    return record ? { ...record } : null;
+  }
+
+  async listRentalInclusions(
+    companyId: string,
+    search?: string,
+    activeOnly?: boolean,
+  ): Promise<RentalInclusionRecord[]> {
+    const list: RentalInclusionRecord[] = [];
+    const q = search?.toLowerCase().trim();
+    for (const item of this.rentalInclusionsById.values()) {
+      if (item.companyId !== companyId && item.companyId !== "global") continue;
+      if (activeOnly && !item.isActive) continue;
+      if (q && !item.name.toLowerCase().includes(q) && !(item.description && item.description.toLowerCase().includes(q))) {
+        continue;
+      }
+      list.push({ ...item });
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async updateRentalInclusion(
+    id: string,
+    input: UpdateRentalInclusionInput,
+  ): Promise<RentalInclusionRecord | null> {
+    const existing = this.rentalInclusionsById.get(id);
+    if (!existing) return null;
+    const updated: RentalInclusionRecord = {
+      ...existing,
+      name: input.name !== undefined ? input.name.trim() : existing.name,
+      description: input.description !== undefined ? input.description?.trim() || null : existing.description,
+      isActive: input.isActive !== undefined ? input.isActive : existing.isActive,
+      updatedAt: new Date(),
+    };
+    this.rentalInclusionsById.set(id, updated);
+    this.saveToDisk();
+    return { ...updated };
+  }
+
+  async deleteRentalInclusion(id: string): Promise<boolean> {
+    const exists = this.rentalInclusionsById.has(id);
+    if (exists) {
+      this.rentalInclusionsById.delete(id);
+      this.saveToDisk();
+    }
+    return exists;
   }
 }

@@ -31,6 +31,8 @@ next-env.d.ts
 # Local Database & Dev Storage Snapshots
 .dev-data/
 */.dev-data/
+uploads/
+*/uploads/
 
 # Agent / AI Assistant internal directories (not part of codebase)
 .agents/

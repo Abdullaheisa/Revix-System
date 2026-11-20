@@ -7,7 +7,11 @@ import { InMemoryAuthDataStore } from "./db/memoryStore.ts";
 import { runMigrations } from "./db/migrate.ts";
 import { PostgresAuthDataStore } from "./db/postgresStore.ts";
 import type { AuthDataStore } from "./db/store.ts";
-import { InMemoryEmailDeliveryAdapter } from "./modules/auth/emailDelivery.ts";
+import {
+  type EmailDeliveryAdapter,
+  DevConsoleEmailDeliveryAdapter,
+  NodemailerEmailDeliveryAdapter,
+} from "./modules/auth/emailDelivery.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_DEV_STORE_FILE = path.resolve(
@@ -33,7 +37,19 @@ async function startServer(): Promise<void> {
     );
   }
 
-  const emailAdapter = new InMemoryEmailDeliveryAdapter();
+  const emailAdapter: EmailDeliveryAdapter = env.smtp
+    ? new NodemailerEmailDeliveryAdapter(env.smtp, env.frontendOrigin)
+    : new DevConsoleEmailDeliveryAdapter(env.frontendOrigin);
+
+  if (env.smtp) {
+    console.log(
+      `[Revix Backend] Real SMTP email delivery active (host: ${env.smtp.host}:${env.smtp.port}, from: ${env.smtp.from})`,
+    );
+  } else {
+    console.log(
+      `[Revix Backend] SMTP credentials not set; DevConsoleEmailDeliveryAdapter active (action links will be logged directly to the console).`,
+    );
+  }
   const { app } = createApp({ env, store, emailAdapter });
 
   app.listen(env.port, () => {

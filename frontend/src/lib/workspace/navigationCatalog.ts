@@ -11,6 +11,7 @@ export interface WorkspaceSubPageItem {
   keyCode: string; // Single letter after 'g' or direct shortcut in command palette
   badgeEn?: string;
   badgeAr?: string;
+  isReady?: boolean; // When true, page is active and visible in navigation
 }
 
 export interface WorkspaceSubPageGroup {
@@ -51,6 +52,7 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "نظرة شاملة على هوية الشركة، الفروع النشطة، واستقلال عملة كل فرع.",
               shortcut: "G O",
               keyCode: "o",
+              isReady: true,
             },
             {
               id: "activity",
@@ -146,8 +148,7 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "إجمالي المبلغ للمورد، المدفوع مقدمًا، المتبقي بالأقساط، والاستلام الجزئي للسيارات.",
               shortcut: "G P",
               keyCode: "p",
-              badgeEn: "Phase 5",
-              badgeAr: "المرحلة ٥",
+              isReady: true,
             },
             {
               id: "vendors",
@@ -159,21 +160,19 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "قائمة الموردين الخاصة بشركتك، مسؤولي التواصل، وطرق الدفع والشروط.",
               shortcut: "G D",
               keyCode: "d",
-              badgeEn: "Phase 5",
-              badgeAr: "المرحلة ٥",
+              isReady: true,
             },
             {
               id: "variants",
-              titleEn: "Vehicle Variants",
+              titleEn: "Vehicle Variants (Templates)",
               titleAr: "كتالوج فئات السيارات (الفريان)",
               descEn:
-                "Make, model, model year, trim/variant, color, and SIPP classification.",
+                "Model specifications, SIPP codes, and daily rental rate bands (model templates, not physical cars).",
               descAr:
-                "الماركة، الموديل، سنة الصنع، الفئة (الفريان)، اللون، وكود SIPP.",
+                "تعريف قوالب الموديلات، كود SIPP العالمي، وشرائح أسعار التأجير اليومي (قوالب الفئات وليس سيارات فردية).",
               shortcut: "G K",
               keyCode: "k",
-              badgeEn: "Phase 5",
-              badgeAr: "المرحلة ٥",
+              isReady: true,
             },
           ],
         },
@@ -183,16 +182,51 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
           items: [
             {
               id: "vehicles",
-              titleEn: "Fleet Vehicles",
-              titleAr: "سجل السيارات والأصول",
+              titleEn: "Fleet Vehicles Register",
+              titleAr: "سجل سيارات الأسطول",
               descEn:
-                "Individual vehicles with VIN/chassis, license plate, key number, branch, and rate bands.",
+                "Browse fleet assets, availability status, daily rates, and quick operations.",
               descAr:
-                "السيارات المستلمة برقم الشاسيه واللوحة ورقم المفتاح والفرع وشرائح الأسعار.",
+                "استعراض سيارات الأسطول وحالتها التشغيلية والأسعار اليومية والعمليات السريعة.",
               shortcut: "G V",
               keyCode: "v",
-              badgeEn: "Phase 5",
-              badgeAr: "المرحلة ٥",
+              isReady: true,
+            },
+            {
+              id: "add-vehicle",
+              titleEn: "Add Fleet Vehicle",
+              titleAr: "إضافة سيارة للأصول",
+              descEn:
+                "Dedicated page to register a vehicle into fleet assets (from purchase order or direct entry).",
+              descAr:
+                "صفحة مخصصة لتسجيل وإضافة سيارة للأصول (تحويل من أمر شراء أو إضافة مباشرة).",
+              shortcut: "G N",
+              keyCode: "n",
+              isReady: true,
+            },
+            {
+              id: "vehicle-photos",
+              titleEn: "Vehicle Photos Catalog",
+              titleAr: "مكتبة وصور السيارات",
+              descEn:
+                "Upload and manage verified vehicle photography for dynamic fleet matching.",
+              descAr:
+                "رفع وإدارة مكتبة صور السيارات للربط التلقائي والديناميكي مع الأسطول.",
+              shortcut: "G H",
+              keyCode: "h",
+              isReady: true,
+            },
+            {
+              id: "rental-inclusions",
+              titleEn: "Rental Inclusions (What is included)",
+              titleAr: "مزايا وتغطيات العقود (Inclusions)",
+              descEn:
+                "Manage contract inclusions, insurance, and rental benefits catalog.",
+              descAr:
+                "إدارة وتعريف مزايا وتغطيات عقود التأجير المشمولة (What is included).",
+              shortcut: "G I",
+              keyCode: "i",
+              isReady: true,
             },
           ],
         },
@@ -310,16 +344,15 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
           items: [
             {
               id: "local-companies",
-              titleEn: "Connected Local Companies",
-              titleAr: "الشركات المحلية المرتبطة",
+              titleEn: "Connected Partners",
+              titleAr: "الشركات الشريكة",
               descEn:
                 "View-only access to connected local companies' permitted branches, vehicles, and contact info.",
               descAr:
                 "عرض فقط (بدون تعديل) لسيارات وفروع وبيانات تواصل الشركات المحلية المرتبطة.",
               shortcut: "G N",
               keyCode: "n",
-              badgeEn: "Phase 4",
-              badgeAr: "المرحلة ٤",
+              isReady: true,
             },
           ],
         },
@@ -346,8 +379,7 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "دعوة الموظفين (شركة واحدة لكل إيميل، ودور واحد لكل موظف) وتحديد الفرع.",
               shortcut: "G T",
               keyCode: "t",
-              badgeEn: "Phase 3",
-              badgeAr: "المرحلة ٣",
+              isReady: true,
             },
             {
               id: "roles",
@@ -359,8 +391,7 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "جدول الصلاحيات المرن للأدوار (المالك، المدير التنفيذي، المدير المالي، المحاسب، الكاشير، المندوب).",
               shortcut: "G M",
               keyCode: "m",
-              badgeEn: "Phase 3",
-              badgeAr: "المرحلة ٣",
+              isReady: true,
             },
           ],
         },
@@ -387,6 +418,7 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "إدارة مواقع وفروع الشركة، أكواد الفروع، عملة كل فرع حسب دولته، ومواعيد العمل.",
               shortcut: "G L",
               keyCode: "l",
+              isReady: true,
             },
             {
               id: "company-profile",
@@ -398,6 +430,7 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "تحديث اسم الشركة، الاسم القانوني، لون البراند، العملة المرجعية، والسجل التجاري والضريبي.",
               shortcut: "G C",
               keyCode: "c",
+              isReady: true,
             },
           ],
         },
@@ -414,9 +447,105 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
               descAr: "إدارة بيانات حسابك الشخصي وتغيير كلمة المرور.",
               shortcut: "G S",
               keyCode: "s",
+              isReady: true,
             },
           ],
         },
       ],
     },
   ];
+
+/**
+ * Filtered list of navigation sections that only include currently ready, functional pages.
+ * Modules/subpages from future roadmap phases remain shelved until their phase is implemented.
+ */
+export const READY_WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
+  WORKSPACE_NAVIGATION_SECTIONS.map((sec) => {
+    const readyGroups = sec.groups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((item) => item.isReady === true),
+      }))
+      .filter((g) => g.items.length > 0);
+
+    return {
+      ...sec,
+      groups: readyGroups,
+    };
+  })
+    .filter((sec) => sec.groups.length > 0)
+    .map((sec, idx) => ({
+      ...sec,
+      altShortcut: `Alt+${idx + 1}`,
+    }));
+
+/**
+ * Dynamic navigation sections filtered by operating mode.
+ * When a company is "independent", the entire network/partner-company section is excluded.
+ */
+export function getReadyWorkspaceNavigationSections(
+  operatingMode?: "independent" | "network_main" | "local_partner",
+): WorkspaceSectionConfig[] {
+  const isIndependent = operatingMode === "independent";
+  return READY_WORKSPACE_NAVIGATION_SECTIONS.filter((sec) => {
+    if (isIndependent && sec.id === "network") {
+      return false;
+    }
+    return true;
+  }).map((sec, idx) => ({
+    ...sec,
+    altShortcut: `Alt+${idx + 1}`,
+  }));
+}
+
+export function parseWorkspaceSlug(slug?: string[]): {
+  section: WorkspaceSectionId;
+  subPage: string;
+} {
+  if (!slug || slug.length === 0) {
+    return { section: "overview", subPage: "summary" };
+  }
+
+  const [rawSection, rawSubPage] = slug;
+  const matchedSection = WORKSPACE_NAVIGATION_SECTIONS.find(
+    (sec) => sec.id === rawSection,
+  );
+  if (!matchedSection) {
+    return { section: "overview", subPage: "summary" };
+  }
+
+  const allSubPages = matchedSection.groups.flatMap((g) =>
+    g.items.map((item) => item.id),
+  );
+  const resolvedSubPage =
+    rawSubPage && allSubPages.includes(rawSubPage)
+      ? rawSubPage
+      : allSubPages[0] ?? "summary";
+
+  return {
+    section: matchedSection.id,
+    subPage: resolvedSubPage,
+  };
+}
+
+export function parseWorkspacePathname(pathname: string): {
+  section: WorkspaceSectionId;
+  subPage: string;
+} {
+  const clean = pathname.replace(/^\/(en|ar)(?=\/|$)/, "");
+  const parts = clean.split("/").filter(Boolean);
+  if (parts[0] !== "workspace") {
+    return { section: "overview", subPage: "summary" };
+  }
+  return parseWorkspaceSlug(parts.slice(1));
+}
+
+export function buildWorkspaceHref(
+  section: WorkspaceSectionId,
+  subPage: string,
+): string {
+  if (section === "overview" && subPage === "summary") {
+    return "/workspace";
+  }
+  return `/workspace/${section}/${subPage}`;
+}

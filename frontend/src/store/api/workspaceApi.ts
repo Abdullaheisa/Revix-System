@@ -48,12 +48,25 @@ export interface BranchDto {
   updatedAt: string;
 }
 
+export interface WorkspaceMembershipDto {
+  id: string;
+  roleId: string;
+  roleCode: string;
+  roleNameEn: string;
+  roleNameAr: string;
+  scopeType: "company_wide" | "assigned_branches";
+  permissions: Record<string, string[]>;
+  branchIds: string[];
+  status: "active" | "suspended";
+}
+
 export interface WorkspaceContextResponseDto {
   ok: true;
   data: {
     user: AuthUserDto;
     company: CompanyDto | null;
     branches: BranchDto[];
+    membership: WorkspaceMembershipDto | null;
     onboardingState: "needs_company" | "needs_first_branch" | "ready";
   };
 }

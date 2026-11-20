@@ -5,10 +5,11 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   // React Compiler and Cache Components are intentionally kept disabled.
+  devIndicators: false,
   async headers() {
     return [
       {
-        source: "/:locale/auth/action",
+        source: "/:locale/(auth/action|invite)",
         headers: [
           {
             key: "Referrer-Policy",

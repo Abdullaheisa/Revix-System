@@ -5,6 +5,15 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, "../..");
 
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+}
+
 export interface BackendEnvConfig {
   nodeEnv: "development" | "test" | "production";
   port: number;
@@ -12,6 +21,7 @@ export interface BackendEnvConfig {
   frontendOrigin: string;
   sessionCookieName: string;
   sessionTtlHours: number;
+  smtp?: SmtpConfig;
 }
 
 let envFileLoaded = false;
@@ -51,6 +61,29 @@ export function loadEnvConfig(): BackendEnvConfig {
   const sessionTtlHours =
     Number.isFinite(parsedTtl) && parsedTtl > 0 ? parsedTtl : 168;
 
+  const smtpHost = process.env.SMTP_HOST?.trim();
+  const smtpUser = process.env.SMTP_USER?.trim();
+  const smtpPass = process.env.SMTP_PASS?.trim();
+  let smtp: SmtpConfig | undefined = undefined;
+
+  if (smtpHost && smtpUser && smtpPass) {
+    const parsedSmtpPort = Number.parseInt(process.env.SMTP_PORT ?? "587", 10);
+    const smtpPort =
+      Number.isFinite(parsedSmtpPort) && parsedSmtpPort > 0 ? parsedSmtpPort : 587;
+    const secure = process.env.SMTP_SECURE === "true" || smtpPort === 465;
+    const from =
+      process.env.SMTP_FROM?.trim() || `Revix System <${smtpUser}>`;
+
+    smtp = {
+      host: smtpHost,
+      port: smtpPort,
+      secure,
+      user: smtpUser,
+      pass: smtpPass,
+      from,
+    };
+  }
+
   return {
     nodeEnv,
     port,
@@ -60,5 +93,6 @@ export function loadEnvConfig(): BackendEnvConfig {
     sessionCookieName:
       process.env.SESSION_COOKIE_NAME?.trim() || "revix_session",
     sessionTtlHours,
+    smtp,
   };
 }
