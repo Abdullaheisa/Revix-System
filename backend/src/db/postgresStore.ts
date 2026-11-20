@@ -2172,9 +2172,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
   ): Promise<PurchaseOrderRecord | null> {
     await this.pool.query(
       `UPDATE purchase_orders
-       SET status = $2,
-           approved_by_user_id = CASE WHEN $2 = 'approved' THEN $3 ELSE approved_by_user_id END,
-           approved_at = CASE WHEN $2 = 'approved' THEN NOW() ELSE approved_at END,
+       SET status = $2::varchar,
+           approved_by_user_id = CASE WHEN $2::text = 'approved' THEN $3::uuid ELSE approved_by_user_id END,
+           approved_at = CASE WHEN $2::text = 'approved' THEN NOW() ELSE approved_at END,
            updated_at = NOW()
        WHERE id = $1`,
       [poId, status, approvedByUserId ?? null],
