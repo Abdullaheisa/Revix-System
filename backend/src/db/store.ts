@@ -134,6 +134,9 @@ export interface CompanyNetworkInvitationRecord {
   mainCompanyId: string;
   inviteeEmail: string;
   localCompanyName: string;
+  contactName?: string;
+  contactPhone?: string;
+  logoUrl?: string | null;
   tokenHash: string;
   status: NetworkInvitationStatus;
   invitedByUserId?: string;
@@ -157,6 +160,9 @@ export interface CreateNetworkInvitationInput {
   mainCompanyId: string;
   inviteeEmail: string;
   localCompanyName: string;
+  contactName?: string;
+  contactPhone?: string;
+  logoUrl?: string | null;
   tokenHash: string;
   expiresAt: Date;
   invitedByUserId?: string;

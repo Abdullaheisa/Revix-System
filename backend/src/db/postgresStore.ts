@@ -261,6 +261,9 @@ interface DbNetworkInvitationRow {
   main_company_id: string;
   invitee_email: string;
   local_company_name: string;
+  contact_name: string | null;
+  contact_phone: string | null;
+  logo_url: string | null;
   token_hash: string;
   status: NetworkInvitationStatus;
   invited_by_user_id: string | null;
@@ -305,6 +308,9 @@ function mapNetworkInvitationRow(
     mainCompanyId: row.main_company_id,
     inviteeEmail: row.invitee_email,
     localCompanyName: row.local_company_name,
+    contactName: row.contact_name ?? undefined,
+    contactPhone: row.contact_phone ?? undefined,
+    logoUrl: row.logo_url ?? null,
     tokenHash: row.token_hash.trim(),
     status: row.status,
     invitedByUserId: row.invited_by_user_id ?? undefined,
@@ -1682,14 +1688,17 @@ export class PostgresAuthDataStore implements AuthDataStore {
     const id = input.id ?? crypto.randomUUID();
     const res = await this.pool.query<DbNetworkInvitationRow>(
       `INSERT INTO company_network_invitations (
-        id, main_company_id, invitee_email, local_company_name, token_hash, expires_at, invited_by_user_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        id, main_company_id, invitee_email, local_company_name, contact_name, contact_phone, logo_url, token_hash, expires_at, invited_by_user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         id,
         input.mainCompanyId,
         input.inviteeEmail.trim().toLowerCase(),
         input.localCompanyName.trim(),
+        input.contactName?.trim() || null,
+        input.contactPhone?.trim() || null,
+        input.logoUrl ?? null,
         input.tokenHash,
         input.expiresAt,
         input.invitedByUserId ?? null,

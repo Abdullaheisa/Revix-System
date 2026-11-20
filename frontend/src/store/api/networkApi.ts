@@ -26,6 +26,9 @@ export interface CompanyNetworkInvitationDto {
   mainCompanyId: string;
   inviteeEmail: string;
   localCompanyName: string;
+  contactName?: string;
+  contactPhone?: string;
+  logoUrl?: string | null;
   status: "pending" | "accepted" | "revoked" | "expired";
   invitedByUserId?: string;
   expiresAt: string;
@@ -57,6 +60,9 @@ export interface NetworkOverviewResponseDto {
 export interface InviteLocalPartnerInput {
   inviteeEmail: string;
   localCompanyName: string;
+  contactName?: string;
+  contactPhone?: string;
+  logoUrl?: string | null;
   locale?: "en" | "ar";
 }
 

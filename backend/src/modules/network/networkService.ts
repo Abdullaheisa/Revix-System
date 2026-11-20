@@ -198,6 +198,9 @@ export class NetworkService {
     input: {
       inviteeEmail: string;
       localCompanyName: string;
+      contactName?: string;
+      contactPhone?: string;
+      logoUrl?: string | null;
       locale?: "en" | "ar";
     },
   ): Promise<{
@@ -232,6 +235,9 @@ export class NetworkService {
       mainCompanyId,
       inviteeEmail: email,
       localCompanyName: input.localCompanyName.trim(),
+      contactName: input.contactName?.trim() || undefined,
+      contactPhone: input.contactPhone?.trim() || undefined,
+      logoUrl: input.logoUrl ?? null,
       tokenHash,
       expiresAt,
       invitedByUserId: actorUserId,
@@ -242,7 +248,7 @@ export class NetworkService {
         toEmail: email,
         localCompanyName: input.localCompanyName.trim(),
         mainCompanyName: mainCompany.name,
-        locale: input.locale ?? "ar",
+        locale: input.locale ?? "en",
         rawToken,
       });
     }

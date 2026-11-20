@@ -14,7 +14,7 @@ import {
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import { extractApiErrorCode } from "@/store/api/baseApi";
 import { FormInput } from "@/components/ui/FormField";
-import { RevixSelect } from "@/components/ui/RevixSelect";
+import { CompanyLogoUploader } from "@/components/shared/workspace/CompanyLogoUploader";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import { StudioTooltip } from "@/components/shared/workspace/StudioTooltip";
@@ -43,7 +43,9 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteCompanyName, setInviteCompanyName] = useState("");
-  const [inviteLocale, setInviteLocale] = useState<"ar" | "en">("ar");
+  const [inviteContactName, setInviteContactName] = useState("");
+  const [inviteContactPhone, setInviteContactPhone] = useState("");
+  const [inviteLogoUrl, setInviteLogoUrl] = useState("");
   const [sentInviteRecipient, setSentInviteRecipient] = useState<{
     email: string;
     companyName: string;
@@ -99,7 +101,9 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   const handleOpenInviteModal = () => {
     setInviteEmail("");
     setInviteCompanyName("");
-    setInviteLocale("ar");
+    setInviteContactName("");
+    setInviteContactPhone("");
+    setInviteLogoUrl("");
     setSentInviteRecipient(null);
     setInviteError(null);
     setIsInviteModalOpen(true);
@@ -109,11 +113,16 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
     e.preventDefault();
     setInviteError(null);
 
-    if (!inviteEmail.trim() || !inviteCompanyName.trim()) {
+    if (
+      !inviteEmail.trim() ||
+      !inviteCompanyName.trim() ||
+      !inviteContactName.trim() ||
+      !inviteContactPhone.trim()
+    ) {
       setInviteError(
         isRtl
-          ? "يرجى كتابة اسم الشركة والبريد الإلكتروني للإدارة"
-          : "Please enter the company name and manager email.",
+          ? "يرجى إدخال اسم الشركة واسم الشخص المسؤول ورقم الهاتف والبريد الإلكتروني."
+          : "Please enter the company name, contact person, phone number, and email.",
       );
       return;
     }
@@ -122,7 +131,10 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
       await inviteLocalPartner({
         inviteeEmail: inviteEmail.trim(),
         localCompanyName: inviteCompanyName.trim(),
-        locale: inviteLocale,
+        contactName: inviteContactName.trim(),
+        contactPhone: inviteContactPhone.trim(),
+        logoUrl: inviteLogoUrl || null,
+        locale: "en",
       }).unwrap();
 
       setSentInviteRecipient({
@@ -650,6 +662,9 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                         {isRtl ? "اسم الشركة الشريكة" : "Company Name"}
                       </th>
                       <th className={`py-2 px-3 ${isRtl ? "text-right" : "text-left"}`}>
+                        {isRtl ? "الشخص المسؤول" : "Contact Person"}
+                      </th>
+                      <th className={`py-2 px-3 ${isRtl ? "text-right" : "text-left"}`}>
                         {isRtl ? "البريد الإلكتروني" : "Invitee Email"}
                       </th>
                       <th className={`py-2 px-3 ${isRtl ? "text-right" : "text-left"}`}>
@@ -662,7 +677,30 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                     {overview.pendingInvitations.map((inv) => (
                       <tr key={inv.id} className="hover:bg-revix-surface/40">
                         <td className="py-2.5 px-3 font-semibold text-revix-dark">
-                          {inv.localCompanyName}
+                          <div className="flex items-center gap-2">
+                            {inv.logoUrl ? (
+                              <img
+                                src={inv.logoUrl}
+                                alt={inv.localCompanyName}
+                                className="h-7 w-7 rounded-[4px] border border-revix-border object-contain bg-white shrink-0"
+                              />
+                            ) : null}
+                            <span>{inv.localCompanyName}</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3 text-revix-secondary">
+                          {inv.contactName || inv.contactPhone ? (
+                            <div className="space-y-0.5">
+                              {inv.contactName ? (
+                                <p className="font-medium text-revix-dark">{inv.contactName}</p>
+                              ) : null}
+                              {inv.contactPhone ? (
+                                <p className="font-mono text-[11px]" dir="ltr">{inv.contactPhone}</p>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <span>—</span>
+                          )}
                         </td>
                         <td className="py-2.5 px-3 text-revix-secondary font-mono text-[11.5px]">{inv.inviteeEmail}</td>
                         <td className="py-2.5 px-3 text-revix-secondary">
@@ -686,7 +724,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
       {/* MODAL 1: Invite Local Partner */}
       {isInviteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg rounded-[10px] border border-revix-border bg-white p-5 sm:p-6 shadow-dialog space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[10px] border border-revix-border bg-white p-5 sm:p-6 shadow-dialog space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-revix-border pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-[6px] bg-emerald-50 text-revix-primary">
@@ -721,6 +759,13 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
 
             {!sentInviteRecipient ? (
               <form onSubmit={handleSendInvite} className="space-y-3.5">
+                <CompanyLogoUploader
+                  isRtl={isRtl}
+                  value={inviteLogoUrl}
+                  companyName={inviteCompanyName}
+                  onChange={setInviteLogoUrl}
+                />
+
                 <FormInput
                   label={isRtl ? "اسم الشركة المحلية الشريكة" : "Local Partner Company Name"}
                   required
@@ -731,28 +776,35 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                   }
                 />
 
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <FormInput
+                    label={isRtl ? "اسم الشخص المسؤول" : "Contact Person Name"}
+                    required
+                    value={inviteContactName}
+                    onChange={(e) => setInviteContactName(e.target.value)}
+                    placeholder={isRtl ? "مثال: محمد العتيبي" : "e.g. Mohammed Ali"}
+                  />
+
+                  <FormInput
+                    label={isRtl ? "رقم الهاتف" : "Phone Number"}
+                    type="tel"
+                    dir="ltr"
+                    required
+                    value={inviteContactPhone}
+                    onChange={(e) => setInviteContactPhone(e.target.value)}
+                    placeholder="+966 50 000 0000"
+                  />
+                </div>
+
                 <FormInput
                   label={isRtl ? "البريد الإلكتروني لمدير الشركة" : "Manager / Admin Email"}
                   type="email"
+                  dir="ltr"
                   required
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="partner-admin@company.com"
                 />
-
-                <div>
-                  <label className="text-[13px] font-medium text-revix-dark mb-1 block">
-                    {isRtl ? "لغة رسالة الدعوة" : "Invitation Language"}
-                  </label>
-                  <RevixSelect
-                    value={inviteLocale}
-                    onChange={(e) => setInviteLocale(e.target.value as "ar" | "en")}
-                    options={[
-                      { value: "ar", label: "العربية (Arabic)" },
-                      { value: "en", label: "English (الإنجليزية)" },
-                    ]}
-                  />
-                </div>
 
                 <div className="rounded-[6px] bg-emerald-50/70 p-3 border border-emerald-200/60 text-[12px] text-emerald-900 space-y-1">
                   <div className="font-semibold flex items-center gap-1.5 text-emerald-950">

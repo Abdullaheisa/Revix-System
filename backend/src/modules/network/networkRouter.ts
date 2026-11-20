@@ -16,7 +16,10 @@ import {
 const invitePartnerSchema = z.object({
   inviteeEmail: z.string().trim().email().max(254),
   localCompanyName: z.string().trim().min(1).max(160),
-  locale: z.enum(["en", "ar"]).optional().default("ar"),
+  contactName: z.string().trim().max(160).optional().default(""),
+  contactPhone: z.string().trim().max(40).optional().default(""),
+  logoUrl: z.string().trim().max(500_000).nullable().optional().default(null),
+  locale: z.enum(["en", "ar"]).optional().default("en"),
 });
 
 const acceptInvitationSchema = z.object({
@@ -165,6 +168,9 @@ export function createNetworkRouter(options: {
             invitation: {
               id: preview.invitation.id,
               localCompanyName: preview.invitation.localCompanyName,
+              contactName: preview.invitation.contactName,
+              contactPhone: preview.invitation.contactPhone,
+              logoUrl: preview.invitation.logoUrl ?? null,
               inviteeEmail: preview.invitation.inviteeEmail,
               expiresAt: preview.invitation.expiresAt,
               createdAt: preview.invitation.createdAt,
