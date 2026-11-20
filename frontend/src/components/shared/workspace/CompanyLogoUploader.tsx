@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { StudioTooltip } from "@/components/shared/workspace/StudioTooltip";
 
 export interface CompanyLogoUploaderProps {
   isRtl: boolean;
@@ -120,115 +121,118 @@ export function CompanyLogoUploader({
     }
   }
 
+  const infoHint = isRtl
+    ? "يفضّل شعار أفقي بالعرض (مثل 3:1 أو 4:1) · PNG شفاف أو JPG (الحد الأقصى 5 ميجابايت)"
+    : "Horizontal landscape logo (3:1 or 4:1) recommended · PNG or JPG (max 5 MB)";
+
   return (
     <div className="space-y-1.5">
-      <label className="block text-[13.5px] font-semibold text-revix-dark">
-        {isRtl ? "شعار الشركة (Logo)" : "Company logo"}
-        <span className="ms-1.5 text-[12px] font-normal text-revix-secondary">
-          {isRtl ? "(اختياري)" : "(optional)"}
-        </span>
-      </label>
-
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        className={`flex flex-col gap-2.5 rounded-control border p-3 transition-colors ${
-          isDragging
-            ? "border-revix-primary bg-revix-tint/70"
-            : "border-revix-border bg-revix-white"
-        }`}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div
-            className="flex h-[44px] w-[144px] shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-revix-border bg-revix-surface px-2.5 py-1 shadow-2xs"
-            style={!value ? { borderColor: `${brandColor}40` } : undefined}
+      <div className="flex items-center gap-1.5">
+        <label className="text-[13px] font-semibold text-revix-dark">
+          {isRtl ? "شعار الشركة (Logo)" : "Company logo"}
+          <span className="ms-1.5 text-[11.5px] font-normal text-revix-secondary">
+            {isRtl ? "(اختياري)" : "(optional)"}
+          </span>
+        </label>
+        <StudioTooltip label={infoHint} side="top" isRtl={isRtl}>
+          <button
+            type="button"
+            aria-label={infoHint}
+            className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-revix-secondary transition-colors hover:bg-revix-surface hover:text-revix-dark"
           >
-            {value ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={value}
-                alt={companyName || (isRtl ? "شعار الشركة" : "Company logo")}
-                className="h-full w-auto max-w-full object-contain"
-              />
-            ) : (
-              <div className="flex items-center gap-1.5 text-revix-secondary text-[11px] font-medium select-none">
-                <RevixIcon
-                  name="building-2"
-                  size={15}
-                  className="text-revix-secondary shrink-0"
-                />
-                <span>{isRtl ? "شعار بالعرض" : "Horizontal logo"}</span>
-              </div>
-            )}
+            <RevixIcon name="info" size={13} />
+          </button>
+        </StudioTooltip>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {value ? (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          className={`flex items-center justify-between gap-3 rounded-control border px-3 py-2 transition-colors ${
+            isDragging
+              ? "border-revix-primary bg-revix-tint/70"
+              : "border-revix-border bg-revix-white"
+          }`}
+        >
+          <div className="flex h-[36px] max-w-[140px] items-center justify-center overflow-hidden rounded-[6px] border border-revix-border bg-revix-surface px-2 py-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={value}
+              alt={companyName || (isRtl ? "شعار الشركة" : "Company logo")}
+              className="h-full w-auto max-w-full object-contain"
+            />
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={handleFileChange}
-              className="hidden"
-            />
             <button
               type="button"
               disabled={isProcessing}
               onClick={() => inputRef.current?.click()}
-              className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-border bg-revix-surface px-3 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary hover:bg-revix-tint hover:text-revix-primary disabled:opacity-60"
+              className="inline-flex h-[30px] cursor-pointer items-center gap-1 rounded-[6px] border border-revix-border bg-revix-surface px-2.5 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary hover:bg-revix-tint hover:text-revix-primary disabled:opacity-60"
             >
-              <RevixIcon name="plus" size={13} />
-              <span>
-                {value
-                  ? isRtl
-                    ? "تغيير"
-                    : "Replace"
-                  : isRtl
-                    ? "رفع شعار"
-                    : "Upload"}
-              </span>
+              <RevixIcon name="plus" size={12} />
+              <span>{isRtl ? "تغيير" : "Replace"}</span>
             </button>
-
-            {value ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setErrorMessage(undefined);
-                  onChange("");
-                }}
-                aria-label={isRtl ? "حذف الشعار" : "Remove logo"}
-                className="inline-flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border border-revix-border text-revix-secondary transition-colors hover:border-red-200 hover:bg-red-50 hover:text-revix-error"
-              >
-                <RevixIcon name="x" size={14} />
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setErrorMessage(undefined);
+                onChange("");
+              }}
+              aria-label={isRtl ? "حذف الشعار" : "Remove logo"}
+              className="inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-[6px] border border-revix-border text-revix-secondary transition-colors hover:border-red-200 hover:bg-red-50 hover:text-revix-error"
+            >
+              <RevixIcon name="x" size={13} />
+            </button>
           </div>
         </div>
-
-        <div className="border-t border-revix-border/50 pt-2">
-          <p className="text-[12.5px] font-medium text-revix-dark">
+      ) : (
+        <button
+          type="button"
+          disabled={isProcessing}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => handleDrop(e as unknown as DragEvent<HTMLDivElement>)}
+          style={!isDragging ? { borderColor: `${brandColor}40` } : undefined}
+          className={`flex h-[46px] w-full cursor-pointer items-center justify-center gap-2 rounded-control border border-dashed px-3 text-[12.5px] font-medium transition-colors disabled:opacity-60 ${
+            isDragging
+              ? "border-revix-primary bg-revix-tint/70 text-revix-primary"
+              : "border-revix-border bg-revix-surface/50 text-revix-secondary hover:border-revix-primary hover:bg-revix-tint/40 hover:text-revix-primary"
+          }`}
+        >
+          <RevixIcon
+            name={isProcessing ? "refresh-cw" : "plus"}
+            size={14}
+            className={isProcessing ? "animate-spin" : ""}
+          />
+          <span>
             {isProcessing
               ? isRtl
                 ? "جاري معالجة الشعار..."
-                : "Optimizing logo..."
-              : value
-                ? isRtl
-                  ? "تم إرفاق شعار الشركة"
-                  : "Company logo ready"
-                : isRtl
-                  ? "اسحب الشعار هنا أو اختر صورة"
-                  : "Drop logo here or upload image"}
-          </p>
-          <p className="mt-0.5 text-[11.5px] text-revix-secondary">
-            {isRtl
-              ? "يفضّل شعار أفقي بالعرض (مثل 3:1 أو 4:1) · PNG شفاف أو JPG"
-              : "Horizontal landscape logo (3:1 or 4:1) recommended · PNG or JPG"}
-          </p>
-        </div>
-      </div>
+                : "Processing logo..."
+              : isRtl
+                ? "اضغط لاختيار الشعار أو اسحبه هنا"
+                : "Click to choose logo or drop image"}
+          </span>
+        </button>
+      )}
 
       {errorMessage ? (
         <p className="text-[12px] font-medium text-revix-error">
