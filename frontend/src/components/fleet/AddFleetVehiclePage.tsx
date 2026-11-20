@@ -700,29 +700,31 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                 </p>
               </div>
 
-              {/* 2. Catalog Variant */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {isAr ? "فئة وموديل الشراء (الفريان) *" : "PURCHASE VARIANT (CATALOG) *"}
-                </label>
-                <RevixSelect
-                  size="md"
-                  isRtl={isAr}
-                  value={selectedVariantId}
-                  onChange={(e) => setSelectedVariantId(e.target.value)}
-                  disabled={Boolean(pendingReceive?.variantId)}
-                  options={variantOptions}
-                  placeholder={isAr ? "-- اختر الفئة والموديل من الكتالوج --" : "-- Select Variant --"}
-                  searchable
-                  buttonClassName="w-full h-[46px] rounded-lg"
-                />
-                {selectedVariant && (
-                  <p className="text-[11px] text-emerald-700 mt-1.5 flex items-center gap-1 font-medium">
-                    <RevixIcon name="check-circle-2" className="w-3.5 h-3.5" />
-                    <span>{decodeSipp(selectedVariant.sippCode).summaryAr}</span>
-                  </p>
-                )}
-              </div>
+              {/* 2. Catalog Variant (only shown when converting from a Purchase Order) */}
+              {pendingReceive && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    {isAr ? "فئة وموديل الشراء (الفريان) *" : "PURCHASE VARIANT (CATALOG) *"}
+                  </label>
+                  <RevixSelect
+                    size="md"
+                    isRtl={isAr}
+                    value={selectedVariantId}
+                    onChange={(e) => setSelectedVariantId(e.target.value)}
+                    disabled={Boolean(pendingReceive?.variantId)}
+                    options={variantOptions}
+                    placeholder={isAr ? "-- اختر الفئة والموديل من الكتالوج --" : "-- Select Variant --"}
+                    searchable
+                    buttonClassName="w-full h-[46px] rounded-lg"
+                  />
+                  {selectedVariant && (
+                    <p className="text-[11px] text-emerald-700 mt-1.5 flex items-center gap-1 font-medium">
+                      <RevixIcon name="check-circle-2" className="w-3.5 h-3.5" />
+                      <span>{decodeSipp(selectedVariant.sippCode).summaryAr}</span>
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* 3. Branch / Pickup Location */}
               <div>
