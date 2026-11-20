@@ -418,22 +418,6 @@ export class NetworkService {
       });
 
       await input.ensureCompanyRolesAndOwnerMembership(localCompany);
-
-      await this.store.createBranch({
-        id: crypto.randomUUID(),
-        companyId: localCompany.id,
-        name: "Main Branch",
-        code: "HQ-1",
-        countryCode: localCompany.countryCode,
-        city: localCompany.city,
-        address: "",
-        phone: localCompany.phone,
-        email: localCompany.email,
-        currencyCode: localCompany.baseCurrency,
-        timezone: localCompany.timezone,
-        workingDays: "Mon-Sat",
-        workingHours: "09:00-18:00",
-      });
     }
 
     const localBranches = await this.store.listBranchesByCompanyId(
