@@ -48,7 +48,11 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
   }
 
   const preview = previewData?.data;
-  const previewErrorCode = extractApiErrorCode(previewErrorRaw);
+  const previewErrorCode = previewErrorRaw
+    ? extractApiErrorCode(previewErrorRaw)
+    : !token
+      ? "MISSING_TOKEN"
+      : null;
 
   const handleAccept = async (e: React.FormEvent) => {
     e.preventDefault();

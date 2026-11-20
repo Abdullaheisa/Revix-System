@@ -128,7 +128,7 @@ export class DevConsoleEmailDeliveryAdapter extends InMemoryEmailDeliveryAdapter
     payload: EmployeeInvitationEmailPayload,
   ): Promise<void> {
     await super.sendEmployeeInvitationEmail(payload);
-    const link = `${this.frontendOrigin}/${payload.locale}/invite?token=${encodeURIComponent(payload.rawToken)}`;
+    const link = `${this.frontendOrigin}/invite?token=${encodeURIComponent(payload.rawToken)}`;
     const roleName = payload.locale === "ar" ? payload.roleNameAr : payload.roleNameEn;
     this.logBox({
       title: "EMPLOYEE INVITATION (دعوة انضمام موظف)",
@@ -147,7 +147,7 @@ export class DevConsoleEmailDeliveryAdapter extends InMemoryEmailDeliveryAdapter
     payload: NetworkInvitationEmailPayload,
   ): Promise<void> {
     await super.sendNetworkInvitationEmail(payload);
-    const link = `${this.frontendOrigin}/${payload.locale}/invite/network?token=${encodeURIComponent(payload.rawToken)}`;
+    const link = `${this.frontendOrigin}/invite/network?token=${encodeURIComponent(payload.rawToken)}`;
     this.logBox({
       title: "NETWORK PARTNERSHIP (دعوة ربط شركة بالشبكة)",
       to: payload.toEmail,
@@ -285,7 +285,7 @@ export class NodemailerEmailDeliveryAdapter implements EmailDeliveryAdapter {
     payload: EmployeeInvitationEmailPayload,
   ): Promise<void> {
     this.invitationOutbox.push(payload);
-    const link = `${this.frontendOrigin}/${payload.locale}/invite?token=${encodeURIComponent(payload.rawToken)}`;
+    const link = `${this.frontendOrigin}/invite?token=${encodeURIComponent(payload.rawToken)}`;
     const isAr = payload.locale === "ar";
     const roleName = isAr ? payload.roleNameAr : payload.roleNameEn;
     const subject = isAr
@@ -322,7 +322,7 @@ export class NodemailerEmailDeliveryAdapter implements EmailDeliveryAdapter {
     payload: NetworkInvitationEmailPayload,
   ): Promise<void> {
     this.networkInvitationOutbox.push(payload);
-    const link = `${this.frontendOrigin}/${payload.locale}/invite/network?token=${encodeURIComponent(payload.rawToken)}`;
+    const link = `${this.frontendOrigin}/invite/network?token=${encodeURIComponent(payload.rawToken)}`;
     const isAr = payload.locale === "ar";
     const subject = isAr
       ? `دعوة ربط شركة بالشبكة من ${payload.mainCompanyName}`

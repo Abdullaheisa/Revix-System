@@ -44,9 +44,11 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteCompanyName, setInviteCompanyName] = useState("");
   const [inviteLocale, setInviteLocale] = useState<"ar" | "en">("ar");
-  const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
+  const [sentInviteRecipient, setSentInviteRecipient] = useState<{
+    email: string;
+    companyName: string;
+  } | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // View partner branches modal
   const [selectedPartnerForBranches, setSelectedPartnerForBranches] =
@@ -98,9 +100,8 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
     setInviteEmail("");
     setInviteCompanyName("");
     setInviteLocale("ar");
-    setGeneratedInviteLink(null);
+    setSentInviteRecipient(null);
     setInviteError(null);
-    setCopiedLink(false);
     setIsInviteModalOpen(true);
   };
 
@@ -118,14 +119,16 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
     }
 
     try {
-      const res = await inviteLocalPartner({
+      await inviteLocalPartner({
         inviteeEmail: inviteEmail.trim(),
         localCompanyName: inviteCompanyName.trim(),
         locale: inviteLocale,
       }).unwrap();
 
-      const fullLink = `${window.location.origin}${res.data.inviteLink}`;
-      setGeneratedInviteLink(fullLink);
+      setSentInviteRecipient({
+        email: inviteEmail.trim(),
+        companyName: inviteCompanyName.trim(),
+      });
     } catch (err) {
       const code = extractApiErrorCode(err);
       if (code === "NOT_MAIN_COMPANY") {
@@ -142,13 +145,6 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
         );
       }
     }
-  };
-
-  const handleCopyInviteLink = () => {
-    if (!generatedInviteLink) return;
-    navigator.clipboard.writeText(generatedInviteLink);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
   };
 
   const handleToggleStatus = async (
@@ -702,8 +698,8 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                   </h3>
                   <p className="text-[11.5px] text-revix-secondary">
                     {isRtl
-                      ? "إنشاء رابط دعوة آمن لربط شركة تأجير محلية بالشبكة الرئيسية"
-                      : "Generate a secure link to connect a local car rental partner"}
+                      ? "سيتم إرسال رسالة الدعوة مباشرة إلى البريد الإلكتروني لمدير الشركة المحلية"
+                      : "An invitation email will be sent directly to the local partner manager"}
                   </p>
                 </div>
               </div>
@@ -723,7 +719,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
               </div>
             )}
 
-            {!generatedInviteLink ? (
+            {!sentInviteRecipient ? (
               <form onSubmit={handleSendInvite} className="space-y-3.5">
                 <FormInput
                   label={isRtl ? "اسم الشركة المحلية الشريكة" : "Local Partner Company Name"}
@@ -784,40 +780,25 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                     className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-primary bg-revix-primary px-3.5 text-[12px] font-semibold text-revix-white shadow-sm hover:bg-revix-primary-hover active:scale-[0.98] transition-all disabled:opacity-50"
                   >
                     {isInviting && <RevixIcon name="refresh-cw" size={13} className="animate-spin" />}
-                    <span>{isRtl ? "إرسال وإنشاء الرابط" : "Send & Generate Link"}</span>
+                    <span>{isRtl ? "إرسال الدعوة عبر البريد" : "Send Invitation Email"}</span>
                   </button>
                 </div>
               </form>
             ) : (
               <div className="space-y-4 py-2">
-                <div className="flex items-center gap-2 rounded-[6px] bg-emerald-50 p-2.5 text-[12px] font-semibold text-emerald-800 border border-emerald-200">
-                  <RevixIcon name="check-circle-2" size={16} className="shrink-0 text-emerald-600" />
-                  <span>
-                    {isRtl
-                      ? "تم إنشاء الدعوة بنجاح! يمكنك الآن نسخ الرابط ومشاركته مع مدير الشركة الشريكة."
-                      : "Invitation created successfully! Copy and share the secure invitation link below."}
-                  </span>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[12px] font-medium text-revix-dark">
-                    {isRtl ? "رابط الدعوة المباشر" : "Direct Invite Link"}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={generatedInviteLink}
-                      className="w-full h-9 rounded-[6px] border border-revix-border bg-revix-surface px-2.5 text-[11.5px] text-revix-dark font-mono focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCopyInviteLink}
-                      className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-[6px] border border-revix-primary bg-revix-primary px-3 text-[12px] font-semibold text-revix-white hover:bg-revix-primary-hover active:scale-[0.98] transition-all shrink-0 shadow-sm"
-                    >
-                      <RevixIcon name={copiedLink ? "check" : "copy"} size={13} />
-                      <span>{copiedLink ? (isRtl ? "تم النسخ" : "Copied") : isRtl ? "نسخ" : "Copy"}</span>
-                    </button>
+                <div className="flex items-start gap-2.5 rounded-[6px] bg-emerald-50 p-3 text-[12.5px] text-emerald-900 border border-emerald-200">
+                  <RevixIcon name="check-circle-2" size={17} className="shrink-0 text-emerald-600 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">
+                      {isRtl
+                        ? `تم إرسال الدعوة بنجاح إلى ${sentInviteRecipient.email}`
+                        : `Invitation email sent to ${sentInviteRecipient.email}`}
+                    </p>
+                    <p className="text-[11.5px] leading-relaxed text-emerald-800">
+                      {isRtl
+                        ? `تم إرسال رسالة الدعوة تلقائيًا إلى البريد الإلكتروني لمدير شركة "${sentInviteRecipient.companyName}" لإتمام الانضمام للشبكة.`
+                        : `An email invitation has been delivered directly to the manager of "${sentInviteRecipient.companyName}" to join the network.`}
+                    </p>
                   </div>
                 </div>
 

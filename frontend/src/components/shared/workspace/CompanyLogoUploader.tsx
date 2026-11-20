@@ -136,15 +136,15 @@ export function CompanyLogoUploader({
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`flex items-center justify-between gap-3 rounded-control border p-2.5 transition-colors ${
+        className={`flex flex-col gap-2.5 rounded-control border p-3 transition-colors ${
           isDragging
             ? "border-revix-primary bg-revix-tint/70"
             : "border-revix-border bg-revix-white"
         }`}
       >
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div
-            className="flex h-[44px] w-[130px] sm:w-[150px] shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-revix-border bg-revix-surface px-2 py-1 shadow-2xs"
+            className="flex h-[44px] w-[144px] shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-revix-border bg-revix-surface px-2.5 py-1 shadow-2xs"
             style={!value ? { borderColor: `${brandColor}40` } : undefined}
           >
             {value ? (
@@ -166,67 +166,67 @@ export function CompanyLogoUploader({
             )}
           </div>
 
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-medium text-revix-dark">
-              {isProcessing
-                ? isRtl
-                  ? "جاري معالجة الشعار..."
-                  : "Optimizing logo..."
-                : value
+          <div className="flex shrink-0 items-center gap-1.5">
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={() => inputRef.current?.click()}
+              className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-border bg-revix-surface px-3 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary hover:bg-revix-tint hover:text-revix-primary disabled:opacity-60"
+            >
+              <RevixIcon name="plus" size={13} />
+              <span>
+                {value
                   ? isRtl
-                    ? "تم إرفاق شعار الشركة"
-                    : "Company logo ready"
+                    ? "تغيير"
+                    : "Replace"
                   : isRtl
-                    ? "اسحب الشعار هنا أو اختر صورة"
-                    : "Drop logo here or upload image"}
-            </p>
-            <p className="text-[11.5px] text-revix-secondary">
-              {isRtl
-                ? "يفضّل شعار أفقي بالعرض (مثل 3:1 أو 4:1) · PNG شفاف أو JPG"
-                : "Horizontal landscape logo (3:1 or 4:1) recommended · PNG or JPG"}
-            </p>
+                    ? "رفع شعار"
+                    : "Upload"}
+              </span>
+            </button>
+
+            {value ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMessage(undefined);
+                  onChange("");
+                }}
+                aria-label={isRtl ? "حذف الشعار" : "Remove logo"}
+                className="inline-flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border border-revix-border text-revix-secondary transition-colors hover:border-red-200 hover:bg-red-50 hover:text-revix-error"
+              >
+                <RevixIcon name="x" size={14} />
+              </button>
+            ) : null}
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <button
-            type="button"
-            disabled={isProcessing}
-            onClick={() => inputRef.current?.click()}
-            className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-border bg-revix-surface px-3 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary hover:bg-revix-tint hover:text-revix-primary disabled:opacity-60"
-          >
-            <RevixIcon name="plus" size={13} />
-            <span>
-              {value
+        <div className="border-t border-revix-border/50 pt-2">
+          <p className="text-[12.5px] font-medium text-revix-dark">
+            {isProcessing
+              ? isRtl
+                ? "جاري معالجة الشعار..."
+                : "Optimizing logo..."
+              : value
                 ? isRtl
-                  ? "تغيير"
-                  : "Replace"
+                  ? "تم إرفاق شعار الشركة"
+                  : "Company logo ready"
                 : isRtl
-                  ? "رفع شعار"
-                  : "Upload"}
-            </span>
-          </button>
-
-          {value ? (
-            <button
-              type="button"
-              onClick={() => {
-                setErrorMessage(undefined);
-                onChange("");
-              }}
-              aria-label={isRtl ? "حذف الشعار" : "Remove logo"}
-              className="inline-flex h-[32px] w-[32px] cursor-pointer items-center justify-center rounded-[6px] border border-revix-border text-revix-secondary transition-colors hover:border-red-200 hover:bg-red-50 hover:text-revix-error"
-            >
-              <RevixIcon name="x" size={14} />
-            </button>
-          ) : null}
+                  ? "اسحب الشعار هنا أو اختر صورة"
+                  : "Drop logo here or upload image"}
+          </p>
+          <p className="mt-0.5 text-[11.5px] text-revix-secondary">
+            {isRtl
+              ? "يفضّل شعار أفقي بالعرض (مثل 3:1 أو 4:1) · PNG شفاف أو JPG"
+              : "Horizontal landscape logo (3:1 or 4:1) recommended · PNG or JPG"}
+          </p>
         </div>
       </div>
 

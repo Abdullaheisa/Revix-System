@@ -76,10 +76,9 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
   const [inviteRoleId, setInviteRoleId] = useState("");
   const [inviteBranchIds, setInviteBranchIds] = useState<string[]>([]);
   const [inviteError, setInviteError] = useState<string | undefined>();
-  const [latestInviteLink, setLatestInviteLink] = useState<
-    { email: string; url: string } | undefined
+  const [latestSentInviteEmail, setLatestSentInviteEmail] = useState<
+    string | undefined
   >();
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // Edit member modal state
   const [editRoleId, setEditRoleId] = useState("");
@@ -183,13 +182,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
         locale: isRtl ? "ar" : "en",
       }).unwrap();
 
-      const origin =
-        typeof window !== "undefined" ? window.location.origin : "";
-      setLatestInviteLink({
-        email: res.data.invitation.email,
-        url: `${origin}${res.data.invitePath}`,
-      });
-      setCopiedLink(false);
+      setLatestSentInviteEmail(res.data.invitation.email);
       setIsInviteOpen(false);
     } catch (err) {
       const code = extractApiErrorCode(err);
@@ -245,16 +238,6 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
           ? "تعذّر تحديث بيانات الموظف."
           : "Unable to update team member.",
       );
-    }
-  }
-
-  async function handleCopyInviteLink() {
-    if (!latestInviteLink) return;
-    try {
-      await navigator.clipboard.writeText(latestInviteLink.url);
-      setCopiedLink(true);
-    } catch {
-      setCopiedLink(false);
     }
   }
 
@@ -318,53 +301,30 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
         </div>
       </div>
 
-      {/* Latest Invite Link Banner */}
-      {latestInviteLink ? (
+      {/* Latest Sent Invitation Banner */}
+      {latestSentInviteEmail ? (
         <div className="rounded-[8px] border border-emerald-200 bg-revix-tint p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[13.5px] font-semibold text-revix-primary">
                 {isRtl
-                  ? `تم إنشاء دعوة الموظف (${latestInviteLink.email})`
-                  : `Employee invitation created for ${latestInviteLink.email}`}
+                  ? `تم إرسال دعوة الموظف بنجاح إلى ${latestSentInviteEmail}`
+                  : `Employee invitation email sent to ${latestSentInviteEmail}`}
               </p>
               <p className="mt-0.5 text-[12px] text-revix-secondary">
                 {isRtl
-                  ? "انسخ رابط الدعوة لمرة واحدة وأرسله للموظف لتعيين كلمة المرور والانضمام فورًا (صالح لمدة 72 ساعة):"
-                  : "Copy this single-use invite link and share it with the employee to set their password (valid for 72 hours):"}
+                  ? "تم إرسال رسالة الدعوة تلقائيًا إلى البريد الإلكتروني للموظف لتعيين كلمة المرور والانضمام إلى مساحة العمل (صالحة لمدة 72 ساعة)."
+                  : "An invitation email has been sent directly to the employee to set their password and join your workspace (valid for 72 hours)."}
               </p>
             </div>
             <button
               type="button"
-              onClick={() => setLatestInviteLink(undefined)}
+              onClick={() => setLatestSentInviteEmail(undefined)}
               aria-label={isRtl ? "إغلاق" : "Dismiss"}
               className="cursor-pointer rounded p-1 text-revix-secondary hover:bg-revix-white"
             >
               <RevixIcon name="x" size={15} />
             </button>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              readOnly
-              dir="ltr"
-              value={latestInviteLink.url}
-              className="h-[36px] min-w-[260px] flex-1 rounded-[6px] border border-emerald-200 bg-revix-white px-3 font-mono text-[12px] text-revix-dark focus:outline-none"
-            />
-            <Button
-              type="button"
-              className="!min-h-[36px] !px-3.5 !py-1.5 text-[12.5px]"
-              onClick={handleCopyInviteLink}
-            >
-              {copiedLink
-                ? isRtl
-                  ? "تم النسخ ✓"
-                  : "Copied ✓"
-                : isRtl
-                  ? "نسخ الرابط"
-                  : "Copy invite link"}
-            </Button>
           </div>
         </div>
       ) : null}
@@ -671,8 +631,8 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
         title={isRtl ? "دعوة موظف جديد" : "Invite new employee"}
         subtitle={
           isRtl
-            ? "سيحصل الموظف على رابط دعوة خاص لتعيين كلمة المرور والانضمام لشركتك."
-            : "The employee will receive a single-use invite link to set their password and join your workspace."
+            ? "سيتم إرسال رسالة دعوة مباشرة إلى البريد الإلكتروني للموظف لتعيين كلمة المرور والانضمام لشركتك."
+            : "An invitation email will be sent directly to the employee to set their password and join your workspace."
         }
       >
         <form onSubmit={handleInviteSubmit} className="space-y-4">
@@ -800,7 +760,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
               className="!min-h-[36px] !px-3.5 !py-1.5 text-[13px]"
               isLoading={isInviting}
             >
-              {isRtl ? "إنشاء الدعوة" : "Create invitation"}
+              {isRtl ? "إرسال الدعوة عبر البريد" : "Send email invitation"}
             </Button>
           </div>
         </form>
