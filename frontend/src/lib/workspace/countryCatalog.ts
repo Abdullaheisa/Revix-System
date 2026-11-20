@@ -91,7 +91,282 @@ export const SUPPORTED_COUNTRIES: readonly CountryMetadata[] = [
     currencyCode: "TRY",
     defaultTimezone: "Europe/Istanbul",
   },
+  {
+    code: "MA",
+    nameEn: "Morocco",
+    nameAr: "المغرب",
+    currencyCode: "MAD",
+    defaultTimezone: "Africa/Casablanca",
+  },
+  {
+    code: "TN",
+    nameEn: "Tunisia",
+    nameAr: "تونس",
+    currencyCode: "TND",
+    defaultTimezone: "Africa/Tunis",
+  },
+  {
+    code: "DZ",
+    nameEn: "Algeria",
+    nameAr: "الجزائر",
+    currencyCode: "DZD",
+    defaultTimezone: "Africa/Algiers",
+  },
+  {
+    code: "IQ",
+    nameEn: "Iraq",
+    nameAr: "العراق",
+    currencyCode: "IQD",
+    defaultTimezone: "Asia/Baghdad",
+  },
+  {
+    code: "LB",
+    nameEn: "Lebanon",
+    nameAr: "لبنان",
+    currencyCode: "LBP",
+    defaultTimezone: "Asia/Beirut",
+  },
+  {
+    code: "LY",
+    nameEn: "Libya",
+    nameAr: "ليبيا",
+    currencyCode: "LYD",
+    defaultTimezone: "Africa/Tripoli",
+  },
+  {
+    code: "SD",
+    nameEn: "Sudan",
+    nameAr: "السودان",
+    currencyCode: "SDG",
+    defaultTimezone: "Africa/Khartoum",
+  },
+  {
+    code: "FR",
+    nameEn: "France",
+    nameAr: "فرنسا",
+    currencyCode: "EUR",
+    defaultTimezone: "Europe/Paris",
+  },
+  {
+    code: "IT",
+    nameEn: "Italy",
+    nameAr: "إيطاليا",
+    currencyCode: "EUR",
+    defaultTimezone: "Europe/Rome",
+  },
+  {
+    code: "ES",
+    nameEn: "Spain",
+    nameAr: "إسبانيا",
+    currencyCode: "EUR",
+    defaultTimezone: "Europe/Madrid",
+  },
+  {
+    code: "CA",
+    nameEn: "Canada",
+    nameAr: "كندا",
+    currencyCode: "CAD",
+    defaultTimezone: "America/Toronto",
+  },
 ] as const;
+
+export function getCountryFlag(countryCode?: string): string {
+  const clean = countryCode?.trim().toUpperCase();
+  if (!clean || clean.length !== 2) return "🌐";
+  return String.fromCodePoint(
+    ...clean.split("").map((char) => 127397 + char.charCodeAt(0)),
+  );
+}
+
+export interface CityMetadata {
+  value: string;
+  nameEn: string;
+  nameAr: string;
+}
+
+export const CITIES_BY_COUNTRY: Record<string, readonly CityMetadata[]> = {
+  EG: [
+    { value: "Cairo", nameEn: "Cairo", nameAr: "القاهرة" },
+    { value: "Giza", nameEn: "Giza", nameAr: "الجيزة" },
+    { value: "Alexandria", nameEn: "Alexandria", nameAr: "الإسكندرية" },
+    { value: "Gharbia", nameEn: "Gharbia (Tanta)", nameAr: "الغربية (طنطا)" },
+    { value: "Dakahlia", nameEn: "Dakahlia (Mansoura)", nameAr: "الدقهلية (المنصورة)" },
+    { value: "Sharqia", nameEn: "Sharqia (Zagazig)", nameAr: "الشرقية (الزقازيق)" },
+    { value: "Qalyubia", nameEn: "Qalyubia (Banha)", nameAr: "القليوبية (بنها)" },
+    { value: "Monufia", nameEn: "Monufia (Shibin El Kom)", nameAr: "المنوفية (شبين الكوم)" },
+    { value: "Beheira", nameEn: "Beheira (Damanhour)", nameAr: "البحيرة (دمنهور)" },
+    { value: "Kafr El Sheikh", nameEn: "Kafr El Sheikh", nameAr: "كفر الشيخ" },
+    { value: "Damietta", nameEn: "Damietta", nameAr: "دمياط" },
+    { value: "Port Said", nameEn: "Port Said", nameAr: "بورسعيد" },
+    { value: "Ismailia", nameEn: "Ismailia", nameAr: "الإسماعيلية" },
+    { value: "Suez", nameEn: "Suez", nameAr: "السويس" },
+    { value: "Fayoum", nameEn: "Fayoum", nameAr: "الفيوم" },
+    { value: "Beni Suef", nameEn: "Beni Suef", nameAr: "بني سويف" },
+    { value: "Minya", nameEn: "Minya", nameAr: "المنيا" },
+    { value: "Asyut", nameEn: "Asyut", nameAr: "أسيوط" },
+    { value: "Sohag", nameEn: "Sohag", nameAr: "سوهاج" },
+    { value: "Qena", nameEn: "Qena", nameAr: "قنا" },
+    { value: "Luxor", nameEn: "Luxor", nameAr: "الأقصر" },
+    { value: "Aswan", nameEn: "Aswan", nameAr: "أسوان" },
+    { value: "Hurghada", nameEn: "Red Sea (Hurghada)", nameAr: "البحر الأحمر (الغردقة)" },
+    { value: "Sharm El Sheikh", nameEn: "South Sinai (Sharm El Sheikh)", nameAr: "جنوب سيناء (شرم الشيخ)" },
+    { value: "Matrouh", nameEn: "Matrouh", nameAr: "مطروح" },
+    { value: "North Sinai", nameEn: "North Sinai (Arish)", nameAr: "شمال سيناء (العريش)" },
+    { value: "New Valley", nameEn: "New Valley", nameAr: "الوادي الجديد" },
+  ],
+  SA: [
+    { value: "Riyadh", nameEn: "Riyadh", nameAr: "الرياض" },
+    { value: "Jeddah", nameEn: "Jeddah", nameAr: "جدة" },
+    { value: "Dammam", nameEn: "Dammam", nameAr: "الدمام" },
+    { value: "Khobar", nameEn: "Khobar", nameAr: "الخبر" },
+    { value: "Mecca", nameEn: "Mecca", nameAr: "مكة المكرمة" },
+    { value: "Medina", nameEn: "Medina", nameAr: "المدينة المنورة" },
+    { value: "Tabuk", nameEn: "Tabuk", nameAr: "تبوك" },
+    { value: "Abha", nameEn: "Abha", nameAr: "أبها" },
+    { value: "Taif", nameEn: "Taif", nameAr: "الطائف" },
+    { value: "Jubail", nameEn: "Jubail", nameAr: "الجبيل" },
+    { value: "Yanbu", nameEn: "Yanbu", nameAr: "ينبع" },
+    { value: "Hail", nameEn: "Hail", nameAr: "حائل" },
+    { value: "Buraidah", nameEn: "Buraidah", nameAr: "بريدة" },
+    { value: "Najran", nameEn: "Najran", nameAr: "نجران" },
+    { value: "Jazan", nameEn: "Jazan", nameAr: "جازان" },
+  ],
+  AE: [
+    { value: "Dubai", nameEn: "Dubai", nameAr: "دبي" },
+    { value: "Abu Dhabi", nameEn: "Abu Dhabi", nameAr: "أبوظبي" },
+    { value: "Sharjah", nameEn: "Sharjah", nameAr: "الشارقة" },
+    { value: "Ajman", nameEn: "Ajman", nameAr: "عجمان" },
+    { value: "Ras Al Khaimah", nameEn: "Ras Al Khaimah", nameAr: "رأس الخيمة" },
+    { value: "Fujairah", nameEn: "Fujairah", nameAr: "الفجيرة" },
+    { value: "Al Ain", nameEn: "Al Ain", nameAr: "العين" },
+    { value: "Umm Al Quwain", nameEn: "Umm Al Quwain", nameAr: "أم القيوين" },
+  ],
+  KW: [
+    { value: "Kuwait City", nameEn: "Kuwait City", nameAr: "مدينة الكويت" },
+    { value: "Hawalli", nameEn: "Hawalli", nameAr: "حولي" },
+    { value: "Salmiya", nameEn: "Salmiya", nameAr: "السالمية" },
+    { value: "Farwaniya", nameEn: "Farwaniya", nameAr: "الفروانية" },
+    { value: "Ahmadi", nameEn: "Ahmadi", nameAr: "الأحمدي" },
+    { value: "Jahra", nameEn: "Jahra", nameAr: "الجهراء" },
+  ],
+  JO: [
+    { value: "Amman", nameEn: "Amman", nameAr: "عمّان" },
+    { value: "Irbid", nameEn: "Irbid", nameAr: "إربد" },
+    { value: "Zarqa", nameEn: "Zarqa", nameAr: "الزرقاء" },
+    { value: "Aqaba", nameEn: "Aqaba", nameAr: "العقبة" },
+    { value: "Salt", nameEn: "Salt", nameAr: "السلط" },
+    { value: "Madaba", nameEn: "Madaba", nameAr: "مأدبا" },
+    { value: "Karak", nameEn: "Karak", nameAr: "الكرك" },
+  ],
+  QA: [
+    { value: "Doha", nameEn: "Doha", nameAr: "الدوحة" },
+    { value: "Al Rayyan", nameEn: "Al Rayyan", nameAr: "الريان" },
+    { value: "Al Wakrah", nameEn: "Al Wakrah", nameAr: "الوكرة" },
+    { value: "Al Khor", nameEn: "Al Khor", nameAr: "الخور" },
+    { value: "Lusail", nameEn: "Lusail", nameAr: "لوسيل" },
+  ],
+  BH: [
+    { value: "Manama", nameEn: "Manama", nameAr: "المنامة" },
+    { value: "Muharraq", nameEn: "Muharraq", nameAr: "المحرق" },
+    { value: "Riffa", nameEn: "Riffa", nameAr: "الرفاع" },
+    { value: "Isa Town", nameEn: "Isa Town", nameAr: "مدينة عيسى" },
+  ],
+  OM: [
+    { value: "Muscat", nameEn: "Muscat", nameAr: "مسقط" },
+    { value: "Salalah", nameEn: "Salalah", nameAr: "صلالة" },
+    { value: "Sohar", nameEn: "Sohar", nameAr: "صحار" },
+    { value: "Nizwa", nameEn: "Nizwa", nameAr: "نزوى" },
+    { value: "Sur", nameEn: "Sur", nameAr: "صور" },
+  ],
+  GB: [
+    { value: "London", nameEn: "London", nameAr: "لندن" },
+    { value: "Manchester", nameEn: "Manchester", nameAr: "مانشستر" },
+    { value: "Birmingham", nameEn: "Birmingham", nameAr: "برمنغهام" },
+    { value: "Edinburgh", nameEn: "Edinburgh", nameAr: "إدنبرة" },
+    { value: "Liverpool", nameEn: "Liverpool", nameAr: "ليفربول" },
+  ],
+  US: [
+    { value: "New York", nameEn: "New York", nameAr: "نيويورك" },
+    { value: "Los Angeles", nameEn: "Los Angeles", nameAr: "لوس أنجلوس" },
+    { value: "Chicago", nameEn: "Chicago", nameAr: "شيكاغو" },
+    { value: "Miami", nameEn: "Miami", nameAr: "ميامي" },
+    { value: "Houston", nameEn: "Houston", nameAr: "هيوستن" },
+  ],
+  DE: [
+    { value: "Berlin", nameEn: "Berlin", nameAr: "برلين" },
+    { value: "Munich", nameEn: "Munich", nameAr: "ميونخ" },
+    { value: "Frankfurt", nameEn: "Frankfurt", nameAr: "فرانكفورت" },
+    { value: "Hamburg", nameEn: "Hamburg", nameAr: "هامبورغ" },
+  ],
+  TR: [
+    { value: "Istanbul", nameEn: "Istanbul", nameAr: "إسطنبول" },
+    { value: "Ankara", nameEn: "Ankara", nameAr: "أنقرة" },
+    { value: "Izmir", nameEn: "Izmir", nameAr: "إزمير" },
+    { value: "Antalya", nameEn: "Antalya", nameAr: "أنطاليا" },
+  ],
+  MA: [
+    { value: "Casablanca", nameEn: "Casablanca", nameAr: "الدار البيضاء" },
+    { value: "Rabat", nameEn: "Rabat", nameAr: "الرباط" },
+    { value: "Marrakesh", nameEn: "Marrakesh", nameAr: "مراكش" },
+    { value: "Tangier", nameEn: "Tangier", nameAr: "طنجة" },
+    { value: "Agadir", nameEn: "Agadir", nameAr: "أكادير" },
+  ],
+  TN: [
+    { value: "Tunis", nameEn: "Tunis", nameAr: "تونس" },
+    { value: "Sfax", nameEn: "Sfax", nameAr: "صفاقس" },
+    { value: "Sousse", nameEn: "Sousse", nameAr: "سوسة" },
+  ],
+  DZ: [
+    { value: "Algiers", nameEn: "Algiers", nameAr: "الجزائر" },
+    { value: "Oran", nameEn: "Oran", nameAr: "وهران" },
+    { value: "Constantine", nameEn: "Constantine", nameAr: "قسنطينة" },
+  ],
+  IQ: [
+    { value: "Baghdad", nameEn: "Baghdad", nameAr: "بغداد" },
+    { value: "Basra", nameEn: "Basra", nameAr: "البصرة" },
+    { value: "Erbil", nameEn: "Erbil", nameAr: "أربيل" },
+  ],
+  LB: [
+    { value: "Beirut", nameEn: "Beirut", nameAr: "بيروت" },
+    { value: "Tripoli", nameEn: "Tripoli", nameAr: "طرابلس" },
+    { value: "Sidon", nameEn: "Sidon", nameAr: "صيدا" },
+  ],
+  LY: [
+    { value: "Tripoli", nameEn: "Tripoli", nameAr: "طرابلس" },
+    { value: "Benghazi", nameEn: "Benghazi", nameAr: "بنغازي" },
+    { value: "Misrata", nameEn: "Misrata", nameAr: "مصراتة" },
+  ],
+  SD: [
+    { value: "Khartoum", nameEn: "Khartoum", nameAr: "الخرطوم" },
+    { value: "Port Sudan", nameEn: "Port Sudan", nameAr: "بورتسودان" },
+  ],
+  FR: [
+    { value: "Paris", nameEn: "Paris", nameAr: "باريس" },
+    { value: "Lyon", nameEn: "Lyon", nameAr: "ليون" },
+    { value: "Marseille", nameEn: "Marseille", nameAr: "مرسيليا" },
+    { value: "Nice", nameEn: "Nice", nameAr: "نيس" },
+  ],
+  IT: [
+    { value: "Rome", nameEn: "Rome", nameAr: "روما" },
+    { value: "Milan", nameEn: "Milan", nameAr: "ميلانو" },
+    { value: "Naples", nameEn: "Naples", nameAr: "نابولي" },
+  ],
+  ES: [
+    { value: "Madrid", nameEn: "Madrid", nameAr: "مدريد" },
+    { value: "Barcelona", nameEn: "Barcelona", nameAr: "برشلونة" },
+    { value: "Valencia", nameEn: "Valencia", nameAr: "فالنسيا" },
+  ],
+  CA: [
+    { value: "Toronto", nameEn: "Toronto", nameAr: "تورونتو" },
+    { value: "Vancouver", nameEn: "Vancouver", nameAr: "فانكوفر" },
+    { value: "Montreal", nameEn: "Montreal", nameAr: "مونتريال" },
+  ],
+};
+
+export function getCitiesForCountry(countryCode: string): readonly CityMetadata[] {
+  const upper = countryCode.trim().toUpperCase();
+  return CITIES_BY_COUNTRY[upper] ?? [];
+}
 
 export function findCountryMetadata(
   countryCode: string,

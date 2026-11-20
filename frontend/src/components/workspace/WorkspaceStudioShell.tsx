@@ -26,7 +26,9 @@ import { VehicleVariantsPanel } from "@/components/fleet/VehicleVariantsPanel";
 import { VendorsDirectoryPanel } from "@/components/fleet/VendorsDirectoryPanel";
 import {
   buildWorkspaceHref,
+  canAccessWorkspacePage,
   getReadyWorkspaceNavigationSections,
+  isOwnerOrCeo,
   parseWorkspacePathname,
   READY_WORKSPACE_NAVIGATION_SECTIONS,
   WORKSPACE_NAVIGATION_SECTIONS,
@@ -121,9 +123,20 @@ export function WorkspaceStudioShell({
   const membership = data?.data.membership ?? null;
   const onboardingState = data?.data.onboardingState;
 
+  const canAccessTeam = isOwnerOrCeo(membership);
+  const canAccessCurrentPage = canAccessWorkspacePage(
+    activeSection,
+    activeSubPage,
+    company?.operatingMode,
+    membership,
+  );
+
   const availableSections = useMemo(() => {
-    return getReadyWorkspaceNavigationSections(company?.operatingMode);
-  }, [company?.operatingMode]);
+    return getReadyWorkspaceNavigationSections(
+      company?.operatingMode,
+      membership,
+    );
+  }, [company?.operatingMode, membership]);
 
   useEffect(() => {
     if (error) {
@@ -229,22 +242,25 @@ export function WorkspaceStudioShell({
     };
   }, [availableSections, dispatch, isCommandPaletteOpen]);
 
-  // Guard: if current activeSection is not in available sections, redirect to first ready section
+  // Guard: if current activeSection/activeSubPage is not in available sections, redirect to first ready page
   useEffect(() => {
-    const isReady = availableSections.some(
-      (s) => s.id === activeSection,
+    const matchedSection = availableSections.find((s) => s.id === activeSection);
+    const hasSubPage = Boolean(
+      matchedSection?.groups.some((g) =>
+        g.items.some((item) => item.id === activeSubPage),
+      ),
     );
-    if (!isReady && availableSections[0]) {
-      const fallbackSec = availableSections[0];
-      const fallbackSub = fallbackSec.groups[0]?.items[0]?.id || "summary";
+    if ((!matchedSection || !hasSubPage) && availableSections[0]) {
+      const targetSec = matchedSection ?? availableSections[0];
+      const fallbackSub = targetSec.groups[0]?.items[0]?.id || "summary";
       dispatch(
         navigateToWorkspacePage({
-          section: fallbackSec.id,
+          section: targetSec.id,
           subPage: fallbackSub,
         }),
       );
     }
-  }, [activeSection, availableSections, dispatch]);
+  }, [activeSection, activeSubPage, availableSections, dispatch]);
 
   const currentSectionConfig = useMemo(() => {
     return (
@@ -378,7 +394,7 @@ export function WorkspaceStudioShell({
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-revix-white p-3.5 sm:p-6 lg:p-7">
-          {activeSection === "settings" && activeSubPage === "locations" ? (
+          {!canAccessCurrentPage ? null : activeSection === "settings" && activeSubPage === "locations" ? (
             <LocationsManager
               isRtl={isRtl}
               company={company}
@@ -391,9 +407,9 @@ export function WorkspaceStudioShell({
             <CompanySettingsPanel isRtl={isRtl} company={company} />
           ) : activeSection === "settings" && activeSubPage === "security" ? (
             <AccountSecurityPanel isRtl={isRtl} user={user} />
-          ) : activeSection === "team" && activeSubPage === "members" ? (
+          ) : activeSection === "team" && activeSubPage === "members" && canAccessTeam ? (
             <TeamMembersPanel isRtl={isRtl} membership={membership} />
-          ) : activeSection === "team" && activeSubPage === "roles" ? (
+          ) : activeSection === "team" && activeSubPage === "roles" && canAccessTeam ? (
             <RolesMatrixPanel isRtl={isRtl} membership={membership} />
           ) : activeSection === "network" &&
             activeSubPage === "local-companies" &&
@@ -455,6 +471,7 @@ export function WorkspaceStudioShell({
               company={company}
               branches={branches}
               user={user}
+              membership={membership}
               activeBranch={activeBranch}
               onSelectBranch={(id) => dispatch(setSelectedBranchId(id))}
               onNavigate={(section, subPage) =>

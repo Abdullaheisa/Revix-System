@@ -8,6 +8,7 @@ import {
 import { resolveAssetUrl } from "../../store/api/baseApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 
 interface VehiclePhotosPageProps {
@@ -30,6 +31,11 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
   const pageSize = 20;
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [pendingDeletePhoto, setPendingDeletePhoto] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data: photosRes, isLoading: isPhotosLoading } = useListVehiclePhotosQuery({
     search: search.trim() || undefined,
@@ -141,13 +147,19 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(isAr ? `هل أنت متأكد من حذف صورة ${name}؟` : `Delete photo for ${name}?`)) {
-      try {
-        await deletePhoto(id).unwrap();
-      } catch (err: any) {
-        alert(err?.data?.error?.message || "Failed to delete");
-      }
+  const handleDelete = (id: string, name: string) => {
+    setDeleteError(null);
+    setPendingDeletePhoto({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeletePhoto) return;
+    setDeleteError(null);
+    try {
+      await deletePhoto(pendingDeletePhoto.id).unwrap();
+      setPendingDeletePhoto(null);
+    } catch (err: any) {
+      setDeleteError(err?.data?.error?.message || "Failed to delete");
     }
   };
 
@@ -473,6 +485,26 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
           </>
         )}
       </div>
+
+      <RevixConfirmModal
+        isOpen={Boolean(pendingDeletePhoto)}
+        isRtl={isAr}
+        title={isAr ? "تأكيد حذف الصورة" : "Confirm Delete Photo"}
+        message={
+          pendingDeletePhoto
+            ? isAr
+              ? `هل أنت متأكد من حذف صورة "${pendingDeletePhoto.name}"؟`
+              : `Are you sure you want to delete the photo for "${pendingDeletePhoto.name}"?`
+            : ""
+        }
+        isLoading={isDeleting}
+        errorMessage={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setPendingDeletePhoto(null);
+          setDeleteError(null);
+        }}
+      />
     </div>
   );
 };

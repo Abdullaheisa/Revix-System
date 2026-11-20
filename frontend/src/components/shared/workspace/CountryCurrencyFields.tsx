@@ -3,6 +3,8 @@
 import { FormSelect } from "@/components/ui/FormField";
 import {
   SUPPORTED_COUNTRIES,
+  getCitiesForCountry,
+  getCountryFlag,
   resolveCurrencyForCountry,
 } from "@/lib/workspace/countryCatalog";
 
@@ -21,16 +23,16 @@ export function CountrySelectField({
   onChange,
   showCurrencyInOption = true,
 }: CountrySelectFieldProps) {
-  const options = SUPPORTED_COUNTRIES.map((c) => ({
-    value: c.code,
-    label: showCurrencyInOption
-      ? isRtl
-        ? `${c.nameAr} (${c.currencyCode})`
-        : `${c.nameEn} (${c.currencyCode})`
-      : isRtl
-        ? c.nameAr
-        : c.nameEn,
-  }));
+  const options = SUPPORTED_COUNTRIES.map((c) => {
+    const flag = getCountryFlag(c.code);
+    const name = isRtl ? c.nameAr : c.nameEn;
+    return {
+      value: c.code,
+      label: showCurrencyInOption
+        ? `${flag} ${name} (${c.currencyCode})`
+        : `${flag} ${name}`,
+    };
+  });
 
   return (
     <FormSelect
@@ -38,6 +40,64 @@ export function CountrySelectField({
       value={countryCode}
       onChange={(e) => onChange(e.target.value)}
       options={options}
+      isRtl={isRtl}
+    />
+  );
+}
+
+export interface CitySelectFieldProps {
+  isRtl: boolean;
+  label: string;
+  countryCode: string;
+  city: string;
+  onChange: (nextCity: string) => void;
+  placeholder?: string;
+}
+
+export function CitySelectField({
+  isRtl,
+  label,
+  countryCode,
+  city,
+  onChange,
+  placeholder,
+}: CitySelectFieldProps) {
+  const cities = getCitiesForCountry(countryCode);
+  const trimmedCity = city.trim();
+  const hasMatch = cities.some(
+    (c) =>
+      c.value.toLowerCase() === trimmedCity.toLowerCase() ||
+      c.nameAr === trimmedCity ||
+      c.nameEn.toLowerCase() === trimmedCity.toLowerCase(),
+  );
+
+  const matchedValue =
+    cities.find(
+      (c) =>
+        c.value.toLowerCase() === trimmedCity.toLowerCase() ||
+        c.nameAr === trimmedCity ||
+        c.nameEn.toLowerCase() === trimmedCity.toLowerCase(),
+    )?.value ?? trimmedCity;
+
+  const options = [
+    ...(trimmedCity && !hasMatch
+      ? [{ value: trimmedCity, label: trimmedCity }]
+      : []),
+    ...cities.map((c) => ({
+      value: c.value,
+      label: isRtl ? c.nameAr : c.nameEn,
+    })),
+  ];
+
+  return (
+    <FormSelect
+      label={label}
+      value={matchedValue}
+      onChange={(e) => onChange(e.target.value)}
+      options={options}
+      placeholder={
+        placeholder ?? (isRtl ? "اختر المدينة" : "Select city")
+      }
       isRtl={isRtl}
     />
   );

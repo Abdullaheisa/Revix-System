@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import {
   useListRentalInclusionsQuery,
@@ -30,6 +31,8 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
   const [isAddFormOpen, setIsAddFormOpen] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<RentalInclusionDto | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data: inclusionsRes, isLoading, refetch, isFetching } = useListRentalInclusionsQuery({
     search: search.trim() || undefined,
@@ -76,23 +79,30 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
   };
 
   const handleToggleStatus = async (item: RentalInclusionDto) => {
+    setFormError(null);
     try {
       await updateInclusion({
         id: item.id,
         data: { isActive: !item.isActive },
       }).unwrap();
     } catch (err: any) {
-      alert(err?.data?.error?.message || "Failed to update status.");
+      setFormError(err?.data?.error?.message || "Failed to update status.");
     }
   };
 
-  const handleDelete = async (item: RentalInclusionDto) => {
-    if (confirm(isAr ? `هل أنت متأكد من حذف "${item.name}"؟` : `Delete "${item.name}"?`)) {
-      try {
-        await deleteInclusion(item.id).unwrap();
-      } catch (err: any) {
-        alert(err?.data?.error?.message || "Failed to delete.");
-      }
+  const handleDelete = (item: RentalInclusionDto) => {
+    setDeleteError(null);
+    setPendingDeleteItem(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteItem) return;
+    setDeleteError(null);
+    try {
+      await deleteInclusion(pendingDeleteItem.id).unwrap();
+      setPendingDeleteItem(null);
+    } catch (err: any) {
+      setDeleteError(err?.data?.error?.message || "Failed to delete.");
     }
   };
 
@@ -368,6 +378,26 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
           lang={lang}
         />
       </div>
+
+      <RevixConfirmModal
+        isOpen={Boolean(pendingDeleteItem)}
+        isRtl={isAr}
+        title={isAr ? "تأكيد الحذف" : "Confirm Delete"}
+        message={
+          pendingDeleteItem
+            ? isAr
+              ? `هل أنت متأكد من حذف "${pendingDeleteItem.name}"؟`
+              : `Are you sure you want to delete "${pendingDeleteItem.name}"?`
+            : ""
+        }
+        isLoading={isDeleting}
+        errorMessage={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setPendingDeleteItem(null);
+          setDeleteError(null);
+        }}
+      />
     </div>
   );
 };

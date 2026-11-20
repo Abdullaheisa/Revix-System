@@ -52,8 +52,59 @@ const RESOURCE_ROWS = [
   },
   {
     key: "fleet",
-    en: "Vendors, POs & Fleet",
-    ar: "الموردون وأوامر الشراء والأسطول",
+    en: "Fleet Vehicles & Add Vehicle",
+    ar: "سجل سيارات الأسطول وإضافة سيارة",
+    actions: [
+      { key: "read", en: "View", ar: "عرض" },
+      { key: "create", en: "Add Vehicle", ar: "إضافة سيارة" },
+      { key: "update", en: "Edit", ar: "تعديل" },
+    ],
+  },
+  {
+    key: "purchase_orders",
+    en: "Purchase Orders (PO)",
+    ar: "أوامر شراء السيارات (PO)",
+    actions: [
+      { key: "read", en: "View", ar: "عرض" },
+      { key: "create", en: "Create Request", ar: "إنشاء طلب" },
+      { key: "update", en: "Edit", ar: "تعديل" },
+      { key: "approve", en: "Approve Immediately", ar: "اعتماد فوري" },
+    ],
+  },
+  {
+    key: "vendors",
+    en: "Vendors Directory",
+    ar: "دليل الموردين",
+    actions: [
+      { key: "read", en: "View", ar: "عرض" },
+      { key: "create", en: "Create", ar: "إنشاء" },
+      { key: "update", en: "Edit", ar: "تعديل" },
+    ],
+  },
+  {
+    key: "variants",
+    en: "Vehicle Variants (Templates)",
+    ar: "كتالوج فئات السيارات (الفريان)",
+    actions: [
+      { key: "read", en: "View", ar: "عرض" },
+      { key: "create", en: "Create", ar: "إنشاء" },
+      { key: "update", en: "Edit", ar: "تعديل" },
+    ],
+  },
+  {
+    key: "vehicle_photos",
+    en: "Vehicle Photos Catalog",
+    ar: "مكتبة وصور السيارات",
+    actions: [
+      { key: "read", en: "View", ar: "عرض" },
+      { key: "create", en: "Upload", ar: "رفع" },
+      { key: "update", en: "Edit", ar: "تعديل" },
+    ],
+  },
+  {
+    key: "rental_inclusions",
+    en: "Rental Inclusions",
+    ar: "مزايا وتغطيات العقود",
     actions: [
       { key: "read", en: "View", ar: "عرض" },
       { key: "create", en: "Create", ar: "إنشاء" },

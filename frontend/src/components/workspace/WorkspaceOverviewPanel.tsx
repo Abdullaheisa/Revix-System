@@ -6,6 +6,10 @@ import { RevixSelect } from "@/components/ui/RevixSelect";
 import { StudioBadge, StudioTooltip } from "@/components/shared/workspace";
 import { findCountryMetadata } from "@/lib/workspace/countryCatalog";
 import {
+  canAccessWorkspacePage,
+  isOwnerOrCeo,
+} from "@/lib/workspace/navigationCatalog";
+import {
   useGetFleetMetricsQuery,
   useListPurchaseOrdersQuery,
   useListVehiclesQuery,
@@ -13,7 +17,11 @@ import {
 import { useGetNetworkOverviewQuery } from "@/store/api/networkApi";
 import { useGetTeamOverviewQuery } from "@/store/api/teamApi";
 import type { AuthUserDto } from "@/store/api/authApi";
-import type { BranchDto, CompanyDto } from "@/store/api/workspaceApi";
+import type {
+  BranchDto,
+  CompanyDto,
+  WorkspaceMembershipDto,
+} from "@/store/api/workspaceApi";
 import type { WorkspaceSectionId } from "@/store/slices/workspaceSlice";
 
 export interface WorkspaceOverviewPanelProps {
@@ -21,6 +29,7 @@ export interface WorkspaceOverviewPanelProps {
   company: CompanyDto;
   branches: BranchDto[];
   user?: AuthUserDto | null;
+  membership?: WorkspaceMembershipDto | null;
   activeBranch?: BranchDto | null;
   onNavigate: (section: WorkspaceSectionId, subPage: string) => void;
   onSelectBranch?: (branchId: string) => void;
@@ -76,11 +85,27 @@ export function WorkspaceOverviewPanel({
   company,
   branches,
   user,
+  membership,
   activeBranch,
   onNavigate,
   onSelectBranch,
   onOpenCommandPalette,
 }: WorkspaceOverviewPanelProps) {
+  const canAccessTeam = isOwnerOrCeo(membership);
+  const canManageSettings = isOwnerOrCeo(membership);
+  const canReadFleet = canAccessWorkspacePage(
+    "fleet",
+    "vehicles",
+    company.operatingMode,
+    membership,
+  );
+  const canReadNetwork = canAccessWorkspacePage(
+    "network",
+    "local-companies",
+    company.operatingMode,
+    membership,
+  );
+
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>("all");
   const [activeOpsTab, setActiveOpsTab] = useState<"pickups" | "returns">("pickups");
@@ -90,15 +115,22 @@ export function WorkspaceOverviewPanel({
 
   const { data: fleetMetricsResp, isLoading: isLoadingMetrics } = useGetFleetMetricsQuery(
     branchParam ? { branchId: branchParam } : undefined,
+    { skip: !canReadFleet },
   );
   const { data: vehiclesResp, isLoading: isLoadingVehicles } = useListVehiclesQuery(
     branchParam ? { branchId: branchParam, includeNetwork: true } : { includeNetwork: true },
+    { skip: !canReadFleet },
   );
   const { data: purchaseOrdersResp, isLoading: isLoadingPOs } = useListPurchaseOrdersQuery(
     branchParam ? { branchId: branchParam } : undefined,
+    { skip: !canReadFleet },
   );
-  const { data: networkOverview } = useGetNetworkOverviewQuery();
-  const { data: teamOverview } = useGetTeamOverviewQuery();
+  const { data: networkOverview } = useGetNetworkOverviewQuery(undefined, {
+    skip: !canReadNetwork,
+  });
+  const { data: teamOverview } = useGetTeamOverviewQuery(undefined, {
+    skip: !canAccessTeam,
+  });
 
   const uniqueCurrencies = useMemo(() => {
     return Array.from(new Set(branches.map((b) => b.currencyCode)));
@@ -306,25 +338,29 @@ export function WorkspaceOverviewPanel({
 
   const quickShortcuts = useMemo(() => {
     return [
-      {
-        id: "locations",
-        title: isRtl ? "الفروع والمواقع" : "Locations & Hubs",
-        desc: isRtl ? "إدارة عناوين الفروع وساعات العمل وعملة كل دولة" : "Manage branch addresses & currencies",
-        icon: "map-pin" as const,
-        shortcut: "G L",
-        section: "settings" as WorkspaceSectionId,
-        subPage: "locations",
-      },
-      {
-        id: "company-profile",
-        title: isRtl ? "بيانات الشركة" : "Company Profile",
-        desc: isRtl ? "الاسم القانوني، الشعار، والعملة المرجعية" : "Legal name, brand logo & base currency",
-        icon: "building-2" as const,
-        shortcut: "G C",
-        section: "settings" as WorkspaceSectionId,
-        subPage: "company-profile",
-      },
-      ...(isIndependent
+      ...(canManageSettings
+        ? [
+            {
+              id: "locations",
+              title: isRtl ? "الفروع والمواقع" : "Locations & Hubs",
+              desc: isRtl ? "إدارة عناوين الفروع وساعات العمل وعملة كل دولة" : "Manage branch addresses & currencies",
+              icon: "map-pin" as const,
+              shortcut: "G L",
+              section: "settings" as WorkspaceSectionId,
+              subPage: "locations",
+            },
+            {
+              id: "company-profile",
+              title: isRtl ? "بيانات الشركة" : "Company Profile",
+              desc: isRtl ? "الاسم القانوني، الشعار، والعملة المرجعية" : "Legal name, brand logo & base currency",
+              icon: "building-2" as const,
+              shortcut: "G C",
+              section: "settings" as WorkspaceSectionId,
+              subPage: "company-profile",
+            },
+          ]
+        : []),
+      ...(isIndependent && canReadFleet
         ? [
             {
               id: "fleet-vehicles",
@@ -336,35 +372,41 @@ export function WorkspaceOverviewPanel({
               subPage: "vehicles",
             },
           ]
-        : [
+        : !isIndependent && canReadNetwork
+          ? [
+              {
+                id: "local-companies",
+                title: isRtl ? "شبكة الشركاء" : "Partner Network",
+                desc: isRtl ? "الربط الشبكي المحلي ومشاركة الفروع" : "Local partnerships & shared branches",
+                icon: "network" as const,
+                shortcut: "G N",
+                section: "network" as WorkspaceSectionId,
+                subPage: "local-companies",
+              },
+            ]
+          : []),
+      ...(canAccessTeam
+        ? [
             {
-              id: "local-companies",
-              title: isRtl ? "شبكة الشركاء" : "Partner Network",
-              desc: isRtl ? "الربط الشبكي المحلي ومشاركة الفروع" : "Local partnerships & shared branches",
-              icon: "network" as const,
-              shortcut: "G N",
-              section: "network" as WorkspaceSectionId,
-              subPage: "local-companies",
+              id: "team-members",
+              title: isRtl ? "فريق العمل" : "Team & Staff",
+              desc: isRtl ? "دعوة الموظفين وتحديد نطاق الفرع" : "Staff invitations & branch scoping",
+              icon: "users-round" as const,
+              shortcut: "G T",
+              section: "team" as WorkspaceSectionId,
+              subPage: "members",
             },
-          ]),
-      {
-        id: "team-members",
-        title: isRtl ? "فريق العمل" : "Team & Staff",
-        desc: isRtl ? "دعوة الموظفين وتحديد نطاق الفرع" : "Staff invitations & branch scoping",
-        icon: "users-round" as const,
-        shortcut: "G T",
-        section: "team" as WorkspaceSectionId,
-        subPage: "members",
-      },
-      {
-        id: "roles-matrix",
-        title: isRtl ? "مصفوفة الصلاحيات" : "Roles (RBAC)",
-        desc: isRtl ? "تخصيص صلاحيات العمليات والمالية" : "Granular operations permissions",
-        icon: "shield" as const,
-        shortcut: "G M",
-        section: "team" as WorkspaceSectionId,
-        subPage: "roles",
-      },
+            {
+              id: "roles-matrix",
+              title: isRtl ? "مصفوفة الصلاحيات" : "Roles (RBAC)",
+              desc: isRtl ? "تخصيص صلاحيات العمليات والمالية" : "Granular operations permissions",
+              icon: "shield" as const,
+              shortcut: "G M",
+              section: "team" as WorkspaceSectionId,
+              subPage: "roles",
+            },
+          ]
+        : []),
       {
         id: "account-security",
         title: isRtl ? "أمان الحساب" : "Account Security",

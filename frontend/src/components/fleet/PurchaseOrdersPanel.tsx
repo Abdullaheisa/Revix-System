@@ -24,6 +24,7 @@ import {
   type PurchaseOrderStatus,
   type PaymentTermsType,
 } from "@/store/api/fleetApi";
+import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import type { BranchDto } from "@/store/api/workspaceApi";
 import { PaymentTermsSelector } from "./PaymentTermsSelector";
 import { formatVendorPaymentTerms } from "@/lib/fleet/paymentTerms";
@@ -75,6 +76,16 @@ export function PurchaseOrdersPanel({
   branches,
   activeBranch,
 }: PurchaseOrdersPanelProps) {
+  const { data: wsContext } = useGetWorkspaceContextQuery();
+  const membership = wsContext?.data.membership ?? null;
+  const canApprovePo =
+    !membership ||
+    membership.roleCode === "owner" ||
+    membership.roleCode === "ceo" ||
+    membership.roleCode === "finance_manager" ||
+    Boolean(membership.permissions.purchase_orders?.includes("approve")) ||
+    Boolean(membership.permissions.finance?.includes("approve"));
+
   const [selectedBranchId, setSelectedBranchId] = useState<string>(activeBranch?.id || "all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [page, setPage] = usePersistedPage("fleet/purchase-orders");
@@ -856,7 +867,7 @@ export function PurchaseOrdersPanel({
                     </button>
                   )}
 
-                  {po.status === "pending_approval" && (
+                  {po.status === "pending_approval" && canApprovePo && (
                     <button
                       type="button"
                       disabled={isUpdatingStatus}

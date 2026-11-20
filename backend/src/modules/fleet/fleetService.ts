@@ -264,21 +264,39 @@ export class FleetService {
       createdByUserId: actor.user.id,
     });
 
+    const canApprove =
+      actor.role.code === "owner" ||
+      actor.role.code === "ceo" ||
+      actor.role.code === "finance_manager" ||
+      Boolean(actor.role.permissions.purchase_orders?.includes("approve")) ||
+      Boolean(actor.role.permissions.finance?.includes("approve"));
+
+    const initialStatus: PurchaseOrderStatus = canApprove
+      ? "approved"
+      : "pending_approval";
+    const finalPo =
+      (await this.store.updatePurchaseOrderStatus(
+        po.id,
+        initialStatus,
+        canApprove ? actor.user.id : undefined,
+      )) ?? po;
+
     await this.store.recordAuditLog({
       companyId: actor.company.id,
-      branchId: po.branchId,
+      branchId: finalPo.branchId,
       actorUserId: actor.user.id,
       action: "fleet.po_created",
       entityType: "purchase_order",
-      entityId: po.id,
+      entityId: finalPo.id,
       metadata: {
-        poNumber: po.poNumber,
-        totalAmount: po.totalAmount,
-        currency: po.currency,
+        poNumber: finalPo.poNumber,
+        totalAmount: finalPo.totalAmount,
+        currency: finalPo.currency,
+        status: finalPo.status,
       },
     });
 
-    return po;
+    return finalPo;
   }
 
   async listPurchaseOrders(
@@ -341,12 +359,17 @@ export class FleetService {
 
     // Approval requires finance or management authority
     if (status === "approved" || status === "cancelled") {
-      const allowedRoles = ["owner", "ceo", "finance_manager"];
-      if (!allowedRoles.includes(actor.role.code)) {
+      const canApprove =
+        actor.role.code === "owner" ||
+        actor.role.code === "ceo" ||
+        actor.role.code === "finance_manager" ||
+        Boolean(actor.role.permissions.purchase_orders?.includes("approve")) ||
+        Boolean(actor.role.permissions.finance?.includes("approve"));
+      if (!canApprove) {
         throw new FleetServiceError(
           403,
           "INSUFFICIENT_APPROVAL_ROLE",
-          "Only Owner, CEO, or Finance Manager can approve or cancel purchase orders.",
+          "Only Owner, CEO, Finance Manager, or authorized approvers can approve or cancel purchase orders.",
         );
       }
     }

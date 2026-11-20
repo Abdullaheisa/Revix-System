@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import {
   useCreateVariantMutation,
@@ -45,9 +46,10 @@ export function VehicleVariantsPanel({
   });
   const [createVariant, { isLoading: isCreating }] = useCreateVariantMutation();
   const [updateVariant, { isLoading: isUpdating }] = useUpdateVariantMutation();
-  const [deleteVariant] = useDeleteVariantMutation();
+  const [deleteVariant, { isLoading: isArchivingVariant }] = useDeleteVariantMutation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVariant, setEditingVariant] = useState<VehicleVariantDto | null>(null);
+  const [pendingArchiveVariant, setPendingArchiveVariant] = useState<VehicleVariantDto | null>(null);
 
   // Form State - Pure Catalog Specs (Zero Pricing & Zero Physical Specs)
   const [formMake, setFormMake] = useState("");
@@ -415,17 +417,7 @@ export function VehicleVariantsPanel({
                     {v.status === "active" && (
                       <button
                         type="button"
-                        onClick={async () => {
-                          if (
-                            confirm(
-                              isRtl
-                                ? "هل أنت متأكد من أرشفة هذا الموديل؟"
-                                : "Are you sure you want to archive this variant?",
-                            )
-                          ) {
-                            await deleteVariant(v.id);
-                          }
-                        }}
+                        onClick={() => setPendingArchiveVariant(v)}
                         className="rounded-md px-2 py-1 text-xs text-revix-muted transition hover:bg-revix-alert-soft hover:text-revix-alert"
                         title={isRtl ? "أرشفة الموديل" : "Archive Variant"}
                       >
@@ -621,6 +613,27 @@ export function VehicleVariantsPanel({
           </div>
         </div>
       )}
+
+      <RevixConfirmModal
+        isOpen={Boolean(pendingArchiveVariant)}
+        isRtl={isRtl}
+        title={isRtl ? "تأكيد أرشفة الموديل" : "Confirm Archive Variant"}
+        message={
+          pendingArchiveVariant
+            ? isRtl
+              ? `هل أنت متأكد من أرشفة موديل "${pendingArchiveVariant.make} ${pendingArchiveVariant.model}"؟`
+              : `Are you sure you want to archive "${pendingArchiveVariant.make} ${pendingArchiveVariant.model}"?`
+            : ""
+        }
+        confirmLabel={isRtl ? "تأكيد الأرشفة" : "Archive"}
+        isLoading={isArchivingVariant}
+        onConfirm={async () => {
+          if (!pendingArchiveVariant) return;
+          await deleteVariant(pendingArchiveVariant.id);
+          setPendingArchiveVariant(null);
+        }}
+        onCancel={() => setPendingArchiveVariant(null)}
+      />
     </div>
   );
 }

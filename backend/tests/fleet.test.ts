@@ -257,7 +257,7 @@ describe("Phase 5 — Purchasing & Fleet Management Lifecycle", () => {
       assert.equal(poJson.data.totalAmount, 1700000); // 2 * 850,000
       assert.equal(poJson.data.upfrontPaid, 400000);
       assert.equal(poJson.data.remainingAmount, 1300000);
-      assert.equal(poJson.data.status, "draft");
+      assert.equal(poJson.data.status, "approved");
       const poId = poJson.data.id;
       const itemId = poJson.data.items[0].id;
 

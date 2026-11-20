@@ -665,10 +665,12 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
             />
             <FormInput
               label={isRtl ? "رقم الهاتف (اختياري)" : "Phone (optional)"}
+              type="tel"
+              autoComplete="tel"
               dir="ltr"
               value={invitePhone}
               onChange={(e) => setInvitePhone(e.target.value)}
-              placeholder="+966 50 000 0000"
+              placeholder="+20 10 0000 0000"
             />
           </div>
 
@@ -795,7 +797,10 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
 
           <FormInput
             label={isRtl ? "رقم الهاتف" : "Phone"}
+            type="tel"
+            autoComplete="tel"
             dir="ltr"
+            placeholder="+20 10 0000 0000"
             value={editPhone}
             onChange={(e) => setEditPhone(e.target.value)}
           />

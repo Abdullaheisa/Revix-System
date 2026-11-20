@@ -1,4 +1,5 @@
 import type { RevixIconName } from "@/components/ui/RevixIcons";
+import type { WorkspaceMembershipDto } from "@/store/api/workspaceApi";
 import type { WorkspaceSectionId } from "@/store/slices/workspaceSlice";
 
 export interface WorkspaceSubPageItem {
@@ -479,23 +480,122 @@ export const READY_WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfi
       altShortcut: `Alt+${idx + 1}`,
     }));
 
+export function isOwnerOrCeo(membership?: WorkspaceMembershipDto | null): boolean {
+  return !membership || membership.roleCode === "owner" || membership.roleCode === "ceo";
+}
+
+export function canAccessWorkspacePage(
+  sectionId: WorkspaceSectionId,
+  subPageId: string,
+  operatingMode?: "independent" | "network_main" | "local_partner",
+  membership?: WorkspaceMembershipDto | null,
+): boolean {
+  if (sectionId === "network") {
+    if (operatingMode === "independent") return false;
+    return (
+      isOwnerOrCeo(membership) ||
+      Boolean(membership?.permissions.network?.includes("read"))
+    );
+  }
+
+  if (sectionId === "team") {
+    return isOwnerOrCeo(membership);
+  }
+
+  if (sectionId === "settings") {
+    if (subPageId === "security") return true;
+    if (subPageId === "company-profile") {
+      return (
+        isOwnerOrCeo(membership) ||
+        Boolean(membership?.permissions.company?.includes("read"))
+      );
+    }
+    if (subPageId === "locations") {
+      return (
+        isOwnerOrCeo(membership) ||
+        Boolean(membership?.permissions.branches?.includes("read"))
+      );
+    }
+    return isOwnerOrCeo(membership);
+  }
+
+  if (sectionId === "fleet") {
+    if (isOwnerOrCeo(membership)) return true;
+    const perms = membership?.permissions;
+    if (subPageId === "add-vehicle") {
+      return Boolean(perms?.fleet?.includes("create"));
+    }
+    if (subPageId === "purchase-orders") {
+      return Boolean(
+        perms?.purchase_orders?.includes("read") &&
+          (perms?.purchase_orders?.includes("create") ||
+            perms?.purchase_orders?.includes("approve")),
+      );
+    }
+    if (subPageId === "vendors") {
+      return Boolean(
+        perms?.vendors?.includes("read") && perms?.vendors?.includes("create"),
+      );
+    }
+    if (subPageId === "variants") {
+      return Boolean(
+        perms?.variants?.includes("read") && perms?.variants?.includes("create"),
+      );
+    }
+    if (subPageId === "vehicle-photos") {
+      return Boolean(perms?.vehicle_photos?.includes("read"));
+    }
+    if (subPageId === "rental-inclusions") {
+      return Boolean(perms?.rental_inclusions?.includes("read"));
+    }
+    return Boolean(perms?.fleet?.includes("read"));
+  }
+
+  if (sectionId === "sales") {
+    if (!membership) return true;
+    return Boolean(membership.permissions.sales?.includes("read"));
+  }
+
+  if (sectionId === "operations") {
+    if (!membership) return true;
+    return Boolean(membership.permissions.operations?.includes("read"));
+  }
+
+  if (sectionId === "finance") {
+    if (!membership) return true;
+    return Boolean(membership.permissions.finance?.includes("read"));
+  }
+
+  return true;
+}
+
 /**
- * Dynamic navigation sections filtered by operating mode.
- * When a company is "independent", the entire network/partner-company section is excluded.
+ * Dynamic navigation sections filtered by operating mode and role permissions.
  */
 export function getReadyWorkspaceNavigationSections(
   operatingMode?: "independent" | "network_main" | "local_partner",
+  membership?: WorkspaceMembershipDto | null,
 ): WorkspaceSectionConfig[] {
-  const isIndependent = operatingMode === "independent";
-  return READY_WORKSPACE_NAVIGATION_SECTIONS.filter((sec) => {
-    if (isIndependent && sec.id === "network") {
-      return false;
-    }
-    return true;
-  }).map((sec, idx) => ({
-    ...sec,
-    altShortcut: `Alt+${idx + 1}`,
-  }));
+  return READY_WORKSPACE_NAVIGATION_SECTIONS.map((sec) => {
+    const filteredGroups = sec.groups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((item) =>
+          canAccessWorkspacePage(sec.id, item.id, operatingMode, membership),
+        ),
+      }))
+      .filter((g) => g.items.length > 0);
+
+    return {
+      ...sec,
+      groups: filteredGroups,
+    };
+  })
+    .filter((sec) => sec.groups.length > 0)
+    .map((sec, idx) => ({
+      ...sec,
+      altShortcut: `Alt+${idx + 1}`,
+    }));
 }
 
 export function parseWorkspaceSlug(slug?: string[]): {

@@ -5,11 +5,15 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormField";
 import {
+  CitySelectField,
   CompanyLogoUploader,
   CountrySelectField,
   OperatingModeSelector,
 } from "@/components/shared/workspace";
-import { findCountryMetadata } from "@/lib/workspace/countryCatalog";
+import {
+  findCountryMetadata,
+  getCitiesForCountry,
+} from "@/lib/workspace/countryCatalog";
 import {
   useUpdateCompanyMutation,
   type CompanyDto,
@@ -195,14 +199,19 @@ export function CompanySettingsPanel({
                 setBaseCurrency(meta.currencyCode);
                 setTimezone(meta.defaultTimezone);
               }
+              const cities = getCitiesForCountry(next);
+              if (cities.length > 0) {
+                setCity(cities[0].value);
+              }
             }}
           />
 
-          <FormInput
+          <CitySelectField
+            isRtl={isRtl}
             label={isRtl ? "المدينة" : "City"}
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            required
+            countryCode={countryCode}
+            city={city}
+            onChange={setCity}
           />
 
           <FormInput

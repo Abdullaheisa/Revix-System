@@ -10,6 +10,7 @@ import { RevixPagination } from "@/components/ui/RevixPagination";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import {
   AutoBranchCurrencyField,
+  CitySelectField,
   CountrySelectField,
   StudioBadge,
   StudioModal,
@@ -516,14 +517,12 @@ export function LocationsManager({
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormInput
+            <CitySelectField
+              isRtl={isRtl}
               label={isRtl ? "المدينة / المنطقة" : "City / Region"}
-              placeholder={
-                isRtl ? "مثال: القاهرة / التجمع الخامس" : "e.g., Cairo / Downtown"
-              }
-              value={city}
-              onChange={(e) => handleCityChange(e.target.value)}
-              required
+              countryCode={countryCode}
+              city={city}
+              onChange={handleCityChange}
             />
             <FormInput
               label={isRtl ? "المنطقة الزمنية" : "Time zone"}

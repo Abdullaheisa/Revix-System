@@ -17,7 +17,7 @@ import { FormInput } from "@/components/ui/FormField";
 import { CompanyLogoUploader } from "@/components/shared/workspace/CompanyLogoUploader";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
-import { StudioTooltip } from "@/components/shared/workspace/StudioTooltip";
+import { StudioTooltip, RevixConfirmModal } from "@/components/shared/workspace";
 
 interface CompanyNetworkPanelProps {
   isRtl: boolean;
@@ -175,14 +175,20 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
     }
   };
 
-  const handleTerminate = async (linkId: string, partnerName: string) => {
-    const confirmMsg = isRtl
-      ? `هل أنت متأكد من إنهاء الربط الشبكي مع "${partnerName}"؟`
-      : `Are you sure you want to terminate the network link with "${partnerName}"?`;
-    if (!window.confirm(confirmMsg)) return;
+  const [pendingTerminateLink, setPendingTerminateLink] = useState<{
+    linkId: string;
+    partnerName: string;
+  } | null>(null);
 
+  const handleTerminate = (linkId: string, partnerName: string) => {
+    setPendingTerminateLink({ linkId, partnerName });
+  };
+
+  const handleConfirmTerminate = async () => {
+    if (!pendingTerminateLink) return;
     try {
-      await terminateLink(linkId).unwrap();
+      await terminateLink(pendingTerminateLink.linkId).unwrap();
+      setPendingTerminateLink(null);
     } catch (err) {
       console.error("Failed to terminate link:", err);
     }
@@ -1162,6 +1168,23 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
           </div>
         </div>
       )}
+
+      <RevixConfirmModal
+        isOpen={Boolean(pendingTerminateLink)}
+        isRtl={isRtl}
+        title={isRtl ? "إنهاء الربط الشبكي" : "Terminate Network Link"}
+        message={
+          pendingTerminateLink
+            ? isRtl
+              ? `هل أنت متأكد من إنهاء الربط الشبكي مع "${pendingTerminateLink.partnerName}"؟`
+              : `Are you sure you want to terminate the network link with "${pendingTerminateLink.partnerName}"?`
+            : ""
+        }
+        confirmLabel={isRtl ? "إنهاء الربط" : "Terminate Link"}
+        isLoading={isTerminating}
+        onConfirm={handleConfirmTerminate}
+        onCancel={() => setPendingTerminateLink(null)}
+      />
     </div>
   );
 }

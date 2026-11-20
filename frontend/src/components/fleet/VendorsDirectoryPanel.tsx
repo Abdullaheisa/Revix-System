@@ -4,6 +4,11 @@ import { useMemo, useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import {
+  CitySelectField,
+  CountrySelectField,
+} from "@/components/shared/workspace";
+import { getCitiesForCountry } from "@/lib/workspace/countryCatalog";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import {
   useCreateVendorMutation,
@@ -628,32 +633,29 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-revix-dark">
-                    {isRtl ? "الدولة" : "Country Code"} *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={3}
-                    value={formCountryCode}
-                    onChange={(e) => setFormCountryCode(e.target.value.toUpperCase())}
-                    className="mt-1 h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs uppercase text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-revix-dark">
-                    {isRtl ? "المدينة" : "City"} *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formCity}
-                    onChange={(e) => setFormCity(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <CountrySelectField
+                  isRtl={isRtl}
+                  label={`${isRtl ? "الدولة" : "Country"} *`}
+                  countryCode={formCountryCode}
+                  showCurrencyInOption={false}
+                  onChange={(nextCountry) => {
+                    setFormCountryCode(nextCountry);
+                    const cities = getCitiesForCountry(nextCountry);
+                    if (cities.length > 0) {
+                      setFormCity(cities[0].value);
+                    } else {
+                      setFormCity("");
+                    }
+                  }}
+                />
+                <CitySelectField
+                  isRtl={isRtl}
+                  label={`${isRtl ? "المدينة" : "City"} *`}
+                  countryCode={formCountryCode}
+                  city={formCity}
+                  onChange={setFormCity}
+                />
               </div>
 
               {/* Enterprise Payment Terms Selector */}

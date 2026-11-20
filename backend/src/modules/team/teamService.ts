@@ -242,6 +242,14 @@ export class TeamService {
     invitations: PublicEmployeeInvitation[];
     branches: BranchRecord[];
   }> {
+    if (actor.role.code !== "owner" && actor.role.code !== "ceo") {
+      throw new TeamServiceError(
+        "FORBIDDEN",
+        "Only the Owner or CEO can access team members and roles.",
+        403,
+      );
+    }
+
     const [roles, memberships, invitations, branches] = await Promise.all([
       this.ensureCompanyRolesAndOwnerMembership(actor.company),
       this.store.listCompanyMemberships(actor.company.id),

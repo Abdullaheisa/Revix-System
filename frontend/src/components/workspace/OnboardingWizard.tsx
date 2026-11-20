@@ -9,6 +9,7 @@ import { FormInput } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import {
   AutoBranchCurrencyField,
+  CitySelectField,
   CompanyLogoUploader,
   CountrySelectField,
   OperatingModeSelector,
@@ -449,12 +450,12 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
                   onChange={handleCompanyCountryChange}
                 />
 
-                <FormInput
+                <CitySelectField
+                  isRtl={isRtl}
                   label={isRtl ? "المدينة" : "City"}
-                  placeholder={isRtl ? "الرياض / الكويت / القاهرة" : "Riyadh / Kuwait City"}
-                  value={companyCity}
-                  onChange={(e) => setCompanyCity(e.target.value)}
-                  required
+                  countryCode={companyCountry}
+                  city={companyCity}
+                  onChange={setCompanyCity}
                 />
 
                 <FormInput
@@ -626,14 +627,12 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormInput
+                <CitySelectField
+                  isRtl={isRtl}
                   label={isRtl ? "المدينة / المنطقة" : "City / Region"}
-                  placeholder={
-                    isRtl ? "مثال: القاهرة / التجمع الخامس" : "e.g., Cairo / Downtown"
-                  }
-                  value={branchCity}
-                  onChange={(e) => handleBranchCityChange(e.target.value)}
-                  required
+                  countryCode={branchCountry}
+                  city={branchCity}
+                  onChange={handleBranchCityChange}
                 />
                 <FormInput
                   label={isRtl ? "المنطقة الزمنية للفرع" : "Branch time zone"}
