@@ -154,7 +154,9 @@ export const DEFAULT_COMPANY_ROLES: readonly DefaultRoleDefinition[] = [
     permissions: {
       company: [],
       branches: [],
-      fleet: ["read"],
+      fleet: ["read", "create", "update"],
+      vehicle_photos: ["read", "create", "update"],
+      rental_inclusions: ["read", "create", "update"],
       sales: ["read", "create", "update"],
       operations: ["read", "create", "update"],
     },

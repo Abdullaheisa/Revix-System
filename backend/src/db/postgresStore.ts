@@ -1283,6 +1283,14 @@ export class PostgresAuthDataStore implements AuthDataStore {
     return row ? mapCompanyRoleRow(row) : null;
   }
 
+  async deleteCompanyRole(roleId: string, companyId: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `DELETE FROM company_roles WHERE id = $1 AND company_id = $2 AND is_system = false`,
+      [roleId, companyId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
   async findMembershipByUserId(
     userId: string,
   ): Promise<CompanyMembershipRecord | null> {

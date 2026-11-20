@@ -29,6 +29,7 @@ export type TeamErrorCode =
   | "COMPANY_NOT_FOUND"
   | "ROLE_NOT_FOUND"
   | "ROLE_LOCKED"
+  | "ROLE_IN_USE"
   | "CANNOT_INVITE_OWNER"
   | "MEMBER_NOT_FOUND"
   | "CANNOT_MODIFY_OWNER"
@@ -851,5 +852,93 @@ export class TeamService {
     });
 
     return updated;
+  }
+
+  async createRole(
+    actor: TenantActor,
+    input: {
+      nameEn: string;
+      nameAr: string;
+      descriptionEn?: string;
+      descriptionAr?: string;
+      scopeType: RoleScopeType;
+      permissions: PermissionMatrix;
+    },
+  ): Promise<CompanyRoleRecord> {
+    if (actor.role.code !== "owner" && actor.role.code !== "ceo") {
+      throw new TeamServiceError(
+        "FORBIDDEN",
+        "Only the Owner or CEO can create custom roles.",
+        403,
+      );
+    }
+
+    const code = `custom_${crypto.randomUUID().slice(0, 8)}`;
+    const role = await this.store.createCompanyRole({
+      id: crypto.randomUUID(),
+      companyId: actor.company.id,
+      code,
+      nameEn: input.nameEn.trim(),
+      nameAr: input.nameAr.trim(),
+      descriptionEn: input.descriptionEn?.trim() || input.nameEn.trim(),
+      descriptionAr: input.descriptionAr?.trim() || input.nameAr.trim(),
+      scopeType: input.scopeType,
+      permissions: sanitizePermissionMatrix(input.permissions),
+      isSystem: false,
+    });
+
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      actorUserId: actor.user.id,
+      action: "team.role.created",
+      entityType: "company_role",
+      entityId: role.id,
+      metadata: { roleCode: role.code, nameEn: role.nameEn },
+    });
+
+    return role;
+  }
+
+  async deleteRole(actor: TenantActor, roleId: string): Promise<void> {
+    if (actor.role.code !== "owner" && actor.role.code !== "ceo") {
+      throw new TeamServiceError(
+        "FORBIDDEN",
+        "Only the Owner or CEO can delete custom roles.",
+        403,
+      );
+    }
+
+    const roles = await this.store.listCompanyRoles(actor.company.id);
+    const target = roles.find((r) => r.id === roleId);
+    if (!target) {
+      throw new TeamServiceError("ROLE_NOT_FOUND", "Role not found.", 404);
+    }
+    if (target.isSystem) {
+      throw new TeamServiceError(
+        "ROLE_LOCKED",
+        "System roles cannot be deleted.",
+        400,
+      );
+    }
+
+    const memberships = await this.store.listCompanyMemberships(actor.company.id);
+    if (memberships.some((m) => m.roleId === roleId)) {
+      throw new TeamServiceError(
+        "ROLE_IN_USE",
+        "Cannot delete a role that is currently assigned to team members.",
+        409,
+      );
+    }
+
+    await this.store.deleteCompanyRole(roleId, actor.company.id);
+
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      actorUserId: actor.user.id,
+      action: "team.role.deleted",
+      entityType: "company_role",
+      entityId: roleId,
+      metadata: { roleCode: target.code },
+    });
   }
 }

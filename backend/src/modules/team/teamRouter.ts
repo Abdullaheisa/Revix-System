@@ -27,6 +27,15 @@ const updateMemberSchema = z.object({
   branchIds: z.array(z.string().uuid()).optional().default([]),
 });
 
+const createRoleSchema = z.object({
+  nameEn: z.string().trim().min(1).max(80),
+  nameAr: z.string().trim().min(1).max(80),
+  descriptionEn: z.string().trim().max(300).optional().default(""),
+  descriptionAr: z.string().trim().max(300).optional().default(""),
+  scopeType: z.enum(["company_wide", "assigned_branches"]),
+  permissions: z.record(z.string(), z.array(z.string())).optional().default({}),
+});
+
 const updateRoleSchema = z.object({
   scopeType: z.enum(["company_wide", "assigned_branches"]),
   permissions: z.record(z.string(), z.array(z.string())),
@@ -310,6 +319,59 @@ export function createTeamRouter(options: {
           ok: true,
           data: { role },
         });
+      } catch (err) {
+        handleTeamError(res, err);
+      }
+    },
+  );
+
+  // Create custom role
+  router.post(
+    "/roles",
+    requirePermission("team", "manage_roles"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const parsed = createRoleSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          ok: false,
+          error: {
+            code: "INVALID_INPUT",
+            message: "Invalid custom role payload.",
+          },
+        });
+        return;
+      }
+
+      try {
+        const role = await teamService.createRole(req.tenantActor!, parsed.data);
+        res.status(201).json({
+          ok: true,
+          data: { role },
+        });
+      } catch (err) {
+        handleTeamError(res, err);
+      }
+    },
+  );
+
+  // Delete custom role
+  router.delete(
+    "/roles/:roleId",
+    requirePermission("team", "manage_roles"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const rawId = req.params.roleId;
+      const roleId = Array.isArray(rawId) ? rawId[0] : rawId;
+      if (!roleId) {
+        res.status(400).json({
+          ok: false,
+          error: { code: "INVALID_INPUT", message: "Role ID required." },
+        });
+        return;
+      }
+
+      try {
+        await teamService.deleteRole(req.tenantActor!, roleId);
+        res.status(200).json({ ok: true });
       } catch (err) {
         handleTeamError(res, err);
       }

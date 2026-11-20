@@ -885,6 +885,16 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     return { ...updated, permissions: { ...updated.permissions } };
   }
 
+  async deleteCompanyRole(roleId: string, companyId: string): Promise<boolean> {
+    const existing = this.rolesById.get(roleId);
+    if (!existing || existing.companyId !== companyId || existing.isSystem) {
+      return false;
+    }
+    this.rolesById.delete(roleId);
+    this.saveToDisk();
+    return true;
+  }
+
   async findMembershipByUserId(
     userId: string,
   ): Promise<CompanyMembershipRecord | null> {

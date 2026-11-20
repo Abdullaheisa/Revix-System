@@ -25,7 +25,11 @@ import {
   type PurchaseOrderItemDto,
   type VehicleVariantDto,
 } from "@/store/api/fleetApi";
-import type { BranchDto, CompanyDto } from "@/store/api/workspaceApi";
+import {
+  useGetWorkspaceContextQuery,
+  type BranchDto,
+  type CompanyDto,
+} from "@/store/api/workspaceApi";
 
 interface FleetVehiclesPanelProps {
   isRtl: boolean;
@@ -97,6 +101,13 @@ export function FleetVehiclesPanel({
   const [page, setPage] = usePersistedPage("fleet/vehicles");
   const pageSize = 15;
   const dispatch = useAppDispatch();
+  const { data: wsContext } = useGetWorkspaceContextQuery();
+  const membership = wsContext?.data.membership ?? null;
+  const canCreateFleet =
+    !membership ||
+    membership.roleCode === "owner" ||
+    membership.roleCode === "ceo" ||
+    Boolean(membership.permissions.fleet?.includes("create"));
 
   const { data, isLoading, refetch, isFetching } = useListVehiclesQuery({
     branchId: selectedBranchId !== "all" ? selectedBranchId : undefined,
@@ -380,14 +391,16 @@ export function FleetVehiclesPanel({
           )}
 
           {/* Primary Action: Add Vehicle to Fleet Assets */}
-          <button
-            type="button"
-            onClick={handleOpenDirectModal}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-revix-primary px-4 text-xs font-semibold text-revix-white shadow-xs transition hover:bg-revix-primary-hover active:scale-95 shrink-0"
-          >
-            <RevixIcon name="plus" className="h-4 w-4" />
-            <span>{isRtl ? "إضافة سيارة للأصول" : "Add Vehicle to Assets"}</span>
-          </button>
+          {canCreateFleet && (
+            <button
+              type="button"
+              onClick={handleOpenDirectModal}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-revix-primary px-4 text-xs font-semibold text-revix-white shadow-xs transition hover:bg-revix-primary-hover active:scale-95 shrink-0"
+            >
+              <RevixIcon name="plus" className="h-4 w-4" />
+              <span>{isRtl ? "إضافة سيارة للأصول" : "Add Vehicle to Assets"}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -786,24 +799,26 @@ export function FleetVehiclesPanel({
               ? "يمكنك تحويل شحنة واردة من أوامر الشراء (PO) لتصبح سيارة بالأسطول، أو تسجيل سيارة مباشرة."
               : "Convert an arrived vehicle from an approved purchase order, or register an existing vehicle directly."}
           </p>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleOpenConvertModal()}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-1.5 text-xs font-semibold text-revix-white shadow-xs hover:bg-revix-primary-hover"
-            >
-              <RevixIcon name="car-front" className="h-3.5 w-3.5" />
-              <span>{isRtl ? "تحويل سيارة واردة للأسطول" : "Receive & Convert to Fleet"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenDirectModal}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3.5 py-1.5 text-xs font-semibold text-revix-dark shadow-xs hover:bg-revix-surface"
-            >
-              <RevixIcon name="plus" className="h-3.5 w-3.5 text-revix-secondary" />
-              <span>{isRtl ? "تسجيل سيارة مباشرة" : "Direct Register"}</span>
-            </button>
-          </div>
+          {canCreateFleet && (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleOpenConvertModal()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-1.5 text-xs font-semibold text-revix-white shadow-xs hover:bg-revix-primary-hover"
+              >
+                <RevixIcon name="car-front" className="h-3.5 w-3.5" />
+                <span>{isRtl ? "تحويل سيارة واردة للأسطول" : "Receive & Convert to Fleet"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenDirectModal}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3.5 py-1.5 text-xs font-semibold text-revix-dark shadow-xs hover:bg-revix-surface"
+              >
+                <RevixIcon name="plus" className="h-3.5 w-3.5 text-revix-secondary" />
+                <span>{isRtl ? "تسجيل سيارة مباشرة" : "Direct Register"}</span>
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <>

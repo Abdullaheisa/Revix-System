@@ -434,6 +434,7 @@ export interface AuthDataStore {
     companyId: string,
     input: UpdateCompanyRoleInput,
   ): Promise<CompanyRoleRecord | null>;
+  deleteCompanyRole(roleId: string, companyId: string): Promise<boolean>;
 
   findMembershipByUserId(
     userId: string,
@@ -619,13 +620,22 @@ export interface AuthDataStore {
 // ==============================================================================
 
 export type VehicleCategory =
+  | "mini"
+  | "economy"
+  | "compact"
+  | "intermediate"
+  | "standard"
+  | "fullsize"
   | "sedan"
   | "suv"
+  | "crossover"
   | "luxury"
-  | "compact"
-  | "economy"
-  | "commercial"
-  | "van";
+  | "premium"
+  | "convertible"
+  | "coupe"
+  | "van"
+  | "pickup"
+  | "commercial";
 export type VehicleTransmission = "automatic" | "manual";
 export type VehicleFuelType = "petrol" | "diesel" | "hybrid" | "electric";
 export type VehicleVariantStatus = "active" | "archived";

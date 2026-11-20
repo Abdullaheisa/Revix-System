@@ -3,9 +3,17 @@
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { StudioBadge } from "@/components/shared/workspace";
+import { FormInput, FormSelect } from "@/components/ui/FormField";
+import { RevixIcon } from "@/components/ui/RevixIcons";
+import {
+  RevixConfirmModal,
+  StudioBadge,
+  StudioModal,
+} from "@/components/shared/workspace";
 import { extractApiErrorCode } from "@/store/api/baseApi";
 import {
+  useCreateRoleMutation,
+  useDeleteRoleMutation,
   useGetTeamOverviewQuery,
   useUpdateRoleMutation,
   type CompanyRoleDto,
@@ -155,6 +163,18 @@ const RESOURCE_ROWS = [
 export function RolesMatrixPanel({ isRtl, membership }: RolesMatrixPanelProps) {
   const { data, isLoading, error } = useGetTeamOverviewQuery();
   const [updateRole, { isLoading: isSaving }] = useUpdateRoleMutation();
+  const [createRole, { isLoading: isCreatingRole }] = useCreateRoleMutation();
+  const [deleteRole, { isLoading: isDeletingRole }] = useDeleteRoleMutation();
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newRoleNameAr, setNewRoleNameAr] = useState("");
+  const [newRoleNameEn, setNewRoleNameEn] = useState("");
+  const [newRoleScope, setNewRoleScope] =
+    useState<RoleScopeType>("assigned_branches");
+  const [createRoleError, setCreateRoleError] = useState<string | null>(null);
+  const [pendingDeleteRole, setPendingDeleteRole] =
+    useState<CompanyRoleDto | null>(null);
+  const [deleteRoleError, setDeleteRoleError] = useState<string | null>(null);
 
   const roles = useMemo(() => data?.data.roles ?? [], [data?.data.roles]);
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
@@ -251,15 +271,49 @@ export function RolesMatrixPanel({ isRtl, membership }: RolesMatrixPanelProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[20px] font-semibold tracking-[-0.015em] text-revix-dark">
-          {isRtl ? "الأدوار ونطاق الصلاحيات" : "Roles & Scope Matrix"}
-        </h1>
-        <p className="mt-0.5 text-[13px] text-revix-secondary">
-          {isRtl
-            ? "تحكم مرن في صلاحيات كل دور ونطاقه (على مستوى الشركة بالكامل أو فروع محددة) بدون تعديل قاعدة البيانات."
-            : "Configure each role's scope (company-wide vs. assigned branches) and module permissions enforced on every API call."}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[20px] font-semibold tracking-[-0.015em] text-revix-dark">
+            {isRtl ? "الأدوار ونطاق الصلاحيات" : "Roles & Scope Matrix"}
+          </h1>
+          <p className="mt-0.5 text-[13px] text-revix-secondary">
+            {isRtl
+              ? "تحكم مرن في صلاحيات كل دور ونطاقه (على مستوى الشركة بالكامل أو فروع محددة) بدون تعديل قاعدة البيانات."
+              : "Configure each role's scope (company-wide vs. assigned branches) and module permissions enforced on every API call."}
+          </p>
+        </div>
+
+        {canManageRoles && (
+          <div className="flex items-center gap-2">
+            {activeRole && !activeRole.isSystem && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteRoleError(null);
+                  setPendingDeleteRole(activeRole);
+                }}
+                className="inline-flex h-[34px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-red-200 bg-white px-3 text-[12.5px] font-semibold text-red-600 transition-colors hover:bg-red-50"
+              >
+                <RevixIcon name="trash-2" size={14} />
+                <span>{isRtl ? "حذف الدور" : "Delete Role"}</span>
+              </button>
+            )}
+            <Button
+              type="button"
+              onClick={() => {
+                setNewRoleNameAr("");
+                setNewRoleNameEn("");
+                setNewRoleScope("assigned_branches");
+                setCreateRoleError(null);
+                setIsCreateModalOpen(true);
+              }}
+              className="!min-h-[34px] !px-3.5 !py-1.5 text-[12.5px]"
+            >
+              <RevixIcon name="plus" size={14} />
+              <span>{isRtl ? "إضافة دور جديد" : "New Role"}</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {savedNotice ? (
@@ -430,6 +484,146 @@ export function RolesMatrixPanel({ isRtl, membership }: RolesMatrixPanelProps) {
           </div>
         </div>
       )}
+
+      <StudioModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title={isRtl ? "إضافة دور وظيفي جديد" : "Create Custom Role"}
+        subtitle={
+          isRtl
+            ? "أنشئ مسمى وظيفي جديد ثم خصص صلاحياته من المصفوفة."
+            : "Create a custom role name and configure its permissions."
+        }
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setCreateRoleError(null);
+            if (!newRoleNameAr.trim() || !newRoleNameEn.trim()) {
+              setCreateRoleError(
+                isRtl
+                  ? "يرجى إدخال اسم الدور بالعربية والإنجليزية."
+                  : "Please enter the role name in both Arabic and English.",
+              );
+              return;
+            }
+            try {
+              const res = await createRole({
+                nameAr: newRoleNameAr.trim(),
+                nameEn: newRoleNameEn.trim(),
+                scopeType: newRoleScope,
+                permissions: {},
+              }).unwrap();
+              setSelectedRoleId(res.data.role.id);
+              setDraftScope(null);
+              setDraftPermissions(null);
+              setIsCreateModalOpen(false);
+            } catch {
+              setCreateRoleError(
+                isRtl
+                  ? "تعذر إنشاء الدور الجديد."
+                  : "Failed to create custom role.",
+              );
+            }
+          }}
+          className="space-y-4"
+        >
+          {createRoleError ? (
+            <Alert
+              variant="error"
+              title={isRtl ? "خطأ" : "Error"}
+              message={createRoleError}
+              onClose={() => setCreateRoleError(null)}
+            />
+          ) : null}
+
+          <FormInput
+            label={isRtl ? "اسم الدور (بالعربية)" : "Role Name (Arabic)"}
+            value={newRoleNameAr}
+            onChange={(e) => setNewRoleNameAr(e.target.value)}
+            placeholder={isRtl ? "مثال: مشرف الأسطول" : "e.g., مشرف الأسطول"}
+            required
+          />
+
+          <FormInput
+            label={isRtl ? "اسم الدور (بالإنجليزية)" : "Role Name (English)"}
+            dir="ltr"
+            value={newRoleNameEn}
+            onChange={(e) => setNewRoleNameEn(e.target.value)}
+            placeholder="e.g., Fleet Supervisor"
+            required
+          />
+
+          <FormSelect
+            isRtl={isRtl}
+            label={isRtl ? "نطاق الوصول" : "Access Scope"}
+            value={newRoleScope}
+            onChange={(e) => setNewRoleScope(e.target.value as RoleScopeType)}
+            options={[
+              {
+                value: "assigned_branches",
+                label: isRtl ? "فروع محددة فقط" : "Assigned branches only",
+              },
+              {
+                value: "company_wide",
+                label: isRtl ? "على مستوى الشركة بالكامل" : "Company-wide",
+              },
+            ]}
+          />
+
+          <div className="flex justify-end gap-2 border-t border-revix-border pt-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsCreateModalOpen(false)}
+            >
+              {isRtl ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button type="submit" isLoading={isCreatingRole}>
+              {isRtl ? "إنشاء الدور" : "Create Role"}
+            </Button>
+          </div>
+        </form>
+      </StudioModal>
+
+      <RevixConfirmModal
+        isOpen={Boolean(pendingDeleteRole)}
+        isRtl={isRtl}
+        title={isRtl ? "تأكيد حذف الدور" : "Confirm Delete Role"}
+        message={
+          pendingDeleteRole
+            ? isRtl
+              ? `هل أنت متأكد من حذف دور "${pendingDeleteRole.nameAr}"؟`
+              : `Are you sure you want to delete role "${pendingDeleteRole.nameEn}"?`
+            : ""
+        }
+        isLoading={isDeletingRole}
+        errorMessage={deleteRoleError}
+        onConfirm={async () => {
+          if (!pendingDeleteRole) return;
+          setDeleteRoleError(null);
+          try {
+            await deleteRole(pendingDeleteRole.id).unwrap();
+            setSelectedRoleId("");
+            setPendingDeleteRole(null);
+          } catch (err) {
+            const code = extractApiErrorCode(err);
+            setDeleteRoleError(
+              code === "ROLE_IN_USE"
+                ? isRtl
+                  ? "لا يمكن حذف هذا الدور لأنه مرتبط بموظفين حاليين."
+                  : "Cannot delete this role because it is assigned to team members."
+                : isRtl
+                  ? "تعذر حذف الدور."
+                  : "Failed to delete role.",
+            );
+          }
+        }}
+        onCancel={() => {
+          setPendingDeleteRole(null);
+          setDeleteRoleError(null);
+        }}
+      />
     </div>
   );
 }

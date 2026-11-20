@@ -164,6 +164,33 @@ export const teamApi = baseApi.injectEndpoints({
       invalidatesTags: ["TeamMember", "Company"],
     }),
 
+    createRole: builder.mutation<
+      { ok: true; data: { role: CompanyRoleDto } },
+      {
+        nameEn: string;
+        nameAr: string;
+        descriptionEn?: string;
+        descriptionAr?: string;
+        scopeType: RoleScopeType;
+        permissions?: PermissionMatrix;
+      }
+    >({
+      query: (body) => ({
+        url: "/team/roles",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["TeamMember", "Company"],
+    }),
+
+    deleteRole: builder.mutation<{ ok: true }, string>({
+      query: (roleId) => ({
+        url: `/team/roles/${roleId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["TeamMember", "Company"],
+    }),
+
     previewInvitation: builder.mutation<
       { ok: true; data: { invitation: InvitationPreviewDto } },
       { token: string }
@@ -195,6 +222,8 @@ export const {
   useRevokeInvitationMutation,
   useUpdateMemberMutation,
   useUpdateRoleMutation,
+  useCreateRoleMutation,
+  useDeleteRoleMutation,
   usePreviewInvitationMutation,
   useAcceptInvitationMutation,
 } = teamApi;

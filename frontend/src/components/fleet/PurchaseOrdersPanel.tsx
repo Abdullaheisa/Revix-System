@@ -10,6 +10,7 @@ import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { RevixConfirmModal, StudioModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import {
   useCreatePurchaseOrderMutation,
@@ -90,6 +91,8 @@ export function PurchaseOrdersPanel({
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [page, setPage] = usePersistedPage("fleet/purchase-orders");
   const pageSize = 15;
+  const [selectedPoForDetails, setSelectedPoForDetails] = useState<PurchaseOrderDto | null>(null);
+  const [pendingDeletePo, setPendingDeletePo] = useState<PurchaseOrderDto | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useListPurchaseOrdersQuery({
     branchId: selectedBranchId !== "all" ? selectedBranchId : undefined,
@@ -560,340 +563,218 @@ export function PurchaseOrdersPanel({
         </div>
       ) : (
         <>
-          <div className="space-y-3.5">
-            {paginatedPurchaseOrders.map((po) => {
-            const totalQty = po.items?.reduce((acc, it) => acc + it.quantity, 0) || 0;
-            const totalRcv = po.items?.reduce((acc, it) => acc + it.receivedCount, 0) || 0;
-            const progressPct = totalQty > 0 ? Math.round((totalRcv / totalQty) * 100) : 0;
-            const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
+          <div className="overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "رقم الطلب" : "PO Number"}</th>
+                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "المورد" : "Vendor"}</th>
+                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "الفرع" : "Branch"}</th>
+                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "التاريخ" : "Order Date"}</th>
+                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "السيارات" : "Cars"}</th>
+                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "الإجمالي" : "Total"}</th>
+                    <th className="py-2.5 px-3 text-center">{isRtl ? "الحالة" : "Status"}</th>
+                    <th className="py-2.5 px-3 text-center">{isRtl ? "إجراءات" : "Actions"}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-revix-border/60">
+                  {paginatedPurchaseOrders.map((po) => {
+                    const totalQty = po.items?.reduce((acc, it) => acc + it.quantity, 0) || 0;
+                    const totalRcv = po.items?.reduce((acc, it) => acc + it.receivedCount, 0) || 0;
+                    const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
 
-            return (
-              <div
-                key={po.id}
-                className="rounded-xl border border-revix-border bg-revix-white p-4 shadow-xs transition hover:border-revix-primary/30"
-              >
-                {/* PO Header */}
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-mono text-sm font-bold text-revix-dark">
-                      {po.poNumber}
-                    </span>
-                    <span
-                      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusConfig.badgeClass}`}
-                    >
+                    return (
+                      <tr
+                        key={po.id}
+                        onClick={() => setSelectedPoForDetails(po)}
+                        className="cursor-pointer transition-colors hover:bg-revix-surface/60"
+                      >
+                        <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap">{po.poNumber}</td>
+                        <td className="py-2.5 px-3 font-semibold text-revix-dark">{po.vendorName || "Vendor"}</td>
+                        <td className="py-2.5 px-3 text-revix-secondary">{po.branchName || "Branch"}</td>
+                        <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">{po.orderDate}</td>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className="font-semibold text-revix-dark">{totalRcv}/{totalQty}</span>
+                          <span className="ms-1 text-revix-secondary">{isRtl ? "سيارة" : "cars"}</span>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap">
+                          {Number(po.totalAmount).toLocaleString()} {po.currency}
+                        </td>
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                          <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusConfig.badgeClass}`}>
+                            {isRtl ? statusConfig.ar : statusConfig.en}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="inline-flex items-center justify-center gap-1.5">
+                            {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
+                              <button
+                                type="button"
+                                disabled={isUpdatingStatus}
+                                onClick={() => updateStatus({ id: po.id, status: "approved" })}
+                                className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md bg-revix-primary px-2.5 text-[11px] font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50"
+                              >
+                                <RevixIcon name="check" size={12} />
+                                <span>{isRtl ? "موافقة" : "Approve"}</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPoForDetails(po)}
+                              title={isRtl ? "عرض التفاصيل" : "View Details"}
+                              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:border-revix-primary/40 hover:text-revix-primary"
+                            >
+                              <RevixIcon name="eye" size={13} />
+                            </button>
+                            {po.status !== "cancelled" && po.status !== "completed" && (
+                              <button
+                                type="button"
+                                onClick={() => setPendingDeletePo(po)}
+                                title={isRtl ? "حذف / إلغاء الطلب" : "Delete / Cancel PO"}
+                                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                              >
+                                <RevixIcon name="trash-2" size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <StudioModal
+            isOpen={Boolean(selectedPoForDetails)}
+            onClose={() => setSelectedPoForDetails(null)}
+            title={selectedPoForDetails ? `${isRtl ? "تفاصيل أمر الشراء" : "Purchase Order"} ${selectedPoForDetails.poNumber}` : ""}
+            maxWidthClass="max-w-3xl"
+          >
+            {selectedPoForDetails && (() => {
+              const po = selectedPoForDetails;
+              const totalQty = po.items?.reduce((acc, it) => acc + it.quantity, 0) || 0;
+              const totalRcv = po.items?.reduce((acc, it) => acc + it.receivedCount, 0) || 0;
+              const progressPct = totalQty > 0 ? Math.round((totalRcv / totalQty) * 100) : 0;
+              const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
+
+              return (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusConfig.badgeClass}`}>
                       {isRtl ? statusConfig.ar : statusConfig.en}
                     </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs text-revix-secondary">
-                    <span>
+                    <div className="text-xs text-revix-secondary">
                       {isRtl ? "تاريخ الطلب:" : "Order Date:"} {po.orderDate}
-                    </span>
-                    {po.expectedDeliveryDate && (
-                      <span>
-                        • {isRtl ? "التسليم المتوقع:" : "Expected:"} {po.expectedDeliveryDate}
-                      </span>
-                    )}
+                      {po.expectedDeliveryDate ? ` • ${isRtl ? "التسليم المتوقع:" : "Expected:"} ${po.expectedDeliveryDate}` : ""}
+                    </div>
                   </div>
-                </div>
-
-                {/* Vendor, Branch & Financial Bar */}
-                <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-revix-surface/70 p-3 text-xs sm:grid-cols-4">
-                  <div>
-                    <span className="block text-[10px] text-revix-muted">
-                      {isRtl ? "المورد" : "Vendor"}
-                    </span>
-                    <span className="font-semibold text-revix-dark">
-                      {po.vendorName || "Vendor"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-revix-muted">
-                      {isRtl ? "فرع الاستلام" : "Target Branch"}
-                    </span>
-                    <span className="font-semibold text-revix-dark">
-                      {po.branchName || "Branch"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-revix-muted">
-                      {isRtl ? "إجمالي المبلغ" : "Total Amount"}
-                    </span>
-                    <span className="font-bold text-revix-dark">
-                      {po.totalAmount.toLocaleString()} {po.currency}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-revix-muted">
-                      {isRtl ? "المتبقي بالأقساط" : "Remaining"}
-                    </span>
-                    <span className="font-bold text-revix-primary">
-                      {po.remainingAmount.toLocaleString()} {po.currency}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Payment Terms & Financial Schedule Badge */}
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-md bg-revix-surface/50 px-3 py-1.5 text-[11px] border border-revix-border/50">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-revix-muted">{isRtl ? "خطة السداد:" : "Payment Plan:"}</span>
-                    {po.remainingAmount === 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700 border border-emerald-200">
-                        <RevixIcon name="wallet" className="h-3 w-3" />
-                        <span>{isRtl ? "كاش فوري (مسدد 100%)" : "100% Cash / Paid"}</span>
-                      </span>
-                    ) : po.installmentsCount > 1 ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-purple-50 px-2 py-0.5 font-bold text-purple-700 border border-purple-200">
-                        <RevixIcon name="calendar" className="h-3 w-3" />
-                        <span>
-                          {isRtl
-                            ? `تقسيط على ${po.installmentsCount} أقساط (مقدم: ${po.upfrontPaid.toLocaleString()} ${po.currency} • قسط: ${Math.round(po.remainingAmount / po.installmentsCount).toLocaleString()} ${po.currency})`
-                            : `${po.installmentsCount} installments (Upfront: ${po.upfrontPaid.toLocaleString()} ${po.currency})`}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 font-bold text-sky-700 border border-sky-200">
-                        <RevixIcon name="clock" className="h-3 w-3" />
-                        <span>
-                          {isRtl
-                            ? `آجل تجاري (المتبقي: ${po.remainingAmount.toLocaleString()} ${po.currency})`
-                            : `Credit Terms (Remaining: ${po.remainingAmount.toLocaleString()} ${po.currency})`}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-
-                  {po.notes && (
-                    <span className="text-[10px] text-revix-secondary truncate max-w-sm" title={po.notes}>
-                      {po.notes}
-                    </span>
-                  )}
-                </div>
-
-                {/* Order Vehicles Summary Bar */}
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-revix-primary/20 bg-revix-primary/5 p-2.5 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-md bg-revix-primary/10 p-1.5 text-revix-primary">
-                      <RevixIcon name="car-front" className="h-4 w-4" />
+                  <div className="grid grid-cols-2 gap-3 rounded-lg bg-revix-surface/70 p-3 text-xs sm:grid-cols-4">
+                    <div>
+                      <span className="block text-[10px] text-revix-muted">{isRtl ? "المورد" : "Vendor"}</span>
+                      <span className="font-semibold text-revix-dark">{po.vendorName || "Vendor"}</span>
                     </div>
                     <div>
-                      <span className="font-bold text-revix-dark">
-                        {isRtl
-                          ? `إجمالي السيارات المشتراة في هذا الطلب: ${totalQty} سيارات`
-                          : `Total Cars Purchased in PO: ${totalQty} cars`}
-                      </span>
-                      <span className="mx-2 text-revix-border">|</span>
-                      <span className="text-revix-secondary">
-                        {isRtl
-                          ? `${po.items?.length || 0} أنواع وفئات مختلفة`
-                          : `${po.items?.length || 0} vehicle types`}
-                      </span>
+                      <span className="block text-[10px] text-revix-muted">{isRtl ? "فرع الاستلام" : "Target Branch"}</span>
+                      <span className="font-semibold text-revix-dark">{po.branchName || "Branch"}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-revix-muted">{isRtl ? "إجمالي المبلغ" : "Total"}</span>
+                      <span className="font-mono font-bold text-revix-dark">{Number(po.totalAmount).toLocaleString()} {po.currency}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-revix-muted">{isRtl ? "المتبقي" : "Remaining"}</span>
+                      <span className="font-mono font-bold text-revix-primary">{Number(po.remainingAmount).toLocaleString()} {po.currency}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="rounded-md bg-revix-accent-soft px-2 py-0.5 font-semibold text-revix-accent">
-                      {totalRcv} {isRtl ? "تم تحويلها للأصول" : "in fleet"}
-                    </span>
-                    {totalQty - totalRcv > 0 && (
-                      <span className="rounded-md bg-revix-warning-soft px-2 py-0.5 font-semibold text-revix-warning">
-                        {totalQty - totalRcv} {isRtl ? "بانتظار الوصول والتحويل" : "pending arrival"}
-                      </span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-revix-dark">
+                      <span>{isRtl ? `السيارات (${totalRcv}/${totalQty})` : `Vehicles (${totalRcv}/${totalQty})`}</span>
+                      <span>{progressPct}%</span>
+                    </div>
+                    {po.items?.map((item) => (
+                      <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-revix-border p-3 text-xs">
+                        <div>
+                          <div className="font-bold text-revix-dark">
+                            {(item as { variantName?: string }).variantName || item.variantId}
+                          </div>
+                          <div className="text-revix-secondary">
+                            {isRtl ? `الكمية: ${item.quantity} • المستلم: ${item.receivedCount}` : `Qty: ${item.quantity} • Received: ${item.receivedCount}`}
+                          </div>
+                        </div>
+                        {(po.status === "approved" || po.status === "partially_received") && item.receivedCount < item.quantity && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedPoForDetails(null);
+                              handleOpenReceiveModal(po, item.id);
+                            }}
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-revix-primary-hover"
+                          >
+                            <RevixIcon name="car-front" size={13} />
+                            <span>{isRtl ? "تحويل سيارة للأصول" : "Convert to Asset"}</span>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2 border-t border-revix-border pt-3">
+                    {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
+                      <button
+                        type="button"
+                        disabled={isUpdatingStatus}
+                        onClick={async () => {
+                          await updateStatus({ id: po.id, status: "approved" });
+                          setSelectedPoForDetails(null);
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-revix-primary-hover"
+                      >
+                        <RevixIcon name="shield-check" size={14} />
+                        <span>{isRtl ? "اعتماد أمر الشراء" : "Approve Purchase Order"}</span>
+                      </button>
+                    )}
+                    {po.status !== "cancelled" && po.status !== "completed" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedPoForDetails(null);
+                          setPendingDeletePo(po);
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                      >
+                        <RevixIcon name="trash-2" size={13} />
+                        <span>{isRtl ? "حذف / إلغاء" : "Delete / Cancel"}</span>
+                      </button>
                     )}
                   </div>
                 </div>
+              );
+            })()}
+          </StudioModal>
 
-                {/* Detailed Vehicles List Breakdown Per Type */}
-                <div className="mt-3.5 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-revix-dark flex items-center gap-1.5">
-                      <RevixIcon name="layers" className="h-3.5 w-3.5 text-revix-primary" />
-                      <span>{isRtl ? "قائمة سيارات أمر الشراء (متابعة الوصول والتحويل للأصول):" : "Order Vehicles & Fleet Conversion List:"}</span>
-                    </span>
-                    <span className="font-mono text-xs font-semibold text-revix-primary">
-                      {progressPct}% {isRtl ? "مكتمل" : "completed"}
-                    </span>
-                  </div>
+          <RevixConfirmModal
+            isOpen={Boolean(pendingDeletePo)}
+            isRtl={isRtl}
+            title={isRtl ? "تأكيد حذف / إلغاء أمر الشراء" : "Confirm Delete / Cancel PO"}
+            message={
+              pendingDeletePo
+                ? isRtl
+                  ? `هل أنت متأكد من إلغاء وحذف أمر الشراء "${pendingDeletePo.poNumber}"؟`
+                  : `Are you sure you want to cancel purchase order "${pendingDeletePo.poNumber}"?`
+                : ""
+            }
+            confirmLabel={isRtl ? "تأكيد الحذف" : "Confirm Delete"}
+            isLoading={isUpdatingStatus}
+            onConfirm={async () => {
+              if (!pendingDeletePo) return;
+              await updateStatus({ id: pendingDeletePo.id, status: "cancelled" });
+              setPendingDeletePo(null);
+            }}
+            onCancel={() => setPendingDeletePo(null)}
+          />
 
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-revix-surface">
-                    <div
-                      className="h-full bg-revix-primary transition-all duration-300"
-                      style={{ width: `${progressPct}%` }}
-                    />
-                  </div>
-
-                  {/* Individual Items and their physical units */}
-                  <div className="space-y-3 pt-1">
-                    {po.items?.map((item) => {
-                      const itemVariant = variants.find((v) => v.id === item.variantId);
-                      const poVehicles = allFleetVehicles.filter(
-                        (v) => v.purchaseOrderId === po.id && v.variantId === item.variantId,
-                      );
-                      const remainingForItem = item.quantity - item.receivedCount;
-
-                      return (
-                        <div
-                          key={item.id}
-                          className="rounded-xl border border-revix-border bg-revix-surface/30 p-3 text-xs space-y-2.5"
-                        >
-                          {/* Variant Line Header */}
-                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b border-revix-border/50 pb-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-bold text-revix-primary border border-revix-border">
-                                {itemVariant?.sippCode || "ICAR"}
-                              </span>
-                              <span className="font-bold text-revix-dark text-sm">
-                                {itemVariant ? `${itemVariant.make} ${itemVariant.model} ${itemVariant.modelYear}` : "Vehicle Variant"}{" "}
-                                <span className="font-normal text-xs text-revix-secondary">({itemVariant?.trim})</span>
-                              </span>
-                              <span className="text-xs text-revix-secondary">
-                                • {isRtl ? `الكمية: ${item.quantity} سيارات` : `Qty: ${item.quantity}`}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] text-revix-secondary">
-                                {item.unitPrice.toLocaleString()} {po.currency} {isRtl ? "للسيارة" : "/unit"}
-                              </span>
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                  remainingForItem === 0
-                                    ? "bg-revix-accent-soft text-revix-accent"
-                                    : "bg-revix-primary/10 text-revix-primary"
-                                }`}
-                              >
-                                {remainingForItem === 0
-                                  ? (isRtl ? "مكتمل التحويل للأصول" : "All Converted")
-                                  : (isRtl ? `متبقي ${remainingForItem} بانتظار الوصول` : `${remainingForItem} pending`)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Unit-by-unit listing */}
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                            {Array.from({ length: item.quantity }).map((_, unitIdx) => {
-                              const convertedCar = poVehicles[unitIdx];
-                              const isConverted = Boolean(convertedCar);
-
-                              return (
-                                <div
-                                  key={unitIdx}
-                                  className={`flex flex-col justify-between rounded-lg border p-2.5 text-xs transition ${
-                                    isConverted
-                                      ? "border-revix-accent/30 bg-revix-accent-soft/20"
-                                      : "border-dashed border-revix-border bg-revix-white hover:border-revix-primary/50"
-                                  }`}
-                                >
-                                  <div>
-                                    <div className="flex items-center justify-between gap-1">
-                                      <span className="font-semibold text-revix-dark">
-                                        {isRtl ? `سيارة رقم ${unitIdx + 1}` : `Vehicle #${unitIdx + 1}`}
-                                      </span>
-                                      {isConverted ? (
-                                        <span className="inline-flex items-center gap-1 rounded bg-revix-accent-soft px-1.5 py-0.2 text-[10px] font-bold text-revix-accent">
-                                          <RevixIcon name="check-circle-2" className="h-3 w-3" />
-                                          <span>{isRtl ? "بالأسطول" : "In Fleet"}</span>
-                                        </span>
-                                      ) : (
-                                        <span className="rounded bg-revix-surface px-1.5 py-0.2 text-[10px] font-medium text-revix-secondary">
-                                          {isRtl ? "بانتظار الوصول" : "Awaiting Arrival"}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {isConverted && convertedCar ? (
-                                      <div className="mt-1.5 space-y-0.5 text-[11px]">
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-revix-muted">{isRtl ? "اللوحة:" : "Plate:"}</span>
-                                          <span className="font-mono font-bold text-revix-dark">{convertedCar.licensePlate}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-revix-muted">{isRtl ? "الشاسيه:" : "VIN:"}</span>
-                                          <span className="font-mono text-[10px] text-revix-secondary truncate max-w-[120px]" title={convertedCar.vin}>
-                                            {convertedCar.vin}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-[10px] text-revix-muted pt-0.5">
-                                          <span>{convertedCar.color}</span>
-                                          <span>{convertedCar.mileageOdometer.toLocaleString()} {isRtl ? "كم" : "km"}</span>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <p className="mt-1.5 text-[11px] text-revix-secondary leading-relaxed">
-                                        {isRtl
-                                          ? "عند وصول هذه السيارة فعلياً، اضغط زر التحويل لتسجيل الشاسيه واللوحة."
-                                          : "When this car physically arrives, click convert to assign VIN and license plate."}
-                                      </p>
-                                    )}
-                                  </div>
-
-                                  {!isConverted && (
-                                    <div className="mt-2.5 pt-2 border-t border-revix-border/40">
-                                      {(po.status === "approved" || po.status === "partially_received") ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleOpenReceiveModal(po, item.id)}
-                                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-revix-primary px-2.5 py-1 text-xs font-semibold text-revix-white shadow-xs transition hover:bg-revix-primary-hover active:scale-95"
-                                        >
-                                          <RevixIcon name="car-front" className="h-3.5 w-3.5" />
-                                          <span>{isRtl ? "العربية وصلت؟ تحويل للأصول" : "Arrived? Convert to Asset"}</span>
-                                        </button>
-                                      ) : (
-                                        <span className="block text-center text-[10px] text-revix-muted">
-                                          {isRtl ? "يتطلب اعتماد الأمر أولاً" : "Requires PO approval"}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* PO Actions */}
-                <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-revix-border/60 pt-3">
-                  {po.status === "draft" && (
-                    <button
-                      type="button"
-                      disabled={isUpdatingStatus}
-                      onClick={() => updateStatus({ id: po.id, status: "pending_approval" })}
-                      className="rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-xs font-semibold text-revix-dark shadow-xs hover:bg-revix-surface"
-                    >
-                      {isRtl ? "إرسال للاعتماد المالي" : "Submit for Approval"}
-                    </button>
-                  )}
-
-                  {po.status === "pending_approval" && canApprovePo && (
-                    <button
-                      type="button"
-                      disabled={isUpdatingStatus}
-                      onClick={() => updateStatus({ id: po.id, status: "approved" })}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-1.5 text-xs font-semibold text-revix-white shadow-xs hover:bg-revix-primary-hover"
-                    >
-                      <RevixIcon name="shield-check" className="h-3.5 w-3.5" />
-                      <span>{isRtl ? "اعتماد أمر الشراء (Approve)" : "Approve Purchase Order"}</span>
-                    </button>
-                  )}
-
-                  {(po.status === "approved" || po.status === "partially_received") && totalQty - totalRcv > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenReceiveModal(po)}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-1.5 text-xs font-semibold text-revix-white shadow-xs hover:bg-revix-primary-hover active:scale-95"
-                    >
-                      <RevixIcon name="car-front" className="h-3.5 w-3.5" />
-                      <span>{isRtl ? "تحويل سيارة للأصول" : "Convert Car to Asset"}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
 
         {/* Unified Pagination */}
         <div className="overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-2xs">

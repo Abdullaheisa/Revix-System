@@ -22,12 +22,22 @@ interface VehicleVariantsPanelProps {
 }
 
 const CATEGORY_LABELS: Record<VehicleCategory, { en: string; ar: string }> = {
+  mini: { en: "Mini (M)", ar: "ميني / صغيرة جداً" },
+  economy: { en: "Economy (E)", ar: "اقتصادية" },
+  compact: { en: "Compact (C)", ar: "مدمجة (Compact)" },
+  intermediate: { en: "Intermediate (I)", ar: "متوسطة (Intermediate)" },
+  standard: { en: "Standard (S)", ar: "قياسية (Standard)" },
+  fullsize: { en: "Full-size (F)", ar: "كبيرة (Full-size)" },
   sedan: { en: "Sedan", ar: "سيدان" },
-  suv: { en: "SUV", ar: "دفع رباعي / SUV" },
-  luxury: { en: "Luxury", ar: "فاخرة" },
-  compact: { en: "Compact", ar: "اقتصادية" },
+  suv: { en: "SUV / 4x4", ar: "دفع رباعي / SUV" },
+  crossover: { en: "Crossover", ar: "كروس أوفر" },
+  luxury: { en: "Luxury (L)", ar: "فاخرة" },
+  premium: { en: "Premium (P)", ar: "بريميوم / فئة عليا" },
+  convertible: { en: "Convertible (T)", ar: "مكشوفة (كابورليه)" },
+  coupe: { en: "Coupe / Sport", ar: "كوبيه / رياضية" },
+  van: { en: "Van / Minivan (V)", ar: "فان / ميني فان" },
+  pickup: { en: "Pickup Truck", ar: "بيك أب / نقل خفيف" },
   commercial: { en: "Commercial", ar: "تجاري" },
-  van: { en: "Van", ar: "فان / عائلي" },
 };
 
 export function VehicleVariantsPanel({

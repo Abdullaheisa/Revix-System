@@ -1,12 +1,22 @@
 import { baseApi } from "./baseApi";
 
 export type VehicleCategory =
+  | "mini"
+  | "economy"
+  | "compact"
+  | "intermediate"
+  | "standard"
+  | "fullsize"
   | "sedan"
   | "suv"
+  | "crossover"
   | "luxury"
-  | "compact"
-  | "commercial"
-  | "van";
+  | "premium"
+  | "convertible"
+  | "coupe"
+  | "van"
+  | "pickup"
+  | "commercial";
 export type VehicleTransmission = "automatic" | "manual";
 export type VehicleFuelType = "petrol" | "diesel" | "hybrid" | "electric";
 export type VehicleVariantStatus = "active" | "archived";
