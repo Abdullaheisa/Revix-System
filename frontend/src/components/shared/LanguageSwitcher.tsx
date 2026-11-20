@@ -50,9 +50,7 @@ export function LanguageSwitcher({
     // Persist locale in NEXT_LOCALE cookie so URL stays unified (no /en or /ar prefix)
     // and browser history never records language switches as separate pages.
     document.cookie = `NEXT_LOCALE=${nextLocale}; path=/; max-age=31536000; SameSite=Lax`;
-    document.documentElement.lang = nextLocale;
-    document.documentElement.dir = nextLocale === "ar" ? "rtl" : "ltr";
-    router.refresh();
+    window.location.reload();
   };
 
   return (
@@ -81,7 +79,9 @@ export function LanguageSwitcher({
         <div
           role="menu"
           aria-label={groupLabel}
-          className="absolute right-0 z-50 mt-1.5 w-36 overflow-hidden rounded-[8px] border border-revix-border bg-revix-white py-1 shadow-lg"
+          className={`absolute z-50 mt-1.5 w-36 overflow-hidden rounded-[8px] border border-revix-border bg-revix-white py-1 shadow-lg ${
+            isArabic ? "left-0" : "right-0"
+          }`}
         >
           <button
             type="button"
