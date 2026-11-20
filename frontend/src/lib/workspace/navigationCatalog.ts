@@ -171,8 +171,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "Model specifications, SIPP codes, and daily rental rate bands (model templates, not physical cars).",
               descAr:
                 "تعريف قوالب الموديلات، كود SIPP العالمي، وشرائح أسعار التأجير اليومي (قوالب الفئات وليس سيارات فردية).",
-              shortcut: "G K",
-              keyCode: "k",
+              shortcut: "G T",
+              keyCode: "t",
               isReady: true,
             },
           ],
@@ -189,8 +189,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "Browse fleet assets, availability status, daily rates, and quick operations.",
               descAr:
                 "استعراض سيارات الأسطول وحالتها التشغيلية والأسعار اليومية والعمليات السريعة.",
-              shortcut: "G V",
-              keyCode: "v",
+              shortcut: "G F",
+              keyCode: "f",
               isReady: true,
             },
             {
@@ -201,8 +201,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "Dedicated page to register a vehicle into fleet assets (from purchase order or direct entry).",
               descAr:
                 "صفحة مخصصة لتسجيل وإضافة سيارة للأصول (تحويل من أمر شراء أو إضافة مباشرة).",
-              shortcut: "G N",
-              keyCode: "n",
+              shortcut: "G A",
+              keyCode: "a",
               isReady: true,
             },
             {
@@ -378,8 +378,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "Invite employees (1 company per email, 1 role per employee) and assign branch scope.",
               descAr:
                 "دعوة الموظفين (شركة واحدة لكل إيميل، ودور واحد لكل موظف) وتحديد الفرع.",
-              shortcut: "G T",
-              keyCode: "t",
+              shortcut: "G E",
+              keyCode: "e",
               isReady: true,
             },
             {
@@ -390,8 +390,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "Configurable role permissions (Owner, CEO, Finance Manager, Accountant, Cashier, Representative).",
               descAr:
                 "جدول الصلاحيات المرن للأدوار (المالك، المدير التنفيذي، المدير المالي، المحاسب، الكاشير، المندوب).",
-              shortcut: "G M",
-              keyCode: "m",
+              shortcut: "G R",
+              keyCode: "r",
               isReady: true,
             },
           ],
@@ -410,18 +410,6 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
           groupTitleAr: "إدارة الفروع والشركة",
           items: [
             {
-              id: "locations",
-              titleEn: "Branches & Locations",
-              titleAr: "الفروع واللوكيشنات",
-              descEn:
-                "Manage company locations, branch codes, country-specific currencies, and working hours.",
-              descAr:
-                "إدارة مواقع وفروع الشركة، أكواد الفروع، عملة كل فرع حسب دولته، ومواعيد العمل.",
-              shortcut: "G L",
-              keyCode: "l",
-              isReady: true,
-            },
-            {
               id: "company-profile",
               titleEn: "Company Profile & Brand",
               titleAr: "بيانات وهوية الشركة",
@@ -431,6 +419,18 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
                 "تحديث اسم الشركة، الاسم القانوني، لون البراند، العملة المرجعية، والسجل التجاري والضريبي.",
               shortcut: "G C",
               keyCode: "c",
+              isReady: true,
+            },
+            {
+              id: "locations",
+              titleEn: "Branches & Locations",
+              titleAr: "الفروع واللوكيشنات",
+              descEn:
+                "Manage company locations, branch codes, country-specific currencies, and working hours.",
+              descAr:
+                "إدارة مواقع وفروع الشركة، أكواد الفروع، عملة كل فرع حسب دولته، ومواعيد العمل.",
+              shortcut: "G L",
+              keyCode: "l",
               isReady: true,
             },
           ],

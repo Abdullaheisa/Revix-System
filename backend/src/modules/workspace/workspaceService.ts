@@ -386,6 +386,7 @@ export class WorkspaceService {
     address: string;
     phone: string;
     email: string;
+    currencyCode?: string;
     timezone?: string;
     workingDays: string;
     workingHours: string;
@@ -404,8 +405,9 @@ export class WorkspaceService {
       );
     }
 
-    // Confirmed business rule: branch currency is automatically determined by the branch's country
-    const branchCurrency = country.currencyCode;
+    // Branch currency defaults to the branch's country currency, but can be overridden (e.g. USD/EUR)
+    const branchCurrency =
+      input.currencyCode?.trim().toUpperCase() || country.currencyCode;
     const branchTimezone = input.timezone?.trim() || country.defaultTimezone;
 
     let branch: BranchRecord;
@@ -477,6 +479,7 @@ export class WorkspaceService {
     address: string;
     phone: string;
     email: string;
+    currencyCode?: string;
     timezone?: string;
     workingDays: string;
     workingHours: string;
@@ -507,7 +510,8 @@ export class WorkspaceService {
         address: input.address,
         phone: input.phone,
         email: input.email,
-        currencyCode: country.currencyCode,
+        currencyCode:
+          input.currencyCode?.trim().toUpperCase() || country.currencyCode,
         timezone: input.timezone?.trim() || country.defaultTimezone,
         workingDays: input.workingDays,
         workingHours: input.workingHours,

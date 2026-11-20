@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { StudioBadge, StudioTooltip } from "@/components/shared/workspace";
@@ -107,7 +107,14 @@ export function WorkspaceOverviewPanel({
   );
 
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
-  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>("all");
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>(
+    activeBranch?.id ?? "all",
+  );
+  useEffect(() => {
+    if (activeBranch?.id) {
+      setSelectedBranchFilter(activeBranch.id);
+    }
+  }, [activeBranch?.id]);
   const [activeOpsTab, setActiveOpsTab] = useState<"pickups" | "returns">("pickups");
   const [hoveredChartIndex, setHoveredChartIndex] = useState<number | null>(null);
 
@@ -431,22 +438,7 @@ export function WorkspaceOverviewPanel({
                   ? `لوحة الإحصائيات ومتابعة العمليات`
                   : `Executive Fleet & Business Analytics`}
               </h1>
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                <span>
-                  {isRtl ? "متابعة حية للأسطول" : "Live Fleet Telemetry Active"}
-                </span>
-              </div>
             </div>
-            <p className="text-[12.5px] text-revix-secondary">
-              <span className="font-semibold text-revix-dark">{company.name}</span>
-              <span> · </span>
-              <span>
-                {isRtl
-                  ? `العملة الأساسية للنظام: ${company.baseCurrency} · ${branches.length} فروع تشغيلية`
-                  : `Base Currency: ${company.baseCurrency} · ${branches.length} Fleet Locations`}
-              </span>
-            </p>
           </div>
 
           {/* Interactive Filters: Branch Scope & Time Range */}
@@ -1194,9 +1186,6 @@ export function WorkspaceOverviewPanel({
                 <div className="flex h-6 w-6 items-center justify-center rounded bg-revix-surface text-revix-primary group-hover:bg-revix-primary group-hover:text-white transition-colors">
                   <RevixIcon name={item.icon} size={13} />
                 </div>
-                <kbd className="font-mono text-[9.5px] font-semibold text-revix-secondary bg-revix-surface px-1 py-0.5 rounded border border-revix-border">
-                  {item.shortcut}
-                </kbd>
               </div>
               <span className="mt-2 text-[12px] font-semibold text-revix-dark group-hover:text-revix-primary truncate">
                 {item.title}

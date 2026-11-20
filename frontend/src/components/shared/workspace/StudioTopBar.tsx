@@ -126,9 +126,6 @@ export function StudioTopBar({
                 }))}
               />
             </div>
-            <StudioBadge variant="amber" dir="ltr" className="font-mono">
-              {activeBranch.currencyCode}
-            </StudioBadge>
           </div>
         ) : null}
       </div>

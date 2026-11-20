@@ -103,24 +103,65 @@ export function CitySelectField({
   );
 }
 
+const COMMON_CURRENCIES = [
+  "USD",
+  "EUR",
+  "GBP",
+  "EGP",
+  "SAR",
+  "AED",
+  "KWD",
+  "QAR",
+  "BHD",
+  "OMR",
+  "JOD",
+  "MAD",
+  "TND",
+  "TRY",
+];
+
 export interface AutoBranchCurrencyFieldProps {
   isRtl: boolean;
   countryCode: string;
+  currencyCode?: string;
+  onChange?: (currencyCode: string) => void;
   helperTag?: string;
 }
 
 export function AutoBranchCurrencyField({
   isRtl,
   countryCode,
+  currencyCode,
+  onChange,
   helperTag,
 }: AutoBranchCurrencyFieldProps) {
   const autoCurrency = resolveCurrencyForCountry(countryCode);
+  const currentCurrency = (currencyCode || autoCurrency).toUpperCase();
+
+  if (onChange) {
+    const optionsList = Array.from(
+      new Set([autoCurrency, currentCurrency, ...COMMON_CURRENCIES]),
+    );
+    return (
+      <FormSelect
+        label={isRtl ? "عملة الفرع" : "Branch currency"}
+        value={currentCurrency}
+        onChange={(e) => onChange(e.target.value.toUpperCase())}
+        options={optionsList.map((code) => ({
+          value: code,
+          label:
+            code === autoCurrency
+              ? `${code} — ${isRtl ? "عملة الدولة" : "Country default"}`
+              : code,
+        }))}
+      />
+    );
+  }
+
   return (
     <div className="space-y-1.5">
       <label className="block text-[13.5px] font-semibold text-revix-dark">
-        {isRtl
-          ? "عملة الفرع (تلقائية حسب الدولة)"
-          : "Branch currency (auto by country)"}
+        {isRtl ? "عملة الفرع" : "Branch currency"}
       </label>
       <div className="flex h-[46px] items-center justify-between rounded-control border border-revix-primary/25 bg-revix-tint/65 px-3.5">
         <span dir="ltr" className="font-mono text-[14px] font-bold text-revix-primary">

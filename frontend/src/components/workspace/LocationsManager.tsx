@@ -59,6 +59,9 @@ export function LocationsManager({
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [currencyCode, setCurrencyCode] = useState(
+    company.baseCurrency || "SAR",
+  );
   const [timezone, setTimezone] = useState(company.timezone || "Asia/Riyadh");
   const [workingDays, setWorkingDays] = useState("Sun - Thu");
   const [workingHours, setWorkingHours] = useState("08:00 - 22:00");
@@ -100,6 +103,7 @@ export function LocationsManager({
     setPhone(company.phone);
     setEmail(company.email);
     const meta = findCountryMetadata(defaultCountry);
+    setCurrencyCode(meta?.currencyCode ?? company.baseCurrency ?? "SAR");
     setTimezone(meta?.defaultTimezone ?? company.timezone);
     setWorkingDays(isRtl ? "الأحد - الخميس" : "Sun - Thu");
     setWorkingHours("08:00 - 22:00");
@@ -120,6 +124,7 @@ export function LocationsManager({
     setAddress(branch.address);
     setPhone(branch.phone);
     setEmail(branch.email);
+    setCurrencyCode(branch.currencyCode);
     setTimezone(branch.timezone);
     setWorkingDays(branch.workingDays);
     setWorkingHours(branch.workingHours);
@@ -135,6 +140,7 @@ export function LocationsManager({
     setPhone(company.phone);
     setEmail(company.email);
     const meta = findCountryMetadata(company.countryCode);
+    setCurrencyCode(company.baseCurrency || meta?.currencyCode || "SAR");
     setTimezone(meta?.defaultTimezone ?? company.timezone);
     const nextSeq = editingBranch ? 1 : branches.length + 1;
     setCode(deriveBranchCode(company.city, company.countryCode, nextSeq));
@@ -145,6 +151,7 @@ export function LocationsManager({
     setCountryCode(nextCountry);
     const meta = findCountryMetadata(nextCountry);
     if (meta) {
+      setCurrencyCode(meta.currencyCode);
       setTimezone(meta.defaultTimezone);
     }
     if (!isCodeTouched && !editingBranch) {
@@ -183,6 +190,7 @@ export function LocationsManager({
           address: address.trim(),
           phone: phone.trim(),
           email: email.trim(),
+          currencyCode,
           timezone: timezone.trim(),
           workingDays: workingDays.trim(),
           workingHours: workingHours.trim(),
@@ -197,6 +205,7 @@ export function LocationsManager({
           address: address.trim(),
           phone: phone.trim(),
           email: email.trim(),
+          currencyCode,
           timezone: timezone.trim(),
           workingDays: workingDays.trim(),
           workingHours: workingHours.trim(),
@@ -322,13 +331,10 @@ export function LocationsManager({
             <thead>
               <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
                 <th className="px-4 py-2.5 text-start">
-                  {isRtl ? "الكود" : "Code"}
+                  {isRtl ? "الدولة / اللوكيشن (المدينة)" : "Country & Location (City)"}
                 </th>
                 <th className="px-4 py-2.5 text-start">
-                  {isRtl ? "اسم الفرع" : "Location name"}
-                </th>
-                <th className="px-4 py-2.5 text-start">
-                  {isRtl ? "الدولة والمدينة" : "Country & City"}
+                  {isRtl ? "الفرع" : "Branch"}
                 </th>
                 <th className="px-4 py-2.5 text-start">
                   {isRtl ? "عملة الفرع" : "Currency"}
@@ -348,7 +354,7 @@ export function LocationsManager({
               {filteredBranches.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-[13.5px] text-revix-secondary"
                   >
                     {isRtl
@@ -364,19 +370,8 @@ export function LocationsManager({
                       key={branch.id}
                       className="transition-colors hover:bg-revix-surface/60"
                     >
-                      <td className="px-4 py-3 font-mono text-[12px] font-semibold text-revix-dark">
-                        {branch.code}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-revix-dark">
-                          {branch.name}
-                        </p>
-                        <p className="mt-0.5 text-[11.5px] text-revix-secondary">
-                          {branch.address}
-                        </p>
-                      </td>
                       <td className="px-4 py-3 text-revix-dark">
-                        <p className="font-medium">
+                        <p className="font-semibold">
                           {countryMeta
                             ? isRtl
                               ? countryMeta.nameAr
@@ -385,6 +380,19 @@ export function LocationsManager({
                         </p>
                         <p className="text-[11.5px] text-revix-secondary">
                           {branch.city} · {branch.timezone}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-revix-dark">
+                            {branch.name}
+                          </p>
+                          <span className="rounded bg-revix-surface px-1.5 py-0.5 font-mono text-[11px] font-semibold text-revix-secondary">
+                            {branch.code}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[11.5px] text-revix-secondary">
+                          {branch.address}
                         </p>
                       </td>
                       <td className="px-4 py-3">
@@ -451,13 +459,8 @@ export function LocationsManager({
               ? "تعديل بيانات الفرع"
               : "Edit location"
             : isRtl
-              ? "إضافة فرع / لوكيشن جديد"
+              ? "إضافة فرع جديد"
               : "Add new location"
-        }
-        subtitle={
-          isRtl
-            ? "يتم تعيين عملة الفرع تلقائيًا حسب دولته."
-            : "Branch currency is automatically assigned according to its country."
         }
         headerAction={
           !editingBranch ? (
@@ -484,12 +487,47 @@ export function LocationsManager({
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <CountrySelectField
+              isRtl={isRtl}
+              label={isRtl ? "الدولة" : "Country"}
+              countryCode={countryCode}
+              onChange={handleCountryChange}
+            />
+            <AutoBranchCurrencyField
+              isRtl={isRtl}
+              countryCode={countryCode}
+              currencyCode={currencyCode}
+              onChange={setCurrencyCode}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <CitySelectField
+              isRtl={isRtl}
+              label={isRtl ? "اللوكيشن (المدينة)" : "Location (City)"}
+              countryCode={countryCode}
+              city={city}
+              onChange={handleCityChange}
+            />
             <FormInput
-              label={isRtl ? "اسم الفرع / اللوكيشن" : "Location name"}
+              label={isRtl ? "المنطقة الزمنية" : "Time zone"}
+              dir="ltr"
+              placeholder="Africa/Cairo"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormInput
+              label={isRtl ? "الفرع" : "Branch name"}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={
-                isRtl ? "مثال: فرع مطار الرياض" : "e.g., Riyadh Airport Desk"
+                isRtl
+                  ? "مثال: مطار القاهرة، المعادي"
+                  : "e.g., Cairo Airport, Maadi"
               }
               required
             />
@@ -502,34 +540,6 @@ export function LocationsManager({
                 setCode(e.target.value.toUpperCase());
               }}
               placeholder="CAI-01"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <CountrySelectField
-              isRtl={isRtl}
-              label={isRtl ? "دولة الفرع" : "Country"}
-              countryCode={countryCode}
-              onChange={handleCountryChange}
-            />
-            <AutoBranchCurrencyField isRtl={isRtl} countryCode={countryCode} />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <CitySelectField
-              isRtl={isRtl}
-              label={isRtl ? "المدينة / المنطقة" : "City / Region"}
-              countryCode={countryCode}
-              city={city}
-              onChange={handleCityChange}
-            />
-            <FormInput
-              label={isRtl ? "المنطقة الزمنية" : "Time zone"}
-              dir="ltr"
-              placeholder="Africa/Cairo"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
               required
             />
           </div>

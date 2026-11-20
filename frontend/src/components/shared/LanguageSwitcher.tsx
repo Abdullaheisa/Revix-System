@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
+import { RevixIcon } from "@/components/ui/RevixIcons";
 
 export interface LanguageSwitcherProps {
   label?: string;
@@ -14,11 +16,35 @@ export function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   const locale = useLocale();
   const router = useRouter();
-  const isEnglish = locale === "en";
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const isArabic = locale === "ar";
   const groupLabel = label ?? (isArabic ? "تبديل اللغة" : "Language switcher");
 
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
   const switchLocale = (nextLocale: "en" | "ar") => {
+    setIsOpen(false);
     if (nextLocale === locale) return;
 
     // Persist locale in NEXT_LOCALE cookie so URL stays unified (no /en or /ar prefix)
@@ -31,43 +57,62 @@ export function LanguageSwitcher({
 
   return (
     <div
+      ref={containerRef}
       dir="ltr"
-      role="group"
-      aria-label={groupLabel}
-      className={`inline-flex min-h-[44px] items-center gap-1 ${className}`.trim()}
+      className={`relative inline-block ${className}`.trim()}
     >
       <button
         type="button"
-        lang="en"
-        onClick={() => switchLocale("en")}
-        aria-current={isEnglish ? "true" : undefined}
-        className={`inline-flex h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-control px-2.5 text-[14px] leading-[1.4] text-revix-primary transition-colors duration-[var(--duration-fast)] ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-revix-primary ${
-          isEnglish
-            ? "bg-revix-tint font-bold"
-            : "bg-revix-white font-normal hover:bg-revix-tint"
-        }`}
+        aria-label={groupLabel}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="inline-flex h-[32px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-border bg-revix-white px-2.5 text-[12.5px] font-semibold text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-tint/40"
       >
-        EN
+        <span>{isArabic ? "AR" : "EN"}</span>
+        <RevixIcon
+          name="chevron-down"
+          size={12}
+          className={`text-revix-secondary transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
-      <span
-        aria-hidden="true"
-        className="text-[14px] leading-[1.4] text-revix-secondary select-none"
-      >
-        /
-      </span>
-      <button
-        type="button"
-        lang="ar"
-        onClick={() => switchLocale("ar")}
-        aria-current={isArabic ? "true" : undefined}
-        className={`inline-flex h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-control px-2.5 text-[14px] leading-[1.4] text-revix-primary transition-colors duration-[var(--duration-fast)] ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-revix-primary ${
-          isArabic
-            ? "bg-revix-tint font-bold"
-            : "bg-revix-white font-normal hover:bg-revix-tint"
-        }`}
-      >
-        AR
-      </button>
+
+      {isOpen ? (
+        <div
+          role="menu"
+          aria-label={groupLabel}
+          className="absolute right-0 z-50 mt-1.5 w-36 overflow-hidden rounded-[8px] border border-revix-border bg-revix-white py-1 shadow-lg"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            lang="en"
+            onClick={() => switchLocale("en")}
+            className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-[12.5px] transition-colors ${
+              !isArabic
+                ? "bg-revix-tint/60 font-semibold text-revix-primary"
+                : "text-revix-dark hover:bg-revix-surface"
+            }`}
+          >
+            <span>English</span>
+            <span className="font-mono text-[11px] text-revix-secondary">EN</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            lang="ar"
+            onClick={() => switchLocale("ar")}
+            className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-[12.5px] transition-colors ${
+              isArabic
+                ? "bg-revix-tint/60 font-semibold text-revix-primary"
+                : "text-revix-dark hover:bg-revix-surface"
+            }`}
+          >
+            <span>العربية</span>
+            <span className="font-mono text-[11px] text-revix-secondary">AR</span>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

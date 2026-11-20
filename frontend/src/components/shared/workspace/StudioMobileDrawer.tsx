@@ -156,12 +156,6 @@ export function StudioMobileDrawer({
                   />
                   {isRtl ? "الفرع الحالي النشط" : "Active Location"}
                 </span>
-                <span
-                  dir="ltr"
-                  className="font-mono text-[10.5px] font-bold text-revix-primary"
-                >
-                  {activeBranch.currencyCode}
-                </span>
               </div>
               <RevixSelect
                 size="sm"

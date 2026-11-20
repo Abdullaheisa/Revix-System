@@ -113,6 +113,7 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
   const [branchAddress, setBranchAddress] = useState("");
   const [branchPhone, setBranchPhone] = useState("");
   const [branchEmail, setBranchEmail] = useState("");
+  const [branchCurrency, setBranchCurrency] = useState("SAR");
   const [branchTimezone, setBranchTimezone] = useState("Asia/Riyadh");
   const [workingDays, setWorkingDays] = useState(
     isRtl ? "الأحد - الخميس" : "Sun - Thu",
@@ -148,6 +149,7 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
     setBranchCountry(nextCode);
     const meta = findCountryMetadata(nextCode);
     if (meta) {
+      setBranchCurrency(meta.currencyCode);
       setBranchTimezone(meta.defaultTimezone);
     }
     if (!isCodeTouched) {
@@ -170,6 +172,7 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
     setBranchPhone(company.phone);
     setBranchEmail(company.email);
     const meta = findCountryMetadata(company.countryCode);
+    setBranchCurrency(company.baseCurrency || meta?.currencyCode || "SAR");
     setBranchTimezone(meta?.defaultTimezone ?? company.timezone);
     const code = deriveBranchCode(company.city, company.countryCode, 1);
     setBranchCode(code);
@@ -232,6 +235,7 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
         address: branchAddress.trim(),
         phone: branchPhone.trim(),
         email: branchEmail.trim(),
+        currencyCode: branchCurrency,
         timezone: branchTimezone.trim(),
         workingDays: workingDays.trim(),
         workingHours: workingHours.trim(),
@@ -623,6 +627,8 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
                 <AutoBranchCurrencyField
                   isRtl={isRtl}
                   countryCode={branchCountry}
+                  currencyCode={branchCurrency}
+                  onChange={setBranchCurrency}
                 />
               </div>
 

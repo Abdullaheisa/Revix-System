@@ -233,15 +233,8 @@ export function WorkingSchedulePicker({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <label className="block text-[14px] font-medium text-revix-dark">
-            {isRtl
-              ? "أيام وساعات العمل (يوم بيوم)"
-              : "Working days & hours (day by day)"}
+            {isRtl ? "أيام وساعات العمل" : "Working days & hours"}
           </label>
-          <p className="text-[12px] text-revix-secondary">
-            {isRtl
-              ? `${openCount} أيام عمل نشطة · اختر أيام العمل ومواعيد الفتح والإغلاق لكل يوم.`
-              : `${openCount} open days · Toggle each day and choose opening and closing times.`}
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">

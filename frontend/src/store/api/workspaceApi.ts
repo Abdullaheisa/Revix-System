@@ -104,6 +104,7 @@ export interface CreateBranchRequestDto {
   address: string;
   phone: string;
   email: string;
+  currencyCode?: string;
   timezone?: string;
   workingDays: string;
   workingHours: string;
