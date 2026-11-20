@@ -93,10 +93,10 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const [transmission, setTransmission] = useState<string>("automatic");
 
   // Section 4: Daily Rental Pricing Tiers
-  const [dailyRate1to2, setDailyRate1to2] = useState<number>(100);
-  const [dailyRate3to7, setDailyRate3to7] = useState<number>(85);
-  const [dailyRate8Plus, setDailyRate8Plus] = useState<number>(70);
-  const [damageExcess, setDamageExcess] = useState<number>(500);
+  const [dailyRate1to2, setDailyRate1to2] = useState<number>(0);
+  const [dailyRate3to7, setDailyRate3to7] = useState<number>(0);
+  const [dailyRate8Plus, setDailyRate8Plus] = useState<number>(0);
+  const [damageExcess, setDamageExcess] = useState<number>(0);
 
   // Section 5: Mileage Policy
   const [mileagePolicy, setMileagePolicy] = useState<"unlimited" | "limited">("unlimited");
@@ -104,12 +104,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const [extraKmRate, setExtraKmRate] = useState<number>(0.35);
 
   // Section 6: Inclusions
-  const [selectedInclusions, setSelectedInclusions] = useState<string[]>([
-    "Free Cancellation (24)",
-    "Third Party Liability (TPL)",
-    "Collision Damage Waiver (CDW)",
-    "Sanitized & Clean Vehicle",
-  ]);
+  const [selectedInclusions, setSelectedInclusions] = useState<string[]>([]);
   const [inclusionsDropdownOpen, setInclusionsDropdownOpen] = useState(false);
   const [inclusionSearch, setInclusionSearch] = useState("");
   const photoPickerRef = useRef<HTMLDivElement | null>(null);
@@ -765,7 +760,10 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                   <input
                     type="text"
                     placeholder={isAr ? "اضغط لاختيار صورة من المكتبة أو ألصق الرابط..." : "Click to choose from library or paste URL..."}
-                    value={photoUrl}
+                    value={
+                      photos.find((p) => p.photoUrl === photoUrl)?.vehicleName ??
+                      photoUrl
+                    }
                     onClick={() => setPhotoPickerOpen(true)}
                     onFocus={() => setPhotoPickerOpen(true)}
                     onChange={(e) => setPhotoUrl(e.target.value)}
