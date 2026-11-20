@@ -9,6 +9,8 @@ import type {
   NetworkPermittedBranchRecord,
 } from "../../db/store.ts";
 import type { EmailDeliveryAdapter } from "../auth/emailDelivery.ts";
+import { hashPassword, verifyPassword } from "../../security/passwordHash.ts";
+import { validateNewPassword } from "../../security/passwordPolicy.ts";
 import { generateSecureToken, hashOpaqueToken } from "../../security/tokens.ts";
 
 export type NetworkErrorCode =
@@ -24,7 +26,9 @@ export type NetworkErrorCode =
   | "LINK_NOT_FOUND"
   | "FAILED_TO_UPDATE_LINK"
   | "FORBIDDEN_CROSS_TENANT"
-  | "FORBIDDEN_NETWORK_VIEW_ONLY";
+  | "FORBIDDEN_NETWORK_VIEW_ONLY"
+  | "WEAK_PASSWORD"
+  | "INVALID_CREDENTIALS";
 
 export class NetworkServiceError extends Error {
   public readonly code: NetworkErrorCode;
@@ -275,6 +279,7 @@ export class NetworkService {
   async previewNetworkInvitation(rawToken: string): Promise<{
     invitation: CompanyNetworkInvitationRecord;
     mainCompany: CompanyRecord;
+    accountExists: boolean;
   }> {
     const tokenHash = hashOpaqueToken(rawToken.trim());
     const invitation =
@@ -313,9 +318,152 @@ export class NetworkService {
       );
     }
 
+    const existingUser = await this.store.findUserByEmail(invitation.inviteeEmail);
+
     return {
       invitation,
       mainCompany,
+      accountExists: Boolean(existingUser),
+    };
+  }
+
+  async completeNetworkInvitationOnboarding(input: {
+    rawToken: string;
+    password: string;
+    fullName?: string;
+    ipAddress: string | null;
+    userAgent: string | null;
+    sessionTtlHours: number;
+    ensureCompanyRolesAndOwnerMembership: (company: CompanyRecord) => Promise<unknown>;
+  }): Promise<{
+    link: CompanyNetworkLinkRecord;
+    rawSessionToken: string;
+    sessionExpiresAt: Date;
+  }> {
+    const { invitation, mainCompany } = await this.previewNetworkInvitation(
+      input.rawToken,
+    );
+
+    const now = new Date();
+    const existingUser = await this.store.findUserByEmail(invitation.inviteeEmail);
+    let userId: string;
+    let localCompany: CompanyRecord | null = null;
+
+    if (existingUser) {
+      const ok = await verifyPassword(existingUser.passwordHash, input.password);
+      if (!ok) {
+        throw new NetworkServiceError(
+          "INVALID_CREDENTIALS",
+          "Incorrect password for this account.",
+          401,
+        );
+      }
+      userId = existingUser.id;
+      if (!existingUser.emailVerifiedAt) {
+        await this.store.markUserEmailVerified(userId, now);
+      }
+
+      const owned = await this.store.findCompanyByOwnerUserId(userId);
+      if (owned) {
+        localCompany = owned;
+      } else {
+        const membership = await this.store.findMembershipByUserId(userId);
+        if (membership) {
+          localCompany = await this.store.findCompanyById(membership.companyId);
+        }
+      }
+    } else {
+      const policyIssue = validateNewPassword(input.password);
+      if (policyIssue) {
+        throw new NetworkServiceError(
+          "WEAK_PASSWORD",
+          "Password does not meet security policy requirements.",
+          400,
+        );
+      }
+
+      const passwordHash = await hashPassword(input.password);
+      const createdUser = await this.store.createUser({
+        id: crypto.randomUUID(),
+        fullName:
+          input.fullName?.trim() ||
+          invitation.contactName ||
+          invitation.localCompanyName,
+        email: invitation.inviteeEmail,
+        passwordHash,
+      });
+      userId = createdUser.id;
+      await this.store.markUserEmailVerified(userId, now);
+    }
+
+    if (!localCompany) {
+      localCompany = await this.store.createCompany({
+        id: crypto.randomUUID(),
+        ownerUserId: userId,
+        name: invitation.localCompanyName,
+        legalName: invitation.localCompanyName,
+        logoUrl: invitation.logoUrl ?? null,
+        brandColor: mainCompany.brandColor,
+        phone: invitation.contactPhone || "",
+        email: invitation.inviteeEmail,
+        countryCode: mainCompany.countryCode,
+        city: mainCompany.city,
+        address: "",
+        postalCode: "",
+        baseCurrency: mainCompany.baseCurrency,
+        timezone: mainCompany.timezone,
+        businessRegNumber: "",
+        taxRegNumber: "",
+        operatingMode: "local_partner",
+      });
+
+      await input.ensureCompanyRolesAndOwnerMembership(localCompany);
+
+      await this.store.createBranch({
+        id: crypto.randomUUID(),
+        companyId: localCompany.id,
+        name: "Main Branch",
+        code: "HQ-1",
+        countryCode: localCompany.countryCode,
+        city: localCompany.city,
+        address: "",
+        phone: localCompany.phone,
+        email: localCompany.email,
+        currencyCode: localCompany.baseCurrency,
+        timezone: localCompany.timezone,
+        workingDays: "Mon-Sat",
+        workingHours: "09:00-18:00",
+      });
+    }
+
+    const localBranches = await this.store.listBranchesByCompanyId(
+      localCompany.id,
+    );
+    const { link } = await this.acceptNetworkInvitation(
+      input.rawToken,
+      localCompany.id,
+      userId,
+      { permittedBranchIds: localBranches.map((b) => b.id) },
+    );
+
+    const rawSessionToken = generateSecureToken(32);
+    const sessionExpiresAt = new Date(
+      now.getTime() + input.sessionTtlHours * 60 * 60 * 1000,
+    );
+
+    await this.store.createSession({
+      id: crypto.randomUUID(),
+      userId,
+      tokenHash: hashOpaqueToken(rawSessionToken),
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent,
+      expiresAt: sessionExpiresAt,
+    });
+
+    return {
+      link,
+      rawSessionToken,
+      sessionExpiresAt,
     };
   }
 

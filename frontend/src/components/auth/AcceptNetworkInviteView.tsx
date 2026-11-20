@@ -6,13 +6,16 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { FormInput } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { validateNewPassword } from "@/lib/auth/passwordPolicy";
 import {
   usePreviewNetworkInvitationQuery,
   useAcceptNetworkInvitationMutation,
+  useCompleteNetworkOnboardingMutation,
 } from "@/store/api/networkApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
-import { extractApiErrorCode } from "@/store/api/baseApi";
+import { extractApiErrorCode, resolveAssetUrl } from "@/store/api/baseApi";
 
 export interface AcceptNetworkInviteViewProps {
   isRtl: boolean;
@@ -35,9 +38,15 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
 
   const [acceptNetworkInvitation, { isLoading: isAccepting }] =
     useAcceptNetworkInvitationMutation();
+  const [completeNetworkOnboarding, { isLoading: isCompletingOnboarding }] =
+    useCompleteNetworkOnboardingMutation();
 
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([]);
   const [branchesInitialized, setBranchesInitialized] = useState(false);
+  const [onboardingName, setOnboardingName] = useState("");
+  const [onboardingPassword, setOnboardingPassword] = useState("");
+  const [onboardingConfirmPassword, setOnboardingConfirmPassword] = useState("");
+  const [showOnboardingPassword, setShowOnboardingPassword] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -59,6 +68,66 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
     setActionError(null);
 
     if (!token) return;
+
+    if (!currentCompany) {
+      if (!preview?.accountExists) {
+        const policyIssue = validateNewPassword(onboardingPassword);
+        if (policyIssue) {
+          setActionError(
+            isRtl
+              ? "كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حروف وأرقام."
+              : "Password must be at least 8 characters with letters and numbers.",
+          );
+          return;
+        }
+        if (onboardingPassword !== onboardingConfirmPassword) {
+          setActionError(
+            isRtl ? "كلمتا المرور غير متطابقتين." : "Passwords do not match.",
+          );
+          return;
+        }
+      } else if (!onboardingPassword) {
+        setActionError(
+          isRtl ? "يرجى إدخال كلمة المرور." : "Please enter your password.",
+        );
+        return;
+      }
+
+      try {
+        await completeNetworkOnboarding({
+          token,
+          password: onboardingPassword,
+          fullName: onboardingName.trim() || undefined,
+        }).unwrap();
+
+        setSuccess(true);
+        setTimeout(() => {
+          router.push("/workspace");
+        }, 1500);
+      } catch (err) {
+        const code = extractApiErrorCode(err);
+        if (code === "INVALID_CREDENTIALS") {
+          setActionError(
+            isRtl
+              ? "كلمة المرور غير صحيحة لهذا الحساب."
+              : "Incorrect password for this account.",
+          );
+        } else if (code === "WEAK_PASSWORD") {
+          setActionError(
+            isRtl
+              ? "كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حروف وأرقام."
+              : "Password must be at least 8 characters with letters and numbers.",
+          );
+        } else {
+          setActionError(
+            isRtl
+              ? "تعذر تفعيل الحساب وقبول الدعوة. يرجى المحاولة مجددًا."
+              : "Failed to complete onboarding. Please try again.",
+          );
+        }
+      }
+      return;
+    }
 
     try {
       await acceptNetworkInvitation({
@@ -177,10 +246,25 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
               <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
                 <div className="flex items-center gap-3">
                   <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-2xs"
-                    style={{ backgroundColor: preview.mainCompany.brandColor || "#059669" }}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-revix-border bg-white shadow-2xs"
+                    style={
+                      !preview.mainCompany.logoUrl
+                        ? { backgroundColor: preview.mainCompany.brandColor || "#059669" }
+                        : undefined
+                    }
                   >
-                    {preview.mainCompany.name.substring(0, 2).toUpperCase()}
+                    {preview.mainCompany.logoUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={resolveAssetUrl(preview.mainCompany.logoUrl)}
+                        alt={preview.mainCompany.name}
+                        className="h-full w-full object-contain p-1"
+                      />
+                    ) : (
+                      <span className="text-sm font-bold text-white">
+                        {preview.mainCompany.name.substring(0, 2).toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-revix-dark">
@@ -272,22 +356,86 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3 pt-2">
-                  <Alert
-                    variant="info"
-                    title={isRtl ? "تنبيه" : "Notice"}
-                    message={
-                      isRtl
-                        ? "يرجى تسجيل الدخول بحساب شركتك المحلية أولاً لقبول هذه الدعوة."
-                        : "Please sign in to your local company account first to accept this invitation."
+                <div className="space-y-3.5 pt-1">
+                  <FormInput
+                    label={isRtl ? "البريد الإلكتروني" : "Email address"}
+                    type="email"
+                    dir="ltr"
+                    value={preview.invitation.inviteeEmail}
+                    disabled
+                    readOnly
+                  />
+
+                  {!preview.accountExists ? (
+                    <FormInput
+                      label={isRtl ? "اسم المسؤول" : "Contact name"}
+                      value={
+                        onboardingName ||
+                        preview.invitation.contactName ||
+                        preview.invitation.localCompanyName
+                      }
+                      onChange={(e) => setOnboardingName(e.target.value)}
+                      required
+                    />
+                  ) : null}
+
+                  <FormInput
+                    label={isRtl ? "كلمة المرور" : "Password"}
+                    type={showOnboardingPassword ? "text" : "password"}
+                    dir="ltr"
+                    value={onboardingPassword}
+                    onChange={(e) => setOnboardingPassword(e.target.value)}
+                    placeholder={
+                      !preview.accountExists
+                        ? isRtl
+                          ? "8 أحرف على الأقل (حروف وأرقام)"
+                          : "At least 8 characters (letters & numbers)"
+                        : isRtl
+                          ? "أدخل كلمة المرور"
+                          : "Enter your password"
+                    }
+                    required
+                    rightElement={
+                      <button
+                        type="button"
+                        onClick={() => setShowOnboardingPassword((v) => !v)}
+                        className="inline-flex h-[44px] w-[44px] cursor-pointer items-center justify-center text-revix-secondary hover:text-revix-primary"
+                      >
+                        <RevixIcon
+                          name={showOnboardingPassword ? "eye-off" : "eye"}
+                          size={18}
+                        />
+                      </button>
                     }
                   />
+
+                  {!preview.accountExists ? (
+                    <FormInput
+                      label={isRtl ? "تأكيد كلمة المرور" : "Confirm password"}
+                      type={showOnboardingPassword ? "text" : "password"}
+                      dir="ltr"
+                      value={onboardingConfirmPassword}
+                      onChange={(e) => setOnboardingConfirmPassword(e.target.value)}
+                      placeholder={
+                        isRtl ? "أعد كتابة كلمة المرور" : "Re-enter password"
+                      }
+                      required
+                    />
+                  ) : null}
+
                   <Button
+                    type="submit"
                     variant="primary"
                     className="w-full"
-                    onClick={() => router.push(`/login?redirect=/invite/network?token=${token}`)}
+                    isLoading={isCompletingOnboarding}
                   >
-                    {isRtl ? "تسجيل الدخول للمتابعة" : "Sign In to Continue"}
+                    {!preview.accountExists
+                      ? isRtl
+                        ? "إنشاء الحساب وقبول الدعوة"
+                        : "Create Account & Accept"
+                      : isRtl
+                        ? "تسجيل الدخول وقبول الدعوة"
+                        : "Sign In & Accept"}
                   </Button>
                 </div>
               )}

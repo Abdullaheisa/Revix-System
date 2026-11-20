@@ -45,13 +45,13 @@ describe("Frontend open-redirect protection (sanitizeReturnUrl)", () => {
 
 describe("Frontend password policy alignment (Revix Auth)", () => {
   it("enforces configured minimum length and character classes without trimming spaces or imposing a 72-byte cap", () => {
-    assert.equal(MIN_PASSWORD_LENGTH, 12);
+    assert.equal(MIN_PASSWORD_LENGTH, 8);
     assert.equal(MAX_PASSWORD_LENGTH, 4096);
 
     assert.equal(validateNewPassword("Short1a"), "too_short");
-    assert.equal(validateNewPassword("lowercaseonly123"), "missing_uppercase");
-    assert.equal(validateNewPassword("UPPERCASEONLY123"), "missing_lowercase");
+    assert.equal(validateNewPassword("123456789"), "missing_letter");
     assert.equal(validateNewPassword("NoNumbersHereAtAll"), "missing_number");
+    assert.equal(validateNewPassword("simple12"), null);
 
     // Spaces are preserved and longer passphrases > 72 UTF-8 bytes succeed up to 4096 chars
     const longPassphrase = `${"Revix Fleet Rental 2026 ".repeat(5)}A1`;

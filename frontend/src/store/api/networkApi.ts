@@ -80,6 +80,9 @@ export interface PreviewNetworkInvitationResponseDto {
     invitation: {
       id: string;
       localCompanyName: string;
+      contactName?: string;
+      contactPhone?: string;
+      logoUrl?: string | null;
       inviteeEmail: string;
       expiresAt: string;
       createdAt: string;
@@ -93,6 +96,7 @@ export interface PreviewNetworkInvitationResponseDto {
       countryCode: string;
       city: string;
     };
+    accountExists?: boolean;
   };
 }
 
@@ -139,6 +143,18 @@ export const networkApi = baseApi.injectEndpoints({
       invalidatesTags: ["Network", "Company", "Branch"],
     }),
 
+    completeNetworkOnboarding: builder.mutation<
+      { ok: true; data: { link: any } },
+      { token: string; password: string; fullName?: string }
+    >({
+      query: (body) => ({
+        url: "/network/invitations/complete-onboarding",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["AuthUser", "Network", "Company", "Branch"],
+    }),
+
     updateLinkStatus: builder.mutation<
       { ok: true; data: { link: any } },
       { linkId: string; status: NetworkLinkStatus }
@@ -181,6 +197,7 @@ export const {
   useInviteLocalPartnerMutation,
   usePreviewNetworkInvitationQuery,
   useAcceptNetworkInvitationMutation,
+  useCompleteNetworkOnboardingMutation,
   useUpdateLinkStatusMutation,
   useUpdatePermittedBranchesMutation,
   useTerminateLinkMutation,

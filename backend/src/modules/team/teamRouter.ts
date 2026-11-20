@@ -38,7 +38,7 @@ const previewInvitationSchema = z.object({
 
 const acceptInvitationSchema = z.object({
   token: z.string().trim().min(10).max(512),
-  password: z.string().min(12).max(4096),
+  password: z.string().min(8).max(4096),
   fullName: z.string().trim().min(1).max(160).optional(),
 });
 

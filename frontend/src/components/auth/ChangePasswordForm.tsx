@@ -104,6 +104,7 @@ export function ChangePasswordForm({
       case "missing_uppercase":
         return copy.validation.passwordMissingUppercase;
       case "missing_lowercase":
+      case "missing_letter":
         return copy.validation.passwordMissingLowercase;
       case "missing_number":
         return copy.validation.passwordMissingNumber;

@@ -10,7 +10,7 @@ import { FormInput } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { StudioBadge } from "@/components/shared/workspace";
 import { validateNewPassword } from "@/lib/auth/passwordPolicy";
-import { extractApiErrorCode } from "@/store/api/baseApi";
+import { extractApiErrorCode, resolveAssetUrl } from "@/store/api/baseApi";
 import {
   useAcceptInvitationMutation,
   usePreviewInvitationMutation,
@@ -85,8 +85,8 @@ export function AcceptInviteView({ isRtl }: AcceptInviteViewProps) {
     if (policyIssue) {
       setFormError(
         isRtl
-          ? "كلمة المرور يجب أن تكون 12 حرفًا على الأقل وتحتوي على حرف كبير وصغير ورقم."
-          : "Password must be at least 12 characters with uppercase, lowercase, and a number.",
+          ? "كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حروف وأرقام."
+          : "Password must be at least 8 characters with letters and numbers.",
       );
       return;
     }
@@ -172,7 +172,7 @@ export function AcceptInviteView({ isRtl }: AcceptInviteViewProps) {
               {preview.companyLogoUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={preview.companyLogoUrl}
+                  src={resolveAssetUrl(preview.companyLogoUrl)}
                   alt={preview.companyName}
                   className="h-full w-full object-contain p-1"
                 />
@@ -242,8 +242,8 @@ export function AcceptInviteView({ isRtl }: AcceptInviteViewProps) {
               onChange={(e) => setPassword(e.target.value)}
               helperText={
                 isRtl
-                  ? "12 حرفًا على الأقل مع حرف كبير وصغير ورقم."
-                  : "At least 12 characters with uppercase, lowercase, and a number."
+                  ? "8 أحرف على الأقل وتحتوي على حروف وأرقام."
+                  : "At least 8 characters with letters and numbers."
               }
               rightElement={
                 <button

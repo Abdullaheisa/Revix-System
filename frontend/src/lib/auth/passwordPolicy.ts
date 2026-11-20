@@ -1,5 +1,5 @@
 
-export const MIN_PASSWORD_LENGTH = 12;
+export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 4096;
 
 export interface ConfiguredPasswordPolicy {
@@ -7,14 +7,16 @@ export interface ConfiguredPasswordPolicy {
   maxLength: number;
   requireUppercase: boolean;
   requireLowercase: boolean;
+  requireLetter: boolean;
   requireNumber: boolean;
 }
 
 export const DEFAULT_PASSWORD_POLICY: ConfiguredPasswordPolicy = {
   minLength: MIN_PASSWORD_LENGTH,
   maxLength: MAX_PASSWORD_LENGTH,
-  requireUppercase: true,
-  requireLowercase: true,
+  requireUppercase: false,
+  requireLowercase: false,
+  requireLetter: true,
   requireNumber: true,
 };
 
@@ -23,6 +25,7 @@ export type PasswordPolicyIssue =
   | "too_long"
   | "missing_uppercase"
   | "missing_lowercase"
+  | "missing_letter"
   | "missing_number";
 
 
@@ -44,6 +47,10 @@ export function validateNewPassword(
 
   if (policy.requireLowercase && !/[a-z]/.test(password)) {
     return "missing_lowercase";
+  }
+
+  if (policy.requireLetter && !/[a-zA-Z]/.test(password)) {
+    return "missing_letter";
   }
 
   if (policy.requireNumber && !/\d/.test(password)) {

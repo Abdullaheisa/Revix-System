@@ -27,6 +27,12 @@ const acceptInvitationSchema = z.object({
   permittedBranchIds: z.array(z.string().uuid()).default([]),
 });
 
+const completeOnboardingSchema = z.object({
+  token: z.string().trim().min(10).max(512),
+  password: z.string().min(8).max(4096),
+  fullName: z.string().trim().max(160).optional(),
+});
+
 const updateLinkStatusSchema = z.object({
   status: z.enum(["active", "paused"]),
 });
@@ -184,6 +190,60 @@ export function createNetworkRouter(options: {
               countryCode: preview.mainCompany.countryCode,
               city: preview.mainCompany.city,
             },
+            accountExists: preview.accountExists,
+          },
+        });
+      } catch (err) {
+        handleNetworkError(res, err);
+      }
+    },
+  );
+
+  /**
+   * POST /api/v1/network/invitations/complete-onboarding
+   * Public endpoint for invited local company manager to set password (or sign in) with prefilled email and accept link.
+   */
+  router.post(
+    "/invitations/complete-onboarding",
+    previewLimiter,
+    async (req: Request, res: Response) => {
+      try {
+        const parsed = completeOnboardingSchema.safeParse(req.body);
+        if (!parsed.success) {
+          res.status(400).json({
+            ok: false,
+            error: {
+              code: "VALIDATION_FAILED",
+              message: "Invalid invitation onboarding payload.",
+              issues: parsed.error.issues,
+            },
+          });
+          return;
+        }
+
+        const result = await networkService.completeNetworkInvitationOnboarding({
+          rawToken: parsed.data.token,
+          password: parsed.data.password,
+          fullName: parsed.data.fullName,
+          ipAddress: req.ip ?? null,
+          userAgent: req.get("user-agent") ?? null,
+          sessionTtlHours: env.sessionTtlHours,
+          ensureCompanyRolesAndOwnerMembership: (company) =>
+            teamService.ensureCompanyRolesAndOwnerMembership(company),
+        });
+
+        res.cookie(env.sessionCookieName, result.rawSessionToken, {
+          httpOnly: true,
+          secure: env.nodeEnv === "production",
+          sameSite: "lax",
+          path: "/",
+          expires: result.sessionExpiresAt,
+        });
+
+        res.status(200).json({
+          ok: true,
+          data: {
+            link: result.link,
           },
         });
       } catch (err) {
