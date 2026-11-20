@@ -171,7 +171,10 @@ export function WorkspaceStudioShell({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        (event.code === "KeyK" || event.key.toLowerCase() === "k")
+      ) {
         event.preventDefault();
         dispatch(setCommandPaletteOpen(!isCommandPaletteOpen));
         return;
