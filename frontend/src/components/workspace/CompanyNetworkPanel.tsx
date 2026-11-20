@@ -12,7 +12,7 @@ import {
   type ParentLinkDto,
 } from "@/store/api/networkApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
-import { extractApiErrorCode } from "@/store/api/baseApi";
+import { extractApiErrorCode, resolveAssetUrl } from "@/store/api/baseApi";
 import { FormInput } from "@/components/ui/FormField";
 import { CompanyLogoUploader } from "@/components/shared/workspace/CompanyLogoUploader";
 import { RevixPagination } from "@/components/ui/RevixPagination";
@@ -97,6 +97,10 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
       0,
     );
   }, [overview?.connectedPartners]);
+
+  const localCountriesCount = useMemo(() => {
+    return new Set(currentBranches.map((b) => b.countryCode).filter(Boolean)).size;
+  }, [currentBranches]);
 
   const handleOpenInviteModal = () => {
     setInviteEmail("");
@@ -281,7 +285,84 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
       </div>
 
       {/* Network Stats Cards */}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+      {isLocalPartner && !isMainCompany ? (
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Local Stat 1: Main HQ */}
+          <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between">
+              <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
+                {isRtl ? "الشركة الرئيسية" : "Network HQ"}
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-blue-200/80 bg-blue-50 text-blue-700">
+                <RevixIcon name="network" size={15} />
+              </div>
+            </div>
+            <div className="mt-2 truncate text-[18px] font-bold text-revix-dark">
+              {overview?.parentLinks?.[0]?.mainCompany.name || "—"}
+            </div>
+            <p className="mt-0.5 text-[11.5px] text-revix-secondary">
+              {isRtl ? "الشركة الأم المشرفة على الشبكة" : "Parent network company"}
+            </p>
+          </div>
+
+          {/* Local Stat 2: My Branches */}
+          <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between">
+              <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
+                {isRtl ? "فروعي" : "My Branches"}
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-sky-200/80 bg-sky-50 text-sky-700">
+                <RevixIcon name="building-2" size={15} />
+              </div>
+            </div>
+            <div className="mt-2 text-[24px] font-bold tabular-nums text-revix-dark">
+              {currentBranches.length}
+            </div>
+            <p className="mt-0.5 text-[11.5px] text-revix-secondary">
+              {isRtl ? "فروعك وأسطولها مرئية للرئيسية" : "Your branches visible to HQ"}
+            </p>
+          </div>
+
+          {/* Local Stat 3: Countries */}
+          <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between">
+              <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
+                {isRtl ? "الدول" : "Countries"}
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-indigo-200/80 bg-indigo-50 text-indigo-700">
+                <RevixIcon name="globe-2" size={15} />
+              </div>
+            </div>
+            <div className="mt-2 text-[24px] font-bold tabular-nums text-revix-dark">
+              {localCountriesCount}
+            </div>
+            <p className="mt-0.5 text-[11.5px] text-revix-secondary">
+              {isRtl ? "الدول التي تغطيها فروعك" : "Countries covered by your branches"}
+            </p>
+          </div>
+
+          {/* Local Stat 4: Independence */}
+          <div className="rounded-[8px] border border-emerald-200/80 bg-emerald-50/50 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between">
+              <span className="text-[11.5px] font-medium text-emerald-800 uppercase tracking-wider">
+                {isRtl ? "عزل الصلاحيات" : "Access Isolation"}
+              </span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-emerald-100 text-emerald-700">
+                <RevixIcon name="shield-check" size={15} />
+              </div>
+            </div>
+            <div className="mt-2 text-[15px] font-bold text-emerald-900">
+              {isRtl ? "عرض فقط (View-Only)" : "Strict View-Only"}
+            </div>
+            <p className="mt-0.5 text-[11.5px] text-emerald-700">
+              {isRtl
+                ? "فروعك وموظفيك مستقلون بالكامل عن فروع الرئيسية"
+                : "Your branches & team stay isolated from HQ"}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Stat 1 */}
         <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all hover:border-revix-primary/30">
           <div className="flex items-center justify-between">
@@ -356,59 +437,67 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
           </p>
         </div>
       </div>
+      )}
 
       {/* VIEW AS LOCAL PARTNER: Shows Parent Company Card */}
       {isLocalPartner && overview?.parentLinks && overview.parentLinks.length > 0 && (
         <div className="rounded-[10px] border border-blue-200 bg-blue-50/40 p-4 sm:p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-[8px] bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
-                <RevixIcon name="network" size={18} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-[14px] text-revix-dark">
-                  {isRtl ? "الشركة الرئيسية المرتبطة" : "Connected Network HQ"}
-                </h3>
-                <p className="text-[12px] text-revix-secondary">
-                  {isRtl
-                    ? "شركتك مرتبطة بالشبكة الرئيسية كشريك محلي مع حماية كاملة لاستقلالية بياناتك وعملياتك."
-                    : "Your company is linked with the network HQ. Daily operations & team remain isolated."}
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 shrink-0 rounded-[8px] bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
+              <RevixIcon name="network" size={18} />
             </div>
-
-            {overview.parentLinks[0] && (
-              <button
-                type="button"
-                onClick={() => handleOpenManageBranches(overview.parentLinks![0])}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-[6px] border border-blue-300 bg-revix-white px-3 py-1.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-50 transition-all shadow-xs"
-              >
-                <RevixIcon name="building-2" size={14} />
-                <span>
-                  {isRtl ? "إدارة الفروع المشاركة مع الشبكة" : "Manage Shared Branches"}
-                </span>
-              </button>
-            )}
+            <div>
+              <h3 className="font-semibold text-[14px] text-revix-dark">
+                {isRtl ? "الشركة الرئيسية المرتبطة" : "Connected Network HQ"}
+              </h3>
+              <p className="text-[12px] text-revix-secondary">
+                {isRtl
+                  ? "ترى الشركة الرئيسية فروعك ودولك وسياراتك (عرض فقط)، بينما تظل فروعك وموظفيك مستقلين تمامًا ولا علاقة لك بفروع الشركة الرئيسية."
+                  : "HQ has View-Only visibility over your branches, countries, and fleet, while your branches and team remain completely independent."}
+              </p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-blue-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-blue-100">
             {overview.parentLinks.map((parent) => (
               <div
                 key={parent.linkId}
-                className="bg-revix-white rounded-[8px] border border-blue-100 p-3 text-[12.5px] space-y-1 shadow-xs"
+                className="bg-revix-white rounded-[8px] border border-blue-100 p-3.5 text-[12.5px] space-y-2.5 shadow-xs"
               >
-                <div className="font-semibold text-revix-dark">
-                  {parent.mainCompany.name}
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-revix-border bg-white">
+                    {parent.mainCompany.logoUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={resolveAssetUrl(parent.mainCompany.logoUrl)}
+                        alt={parent.mainCompany.name}
+                        className="h-full w-full object-contain p-0.5"
+                      />
+                    ) : (
+                      <span
+                        className="flex h-full w-full items-center justify-center text-xs font-bold text-white"
+                        style={{ backgroundColor: parent.mainCompany.brandColor || "#2563EB" }}
+                      >
+                        {parent.mainCompany.name.substring(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-revix-dark truncate">
+                      {parent.mainCompany.name}
+                    </div>
+                    <div className="text-[11.5px] text-revix-secondary truncate">
+                      {parent.mainCompany.city}, {parent.mainCompany.countryCode}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[11.5px] text-revix-secondary">
-                  {parent.mainCompany.city}, {parent.mainCompany.countryCode}
-                </div>
-                <div className="pt-2 flex items-center justify-between text-[11.5px]">
+
+                <div className="pt-2 border-t border-blue-50 flex items-center justify-between text-[11.5px]">
                   <span className="text-revix-secondary">
-                    {isRtl ? "الفروع المسموح بها:" : "Permitted branches:"}
+                    {isRtl ? "فروعك ودولك المرئية:" : "Your visible coverage:"}
                   </span>
                   <span className="font-semibold text-blue-700">
-                    {parent.permittedBranches.length} {isRtl ? "فرع" : "branch(es)"}
+                    {currentBranches.length} {isRtl ? "فرع" : "branch(es)"} · {localCountriesCount} {isRtl ? "دولة" : "country(s)"}
                   </span>
                 </div>
               </div>
@@ -558,10 +647,13 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                         </div>
 
                         <div className="flex items-center justify-between text-revix-secondary">
-                          <span>{isRtl ? "الفروع المشتركة:" : "Shared Branches:"}</span>
+                          <span>{isRtl ? "الفروع والدول:" : "Branches & Countries:"}</span>
                           <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
                             <RevixIcon name="building-2" size={13} />
-                            {partner.permittedBranches.length} {isRtl ? "فرع" : "branch(es)"}
+                            {partner.permittedBranches.length} {isRtl ? "فرع" : "branch(es)"} ·{" "}
+                            {new Set(partner.permittedBranches.map((b) => b.countryCode)).size ||
+                              (partner.countryCode ? 1 : 0)}{" "}
+                            {isRtl ? "دولة" : "country(s)"}
                           </span>
                         </div>
                       </div>

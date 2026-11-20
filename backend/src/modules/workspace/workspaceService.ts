@@ -437,6 +437,19 @@ export class WorkspaceService {
       throw err;
     }
 
+    if (company.operatingMode === "local_partner") {
+      const parentLinks = await this.store.listNetworkLinksForLocal(company.id);
+      const allBranches = await this.store.listBranchesByCompanyId(company.id);
+      const allBranchIds = allBranches.map((b) => b.id);
+      for (const link of parentLinks) {
+        await this.store.setNetworkPermittedBranches(
+          link.id,
+          company.id,
+          allBranchIds,
+        );
+      }
+    }
+
     await this.store.recordAuditLog({
       companyId: company.id,
       branchId: branch.id,

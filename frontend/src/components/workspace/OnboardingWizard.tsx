@@ -622,11 +622,6 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
                 <AutoBranchCurrencyField
                   isRtl={isRtl}
                   countryCode={branchCountry}
-                  helperTag={
-                    isRtl
-                      ? "مستقلة عن لغة الواجهة"
-                      : "Independent of UI language"
-                  }
                 />
               </div>
 

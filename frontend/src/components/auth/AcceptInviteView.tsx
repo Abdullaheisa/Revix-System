@@ -238,6 +238,12 @@ export function AcceptInviteView({ isRtl }: AcceptInviteViewProps) {
             <FormInput
               label={isRtl ? "كلمة المرور" : "Password"}
               type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder={
+                isRtl
+                  ? "8 أحرف على الأقل (حروف وأرقام)"
+                  : "At least 8 characters (letters & numbers)"
+              }
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               helperText={
@@ -272,6 +278,8 @@ export function AcceptInviteView({ isRtl }: AcceptInviteViewProps) {
             <FormInput
               label={isRtl ? "تأكيد كلمة المرور" : "Confirm password"}
               type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder={isRtl ? "أعد كتابة كلمة المرور" : "Re-enter password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
