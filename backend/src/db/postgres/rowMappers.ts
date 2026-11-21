@@ -487,6 +487,8 @@ export interface DbFleetVehicleRow {
   fuel_type?: string | null;
   luggage_capacity?: string | null;
   transmission?: string | null;
+  is_bookable?: boolean;
+  published_to_fleet_at?: string | Date | null;
   created_at: string;
   updated_at: string;
   branch_name?: string;

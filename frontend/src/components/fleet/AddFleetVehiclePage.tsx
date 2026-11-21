@@ -83,10 +83,10 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const [transmission, setTransmission] = useState<string>("automatic");
 
   // Section 4: Daily Rental Pricing Tiers
-  const [dailyRate1to2] = useState<number>(0);
-  const [dailyRate3to7] = useState<number>(0);
-  const [dailyRate8Plus] = useState<number>(0);
-  const [damageExcess] = useState<number>(0);
+  const [dailyRate1to2, setDailyRate1to2] = useState<number>(0);
+  const [dailyRate3to7, setDailyRate3to7] = useState<number>(0);
+  const [dailyRate8Plus, setDailyRate8Plus] = useState<number>(0);
+  const [damageExcess, setDamageExcess] = useState<number>(0);
 
   // Section 5: Mileage Policy
   const [mileagePolicy, setMileagePolicy] = useState<"unlimited" | "limited">("unlimited");
@@ -435,6 +435,10 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
       setErrorMessage(isAr ? "يرجى إدخال رقم اللوحة المعدنية" : "License plate is required.");
       return;
     }
+    if (Number(dailyRate1to2) <= 0) {
+      setErrorMessage(isAr ? "أدخل سعر التأجير اليومي (١–٢ يوم) قبل نشر السيارة للحجز." : "Enter a daily rate for 1–2 days before publishing this vehicle for booking.");
+      return;
+    }
 
     const finalColor = color === "Custom" ? customColor.trim() || "White" : color;
     const finalDescription = vehicleName.trim()
@@ -448,6 +452,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
       keyNumber: keyNumber.trim() || null,
       color: finalColor,
       mileageOdometer: Number(mileageOdometer) || 0,
+      isBookable: true,
       registrationExpiry: registrationExpiry || null,
       insuranceExpiry: insuranceExpiry || null,
       notes: finalDescription ? finalDescription.slice(0, 300) : null,
@@ -1189,6 +1194,35 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
             </div>
           </div>
         </div>
+
+        {/* ====================================================================== */}
+        {/* SECTION 4: RENTAL PRICING */}
+        {/* ====================================================================== */}
+        <section className="overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-xs">
+          <div className="flex items-center gap-2.5 border-b border-emerald-100 bg-emerald-50/60 px-6 py-4">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800"><RevixIcon name="wallet" className="h-4 w-4" /></span>
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">{isAr ? "أسعار التأجير والحجز" : "Rental & Booking Rates"}</h2>
+              <p className="mt-0.5 text-[11px] text-gray-500">{isAr ? `الأسعار بعملة الفرع (${currencySymbol}). السيارة ستظهر للحجز بعد تسجيل السعر.` : `Rates use the branch currency (${currencySymbol}). A rate is required to publish this vehicle for booking.`}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: isAr ? "سعر اليوم (١–٢ يوم) *" : "Daily rate (1–2 days) *", value: dailyRate1to2, setter: setDailyRate1to2, required: true },
+              { label: isAr ? "سعر اليوم (٣–٧ أيام)" : "Daily rate (3–7 days)", value: dailyRate3to7, setter: setDailyRate3to7, required: false },
+              { label: isAr ? "سعر اليوم (٨ أيام فأكثر)" : "Daily rate (8+ days)", value: dailyRate8Plus, setter: setDailyRate8Plus, required: false },
+              { label: isAr ? `تحمل الأضرار (${currencySymbol})` : `Damage excess (${currencySymbol})`, value: damageExcess, setter: setDamageExcess, required: false },
+            ].map((rate) => (
+              <label key={rate.label} className="block text-xs font-semibold text-gray-700">
+                {rate.label}
+                <div className="mt-1.5 flex h-[46px] items-center overflow-hidden rounded-lg border border-gray-200 focus-within:border-emerald-700 focus-within:ring-3 focus-within:ring-emerald-700/10">
+                  <input type="number" min="0" step="0.01" required={rate.required} value={rate.value} onChange={(event) => rate.setter(Math.max(0, Number(event.target.value) || 0))} className="h-full min-w-0 flex-1 px-3 text-sm text-gray-900 outline-none" />
+                  <span className="px-3 text-[11px] font-bold text-gray-500">{currencySymbol}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
 
         {/* ====================================================================== */}
         {/* SECTION 5: MILEAGE ALLOWANCE & EXTRA KM RATE (Matches Screenshot 3) */}

@@ -270,6 +270,7 @@ export interface CreateFleetVehicleInput {
   keyNumber?: string | null;
   color: string;
   mileageOdometer?: number;
+  isBookable?: boolean;
   status?: FleetVehicleStatus;
   registrationExpiry?: string | null;
   insuranceExpiry?: string | null;

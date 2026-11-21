@@ -1557,9 +1557,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
            photo_url, location_type, fuel_policy, instant_confirmation, description, delivery_policy,
            daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
            mileage_policy, daily_km_limit, extra_km_rate, inclusions,
-           seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission)
+         seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission,
+         is_bookable, published_to_fleet_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'available', $11, $12, $13,
-                 $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
+                 $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33,
+                 $34, CASE WHEN $34 THEN NOW() ELSE NULL END)
          RETURNING *`,
         [
           vehicleId,
@@ -1595,6 +1597,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
           input.fuelType ?? "petrol",
           input.luggageCapacity ?? "2 Bags",
           input.transmission ?? "automatic",
+          Boolean(input.isBookable),
         ],
       );
 
@@ -1646,9 +1649,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
          photo_url, location_type, fuel_policy, instant_confirmation, description, delivery_policy,
          daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
          mileage_policy, daily_km_limit, extra_km_rate, inclusions,
-         seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission)
+         seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission,
+         is_bookable, published_to_fleet_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-               $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)
+               $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34,
+               $35, CASE WHEN $35 THEN NOW() ELSE NULL END)
        RETURNING *`,
       [
         id,
@@ -1685,6 +1690,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.fuelType ?? "petrol",
         input.luggageCapacity ?? "2 Bags",
         input.transmission ?? "automatic",
+        Boolean(input.isBookable),
       ],
     );
     return (await this.findFleetVehicleById(res.rows[0]!.id))!;

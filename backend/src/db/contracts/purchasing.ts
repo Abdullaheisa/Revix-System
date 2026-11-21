@@ -169,6 +169,7 @@ export interface ReceiveVehicleFromPoInput {
   keyNumber?: string | null;
   color: string;
   mileageOdometer?: number;
+  isBookable?: boolean;
   registrationExpiry?: string | null;
   insuranceExpiry?: string | null;
   notes?: string | null;
