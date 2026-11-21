@@ -316,9 +316,6 @@ export function PaymentTermsSelector({
                   {isRtl ? item.shortLabelAr : item.shortLabelEn}
                 </span>
               </div>
-              <p className="text-[10px] leading-snug text-revix-muted line-clamp-2">
-                {isRtl ? item.descriptionAr : item.descriptionEn}
-              </p>
             </button>
           );
         })}
@@ -334,13 +331,8 @@ export function PaymentTermsSelector({
             </div>
             <div>
               <h4 className="font-bold text-revix-dark">
-                {isRtl ? "دفع فوري كامل (Cash on Delivery / COD)" : "100% Immediate Full Cash Settlement"}
+                {isRtl ? "دفع فوري كامل" : "Immediate Cash Settlement"}
               </h4>
-              <p className="mt-0.5 text-[11px] text-revix-secondary leading-relaxed">
-                {isRtl
-                  ? "لا توجد فترة سماح ائتمانية (0 أيام). يتم تسوية 100% من قيمة أمر التوريد فور اعتماد الفاتورة واستلام الأسطول."
-                  : "Zero credit delay (0 days). Full 100% invoice settlement upon delivery confirmation."}
-              </p>
             </div>
           </div>
         )}
@@ -403,12 +395,6 @@ export function PaymentTermsSelector({
                 </div>
               )}
             </div>
-
-            <p className="text-[11px] text-revix-muted">
-              {isRtl
-                ? `يتم سداد الفاتورة بالكامل بعد ${days} يوماً من تاريخ التوريد المعتمد للمركبات.`
-                : `Full payment is due ${days} days following vehicle delivery and PO approval.`}
-            </p>
           </div>
         )}
 

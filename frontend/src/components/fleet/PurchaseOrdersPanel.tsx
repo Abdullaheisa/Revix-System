@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { ConvertPoVehiclePage } from "./ConvertPoVehiclePage";
 import {
   formatCompanyDate,
   formatCompanyDateTime,
@@ -118,6 +119,8 @@ export function PurchaseOrdersPanel({
   const [receiveVehicle, { isLoading: isReceiving }] = useReceiveVehicleMutation();
   const [signPurchaseOrder, { isLoading: isSigning }] = useSignPurchaseOrderMutation();
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+  const [isConvertingVehicle, setIsConvertingVehicle] = useState(false);
+  const [createStep, setCreateStep] = useState<1 | 2 | 3>(1);
   const sigCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawingSig, setIsDrawingSig] = useState(false);
   const [hasDrawnSig, setHasDrawnSig] = useState(false);
@@ -453,8 +456,8 @@ export function PurchaseOrdersPanel({
     if (missingChassisCount > 0) {
       setCreateError(
         isRtl
-          ? `يجب إدخال رقم الشاصي لجميع السيارات أولاً (متبقي ${missingChassisCount} سيارة بدون رقم شاصي). اضغط على "تحديد أرقام الشاصي".`
-          : `Please assign a Chassis Number for all vehicles before issuing the PO (${missingChassisCount} vehicle(s) missing). Click "Assign Chassis Numbers".`,
+          ? `يجب إدخال رقم الشاصي لجميع السيارات أولاً (متبقي ${missingChassisCount} سيارة بدون رقم شاصي).`
+          : `Please enter a Chassis Number for all vehicles (${missingChassisCount} missing).`,
       );
       return;
     }
@@ -536,13 +539,8 @@ export function PurchaseOrdersPanel({
           color: targetItem.color || "",
         }),
       );
+      setIsConvertingVehicle(true);
     }
-    dispatch(
-      navigateToWorkspacePage({
-        section: "fleet",
-        subPage: "add-vehicle",
-      }),
-    );
   }
 
   async function handleReceiveSubmit(e: React.FormEvent) {
@@ -550,11 +548,11 @@ export function PurchaseOrdersPanel({
     if (!receivingPo) return;
     setRecvError(null);
 
-    if (!recvVin.trim() || !recvPlate.trim()) {
+    if (!recvPlate.trim() || !recvKeyNumber.trim()) {
       setRecvError(
         isRtl
-          ? "برجاء كتابة رقم الشاسيه (VIN) ورقم اللوحة."
-          : "VIN and License Plate are required.",
+          ? "برجاء كتابة رقم اللوحة ورقم المفتاح."
+          : "License Plate and Key Number are required.",
       );
       return;
     }
@@ -583,6 +581,16 @@ export function PurchaseOrdersPanel({
             : "Failed to receive vehicle asset."),
       );
     }
+  }
+
+  if (isConvertingVehicle) {
+    return (
+      <ConvertPoVehiclePage
+        lang={isRtl ? "ar" : "en"}
+        onBack={() => setIsConvertingVehicle(false)}
+        onSuccess={() => setIsConvertingVehicle(false)}
+      />
+    );
   }
 
   if (selectedPoForDetails) {
@@ -1553,330 +1561,404 @@ export function PurchaseOrdersPanel({
         </>
       )}
 
-      {/* Create PO Full-Page Overlay */}
-      {isCreateModalOpen && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-revix-border pb-3">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
-              >
-                <span>{isRtl ? "← رجوع" : "← Back"}</span>
-              </button>
-              <h2 className="text-lg font-bold text-revix-dark">
-                {isRtl ? "إنشاء أمر شراء سيارات جديد (PO)" : "Create Vehicle Purchase Order"}
-              </h2>
-            </div>
-          </div>
-          <div className="w-full rounded-xl border border-revix-border bg-white shadow-xs">
-            <form onSubmit={handleCreateSubmit} className="flex flex-col">
-              <div className="p-6 space-y-5">
-                {createError && (
-                  <div className="rounded-lg bg-revix-alert-soft p-3 text-xs text-revix-alert">
-                    {createError}
-                  </div>
-                )}
+      {/* Create PO Full-Page 3-Step Workspace */}
+      {isCreateModalOpen && (() => {
+        const assignedChassisCount = expandedVehicleUnits.filter((u) =>
+          chassisByUnitKey[u.key]?.trim(),
+        ).length;
+        const totalUnitsCount = expandedVehicleUnits.length;
+        const selectedVendorObj = vendors.find((v) => v.id === formVendorId);
+        const currencyCode = activeBranch?.currencyCode || "EGP";
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-revix-dark mb-1">
-                    {isRtl ? "الشركة (الشاري)" : "Company (Buyer)"}
-                  </label>
-                  <div className="flex h-9 w-full items-center rounded-lg border border-revix-border bg-revix-surface/60 px-3 text-xs font-semibold text-revix-dark">
-                    {wsContext?.data.company?.name ||
-                      (isRtl ? "الشركة الرئيسية" : "Company")}
-                  </div>
-                </div>
+        const steps: Array<{ id: 1 | 2 | 3; label: string }> = [
+          { id: 1, label: isRtl ? "١. البيانات والسيارات" : "1. Order & Vehicles" },
+          { id: 2, label: isRtl ? "٢. أرقام الشاصي" : "2. Chassis Numbers" },
+          { id: 3, label: isRtl ? "٣. الدفع والشروط" : "3. Payment & Terms" },
+        ];
 
-                <div>
-                  <label className="block text-xs font-semibold text-revix-dark mb-1">
-                    {isRtl ? "المورد" : "Vendor / Supplier"} *
-                  </label>
-                  <RevixSelect
-                    size="sm"
-                    isRtl={isRtl}
-                    value={formVendorId}
-                    onChange={(e) => {
-                      const vId = e.target.value;
-                      setFormVendorId(vId);
-                      const selectedV = vendors.find((v) => v.id === vId);
-                      if (selectedV) {
-                        const terms = formatVendorPaymentTerms(selectedV, isRtl);
-                        setFormPaymentTermsType(terms.type);
-                        setFormPaymentTermsDays(selectedV.paymentTermsDays ?? 30);
-                        setFormPaymentTermsConfig(selectedV.paymentTermsConfig || null);
-                      }
-                    }}
-                    placeholder={isRtl ? "اختر المورد..." : "Select Vendor..."}
-                    buttonClassName="h-9 rounded-lg text-xs"
-                    options={vendors.map((v) => ({
-                      value: v.id,
-                      label: `${v.name} (${v.city})`,
-                    }))}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-revix-dark mb-1">
-                    {isRtl ? "تاريخ أمر الشراء" : "Order Date"} *
-                  </label>
-                  <RevixDatePicker
-                    size="sm"
-                    isRtl={isRtl}
-                    value={formOrderDate}
-                    onChange={(val) => setFormOrderDate(val)}
-                    buttonClassName="h-9 rounded-lg text-xs"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-revix-dark mb-1">
-                    {isRtl ? "تاريخ التسليم المتوقع" : "Expected Delivery Date"}
-                  </label>
-                  <RevixDatePicker
-                    size="sm"
-                    isRtl={isRtl}
-                    value={formDeliveryDate}
-                    onChange={(val) => setFormDeliveryDate(val)}
-                    placeholder={isRtl ? "تاريخ التسليم المتوقع..." : "Expected delivery date..."}
-                    buttonClassName="h-9 rounded-lg text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Dynamic Line Items */}
-              <div className="rounded-xl border border-revix-border bg-revix-surface/70 p-3.5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-revix-dark">
-                    {isRtl ? "بنود السيارات والكميات المطلوبة" : "Vehicle Line Items"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleAddLineItem}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-revix-primary hover:underline"
-                  >
-                    <RevixIcon name="plus" className="h-3.5 w-3.5" />
-                    <span>{isRtl ? "إضافة بند سيارة" : "Add Vehicle Item"}</span>
-                  </button>
-                </div>
-
-                <div className="space-y-2.5">
-                  {formItems.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="grid grid-cols-12 items-center gap-2 rounded-lg border border-revix-border bg-revix-white p-2.5"
-                    >
-                      <div className="col-span-3">
-                        <label className="block text-[10px] text-revix-muted mb-0.5">
-                          {isRtl ? "فئة السيارة" : "Variant"}
-                        </label>
-                        <RevixSelect
-                          size="sm"
-                          isRtl={isRtl}
-                          value={item.variantId}
-                          onChange={(e) => handleItemChange(idx, "variantId", e.target.value)}
-                          placeholder={isRtl ? "اختر الفئة..." : "Select Variant..."}
-                          buttonClassName="h-8 rounded-md text-xs font-normal"
-                          options={variants.map((v) => ({
-                            value: v.id,
-                            label: `${v.make} ${v.model} (${v.trim})`,
-                          }))}
-                        />
-                      </div>
-
-                      <div className="col-span-1">
-                        <label className="block text-[10px] text-revix-muted">
-                          {isRtl ? "العدد" : "Qty"}
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(idx, "quantity", Number(e.target.value))}
-                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                        />
-                      </div>
-
-                      <div className="col-span-2">
-                        <label className="block text-[10px] text-revix-muted">
-                          {isRtl ? "سعر الشراء" : "Unit Price"}
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.unitPrice}
-                          onChange={(e) => handleItemChange(idx, "unitPrice", Number(e.target.value))}
-                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                        />
-                      </div>
-                      <div className="col-span-4">
-                        <label className="block text-[10px] text-revix-muted">
-                          {isRtl ? "اللون" : "Color"}
-                        </label>
-                        <RevixSelect
-                          size="sm"
-                          isRtl={isRtl}
-                          value={item.color ?? ""}
-                          onChange={(e) => handleItemChange(idx, "color", e.target.value)}
-                          placeholder={isRtl ? "اختر اللون..." : "Select color..."}
-                          buttonClassName="mt-0.5 h-8 rounded-md text-xs"
-                          options={[
-                            { value: "White", label: isRtl ? "أبيض (White)" : "White" },
-                            { value: "Black", label: isRtl ? "أسود (Black)" : "Black" },
-                            { value: "Silver", label: isRtl ? "فضي (Silver)" : "Silver" },
-                            { value: "Gray", label: isRtl ? "رمادي (Gray)" : "Gray" },
-                            { value: "Blue", label: isRtl ? "أزرق (Blue)" : "Blue" },
-                            { value: "Red", label: isRtl ? "أحمر (Red)" : "Red" },
-                            { value: "Green", label: isRtl ? "أخضر (Green)" : "Green" },
-                            { value: "Gold", label: isRtl ? "ذهبي (Gold)" : "Gold" },
-                            { value: "Brown", label: isRtl ? "بني (Brown)" : "Brown" },
-                            { value: "Beige", label: isRtl ? "بيج (Beige)" : "Beige" },
-                          ]}
-                        />
-                      </div>
-
-                      <div className="col-span-1 flex justify-end pt-3">
-                        <button
-                          type="button"
-                          disabled={formItems.length <= 1}
-                          onClick={() => handleRemoveLineItem(idx)}
-                          className="rounded-md p-1 text-revix-muted hover:bg-revix-alert-soft hover:text-revix-alert disabled:opacity-30 transition-colors"
-                        >
-                          <RevixIcon name="trash-2" className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Total Summary */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-revix-border/70 pt-2.5 text-xs font-bold text-revix-dark">
-                  <div className="flex items-center gap-3">
-                    <span>{isRtl ? "إجمالي أمر الشراء:" : "Calculated Total:"}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDraftChassisByUnitKey({ ...chassisByUnitKey });
-                        setIsChassisModalOpen(true);
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-1.5 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
-                    >
-                      <RevixIcon name="car-front" className="h-3.5 w-3.5" />
-                      <span>
-                        {isRtl
-                          ? `تحديد أرقام الشاصي (${expandedVehicleUnits.filter((u) => chassisByUnitKey[u.key]?.trim()).length}/${expandedVehicleUnits.length})`
-                          : `Assign Chassis Numbers (${expandedVehicleUnits.filter((u) => chassisByUnitKey[u.key]?.trim()).length}/${expandedVehicleUnits.length})`}
-                      </span>
-                    </button>
-                  </div>
-                  <span className="text-base text-revix-primary">
-                    {formCalculatedTotal.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Enterprise Payment Terms & Financial Schedule */}
-              <div className="rounded-xl border border-revix-border bg-white p-3.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-revix-dark">
-                    {isRtl ? "شروط الدفع والجدولة المالية لأمر الشراء" : "Payment Terms & Financial Schedule"}
-                  </label>
-                  {(() => {
-                    const selectedV = vendors.find((v) => v.id === formVendorId);
-                    if (!selectedV) return null;
-                    const terms = formatVendorPaymentTerms(selectedV, isRtl);
-                    return (
-                      <span className="text-[10px] text-revix-secondary flex items-center gap-1">
-                        <span>{isRtl ? "شروط المورد المعتمدة:" : "Vendor Terms:"}</span>
-                        <span className="font-semibold text-revix-dark">
-                          {terms.label}
-                        </span>
-                      </span>
-                    );
-                  })()}
-                </div>
-
-                <PaymentTermsSelector
-                  valueType={formPaymentTermsType}
-                  valueDays={formPaymentTermsDays}
-                  valueConfig={formPaymentTermsConfig}
-                  totalAmount={formCalculatedTotal}
-                  currency={activeBranch?.currencyCode || "JOD"}
-                  upfrontPaid={formUpfrontPaid}
-                  installmentsCount={formInstallmentsCount}
-                  isRtl={isRtl}
-                  onChange={(payload) => {
-                    setFormPaymentTermsType(payload.type);
-                    setFormPaymentTermsDays(payload.days);
-                    setFormPaymentTermsConfig(payload.config || null);
-                    if (typeof payload.upfrontPaid === "number") {
-                      setFormUpfrontPaid(payload.upfrontPaid);
-                    }
-                    if (typeof payload.installmentsCount === "number") {
-                      setFormInstallmentsCount(payload.installmentsCount);
-                    }
-                    if (payload.scheduleSummary) {
-                      setFormPaymentScheduleSummary(payload.scheduleSummary);
-                    }
-                  }}
-                />
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-semibold text-revix-dark">
-                  {isRtl ? "ملاحظات إضافية على أمر الشراء" : "Order Notes & Contract Terms"}
-                </label>
-                <textarea
-                  rows={2}
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder={
-                    isRtl
-                      ? "شروط التسليم، مواصفات الضمان، شروط الدفعات..."
-                      : "Delivery terms, warranty specs, installment notes..."
-                  }
-                  className="mt-1 w-full rounded-lg border border-revix-border bg-revix-white p-2.5 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                />
-              </div>
-
-              </div>
-
-              {createError && (
-                <div className="mx-6 mb-2 rounded-lg border border-revix-alert/30 bg-revix-alert-soft p-3 text-xs font-medium text-revix-alert">
-                  {createError}
-                </div>
-              )}
-
-              {/* Fixed Sticky Footer */}
-              <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-revix-border bg-revix-surface/40 px-6 py-3.5">
+        return (
+          <form onSubmit={handleCreateSubmit} className="mx-auto max-w-5xl space-y-4">
+            {/* Top Bar: Back + Title + Primary Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-revix-border pb-4">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="rounded-lg border border-revix-border bg-revix-white px-3.5 py-2 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-2 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+                >
+                  <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
+                  <span>{isRtl ? "رجوع" : "Back"}</span>
+                </button>
+                <h2 className="text-lg font-bold tracking-tight text-revix-dark">
+                  {isRtl ? "إنشاء أمر شراء جديد" : "New Purchase Order"}
+                </h2>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="rounded-lg border border-revix-border bg-revix-white px-4 py-2 text-xs font-semibold text-revix-secondary hover:bg-revix-surface transition-colors"
                 >
                   {isRtl ? "إلغاء" : "Cancel"}
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-revix-primary px-4 py-2 text-xs font-semibold text-revix-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50 transition-colors"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50 transition-colors"
                 >
                   {isCreating && (
                     <RevixIcon name="refresh-cw" className="h-3.5 w-3.5 animate-spin" />
                   )}
-                  <span>{isRtl ? "حفظ وإصدار أمر الشراء" : "Issue Purchase Order"}</span>
+                  <span>{isRtl ? "إصدار أمر الشراء" : "Issue Purchase Order"}</span>
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            {createError && (
+              <div className="rounded-xl border border-revix-alert/30 bg-revix-alert-soft px-4 py-3 text-xs font-medium text-revix-alert">
+                {createError}
+              </div>
+            )}
+
+            {/* Main Full-Width Step Content */}
+            <div className="w-full space-y-5">
+                {/* SECTION 1: Order Details & Vehicles */}
+                <>
+                    <div className="rounded-2xl border border-revix-border bg-revix-white p-5 shadow-xs space-y-4">
+                      <h3 className="text-sm font-bold text-revix-dark">
+                        {isRtl ? "بيانات المورد والتواريخ" : "Supplier & Dates"}
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
+                            {isRtl ? "الشركة" : "Company"}
+                          </label>
+                          <input
+                            type="text"
+                            readOnly
+                            value={wsContext?.data.company?.name || "—"}
+                            className="h-9 w-full rounded-lg border border-revix-border/80 bg-revix-surface/50 px-3 text-xs font-semibold text-revix-dark focus:outline-hidden"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
+                            {isRtl ? "المورد *" : "Vendor *"}
+                          </label>
+                          <RevixSelect
+                            size="sm"
+                            isRtl={isRtl}
+                            value={formVendorId}
+                            onChange={(e) => {
+                              const vId = e.target.value;
+                              setFormVendorId(vId);
+                              const selectedV = vendors.find((v) => v.id === vId);
+                              if (selectedV) {
+                                const terms = formatVendorPaymentTerms(selectedV, isRtl);
+                                setFormPaymentTermsType(terms.type);
+                                setFormPaymentTermsDays(selectedV.paymentTermsDays ?? 30);
+                                setFormPaymentTermsConfig(selectedV.paymentTermsConfig || null);
+                              }
+                            }}
+                            placeholder={isRtl ? "اختر المورد..." : "Select vendor..."}
+                            buttonClassName="h-9 rounded-lg text-xs"
+                            options={vendors.map((v) => ({
+                              value: v.id,
+                              label: `${v.name} (${v.city})`,
+                            }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
+                            {isRtl ? "تاريخ الطلب *" : "Order Date *"}
+                          </label>
+                          <RevixDatePicker
+                            size="sm"
+                            isRtl={isRtl}
+                            value={formOrderDate}
+                            onChange={(val) => setFormOrderDate(val)}
+                            buttonClassName="h-9 rounded-lg text-xs"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
+                            {isRtl ? "تاريخ التسليم" : "Expected Delivery"}
+                          </label>
+                          <RevixDatePicker
+                            size="sm"
+                            isRtl={isRtl}
+                            value={formDeliveryDate}
+                            onChange={(val) => setFormDeliveryDate(val)}
+                            placeholder={isRtl ? "اختياري..." : "Optional..."}
+                            buttonClassName="h-9 rounded-lg text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-xs">
+                      <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-3.5">
+                        <h3 className="text-sm font-bold text-revix-dark">
+                          {isRtl ? "السيارات المطلوبة" : "Vehicles"}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={handleAddLineItem}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary/10 px-3 py-1.5 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
+                        >
+                          <RevixIcon name="plus" size={13} />
+                          <span>{isRtl ? "إضافة سيارة" : "Add Row"}</span>
+                        </button>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-start text-xs">
+                          <thead>
+                            <tr className="border-b border-revix-border/70 bg-revix-surface/40 text-[10px] font-bold uppercase tracking-wide text-revix-muted">
+                              <th className="px-4 py-2.5 text-start w-[34%]">{isRtl ? "الفريان" : "Variant"}</th>
+                              <th className="px-3 py-2.5 text-start w-[12%]">{isRtl ? "الكمية" : "Qty"}</th>
+                              <th className="px-3 py-2.5 text-start w-[20%]">{isRtl ? "السعر" : "Unit Price"}</th>
+                              <th className="px-3 py-2.5 text-start w-[20%]">{isRtl ? "اللون" : "Color"}</th>
+                              <th className="px-3 py-2.5 text-end w-[11%]">{isRtl ? "الإجمالي" : "Subtotal"}</th>
+                              <th className="px-3 py-2.5 w-10" />
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-revix-border/60">
+                            {formItems.map((item, idx) => (
+                              <tr key={idx}>
+                                <td className="px-4 py-2.5">
+                                  <RevixSelect
+                                    size="sm"
+                                    isRtl={isRtl}
+                                    value={item.variantId}
+                                    onChange={(e) => handleItemChange(idx, "variantId", e.target.value)}
+                                    placeholder={isRtl ? "اختر الفريان..." : "Select variant..."}
+                                    buttonClassName="h-9 rounded-lg text-xs"
+                                    options={variants.map((v) => ({
+                                      value: v.id,
+                                      label: `${v.make} ${v.model} (${v.trim})`,
+                                    }))}
+                                  />
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={500}
+                                    value={item.quantity}
+                                    onChange={(e) => handleItemChange(idx, "quantity", Number(e.target.value))}
+                                    className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-2.5 text-xs font-mono font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
+                                  />
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={item.unitPrice}
+                                    onChange={(e) => handleItemChange(idx, "unitPrice", Number(e.target.value))}
+                                    className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-2.5 text-xs font-mono font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
+                                  />
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <RevixSelect
+                                    size="sm"
+                                    isRtl={isRtl}
+                                    value={item.color ?? ""}
+                                    onChange={(e) => handleItemChange(idx, "color", e.target.value)}
+                                    placeholder={isRtl ? "اللون..." : "Color..."}
+                                    buttonClassName="h-9 rounded-lg text-xs"
+                                    options={[
+                                      { value: "White", label: isRtl ? "أبيض" : "White" },
+                                      { value: "Black", label: isRtl ? "أسود" : "Black" },
+                                      { value: "Silver", label: isRtl ? "فضي" : "Silver" },
+                                      { value: "Gray", label: isRtl ? "رمادي" : "Gray" },
+                                      { value: "Blue", label: isRtl ? "أزرق" : "Blue" },
+                                      { value: "Red", label: isRtl ? "أحمر" : "Red" },
+                                      { value: "Green", label: isRtl ? "أخضر" : "Green" },
+                                      { value: "Gold", label: isRtl ? "ذهبي" : "Gold" },
+                                      { value: "Brown", label: isRtl ? "بني" : "Brown" },
+                                      { value: "Beige", label: isRtl ? "بيج" : "Beige" },
+                                    ]}
+                                  />
+                                </td>
+                                <td className="px-3 py-2.5 text-end font-mono font-semibold text-revix-dark tabular-nums">
+                                  {(Number(item.quantity) * Number(item.unitPrice)).toLocaleString()}
+                                </td>
+                                <td className="px-3 py-2.5 text-end">
+                                  <button
+                                    type="button"
+                                    disabled={formItems.length <= 1}
+                                    onClick={() => handleRemoveLineItem(idx)}
+                                    className="rounded-lg p-1.5 text-revix-muted hover:bg-revix-alert-soft hover:text-revix-alert disabled:opacity-30 transition-colors"
+                                  >
+                                    <RevixIcon name="trash-2" className="h-3.5 w-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-revix-border/70 bg-revix-surface/30 px-5 py-3 text-xs font-bold text-revix-dark">
+                        <span>
+                          {isRtl
+                            ? `إجمالي السيارات: ${totalUnitsCount}`
+                            : `Total Vehicles: ${totalUnitsCount}`}
+                        </span>
+                        <span className="font-mono text-sm text-revix-primary tabular-nums">
+                          {formCalculatedTotal.toLocaleString()} {currencyCode}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+
+                {/* SECTION 2: Chassis Numbers */}
+                {expandedVehicleUnits.length > 0 && (
+                  <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-xs">
+                    <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-revix-dark">
+                          {isRtl ? "أرقام الشاصي للسيارات *" : "Assign Chassis Numbers *"}
+                        </h3>
+                      </div>
+                      <span className="rounded-full bg-revix-primary/10 px-3 py-1 text-xs font-mono font-bold text-revix-primary">
+                        {assignedChassisCount} / {totalUnitsCount}
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-start text-xs">
+                        <thead>
+                          <tr className="border-b border-revix-border/70 bg-revix-surface/40 text-[10px] font-bold uppercase tracking-wide text-revix-muted">
+                            <th className="px-4 py-2.5 text-start w-12">#</th>
+                            <th className="px-3 py-2.5 text-start">{isRtl ? "الفريان" : "Variant"}</th>
+                            <th className="px-3 py-2.5 text-start w-28">{isRtl ? "اللون" : "Color"}</th>
+                            <th className="px-3 py-2.5 text-start w-28">{isRtl ? "السعر" : "Price"}</th>
+                            <th className="px-4 py-2.5 text-start w-96">
+                              {isRtl ? "رقم الشاصي *" : "Chassis Number *"}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-revix-border/60">
+                          {expandedVehicleUnits.map((unit, i) => (
+                            <tr key={unit.key}>
+                              <td className="px-4 py-2.5 font-mono font-semibold text-revix-secondary">
+                                {i + 1}
+                              </td>
+                              <td className="px-3 py-2.5 font-semibold text-revix-dark">
+                                {unit.variantLabel}
+                              </td>
+                              <td className="px-3 py-2.5 font-semibold text-revix-dark">
+                                {unit.color || "—"}
+                              </td>
+                              <td className="px-3 py-2.5 font-mono font-semibold text-revix-dark tabular-nums">
+                                {unit.unitPrice.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <input
+                                  type="text"
+                                  value={chassisByUnitKey[unit.key] ?? ""}
+                                  onChange={(e) =>
+                                    setChassisByUnitKey((prev) => ({
+                                      ...prev,
+                                      [unit.key]: e.target.value.toUpperCase(),
+                                    }))
+                                  }
+                                  placeholder="e.g. 1HGCR2F83HA001234"
+                                  className="h-10 w-full rounded-lg border border-revix-border bg-revix-white px-3.5 text-sm font-mono uppercase text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* SECTION 3: Payment & Terms */}
+                <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-xs">
+                    <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-4">
+                      <h3 className="text-sm font-bold text-revix-dark">
+                        {isRtl ? "الدفع والشروط والأحكام" : "Payment & Terms"}
+                      </h3>
+                      {selectedVendorObj && (
+                        <span className="text-[11px] font-semibold text-revix-secondary">
+                          {formatVendorPaymentTerms(selectedVendorObj, isRtl).label}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="p-5 space-y-5">
+                      <PaymentTermsSelector
+                        valueType={formPaymentTermsType}
+                        valueDays={formPaymentTermsDays}
+                        valueConfig={formPaymentTermsConfig}
+                        totalAmount={formCalculatedTotal}
+                        currency={currencyCode}
+                        upfrontPaid={formUpfrontPaid}
+                        installmentsCount={formInstallmentsCount}
+                        isRtl={isRtl}
+                        onChange={(payload) => {
+                          setFormPaymentTermsType(payload.type);
+                          setFormPaymentTermsDays(payload.days);
+                          setFormPaymentTermsConfig(payload.config || null);
+                          if (typeof payload.upfrontPaid === "number") {
+                            setFormUpfrontPaid(payload.upfrontPaid);
+                          }
+                          if (typeof payload.installmentsCount === "number") {
+                            setFormInstallmentsCount(payload.installmentsCount);
+                          }
+                          if (payload.scheduleSummary) {
+                            setFormPaymentScheduleSummary(payload.scheduleSummary);
+                          }
+                        }}
+                      />
+
+                      <div className="border-t border-revix-border/60 pt-4">
+                        <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
+                          {isRtl ? "الشروط والأحكام *" : "Terms & Conditions *"}
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={formNotes}
+                          onChange={(e) => setFormNotes(e.target.value)}
+                          placeholder={
+                            isRtl
+                              ? "اكتب كل شرط في سطر جديد..."
+                              : "Write each term on a new line..."
+                          }
+                          className="w-full rounded-lg border border-revix-border bg-revix-white p-3 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2.5 border-t border-revix-border/70 bg-revix-surface/30 px-5 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(false)}
+                        className="rounded-lg border border-revix-border bg-revix-white px-4 py-2 text-xs font-semibold text-revix-secondary hover:bg-revix-surface transition-colors"
+                      >
+                        {isRtl ? "إلغاء" : "Cancel"}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isCreating}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50 transition-colors"
+                      >
+                        {isCreating && (
+                          <RevixIcon name="refresh-cw" className="h-3.5 w-3.5 animate-spin" />
+                        )}
+                        <span>{isRtl ? "إصدار أمر الشراء" : "Issue Purchase Order"}</span>
+                      </button>
+                    </div>
+                  </div>
+              </div>
+          </form>
+        );
+      })()}
 
       {/* Receive & Convert Vehicle Modal */}
       {receivingPo && (
