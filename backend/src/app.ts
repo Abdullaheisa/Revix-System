@@ -48,11 +48,18 @@ export function createApp(options: {
   app.use(express.json({ limit: "512kb" }));
   app.use(
     "/uploads",
-    express.static(path.resolve(process.cwd(), "uploads"), {
+    express.static(env.uploadsDir, {
       maxAge: "7d",
       immutable: true,
     }),
   );
+  const legacyUploadsDir = path.resolve(process.cwd(), "uploads");
+  if (legacyUploadsDir !== env.uploadsDir) {
+    app.use(
+      "/uploads",
+      express.static(legacyUploadsDir, { maxAge: "7d", immutable: true }),
+    );
+  }
 
   const authService = new AuthService({
     store,

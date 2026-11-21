@@ -3,3 +3,4 @@
 - **Database:** PostgreSQL (`pg` driver) with explicit SQL migrations in `backend/src/db/migrations/`.
 - **Authentication:** Backend-owned session authentication in `backend/src/modules/auth/`.
 - **Email & Private Storage Providers:** Email is abstracted behind `EmailDeliveryAdapter` in `backend/src/modules/auth/emailDelivery.ts`. Production SMTP/API email and S3-compatible private file storage providers can be configured before deployment.
+- **Vehicle Uploads:** Files are stored under `UPLOADS_DIR` (defaults to `backend/uploads`) while the database stores their URLs. Set `UPLOADS_DIR` to a persistent mounted volume in hosted environments; local upload files are intentionally excluded from Git.

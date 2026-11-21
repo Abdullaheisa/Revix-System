@@ -18,6 +18,7 @@ export interface BackendEnvConfig {
   nodeEnv: "development" | "test" | "production";
   port: number;
   databaseUrl: string | undefined;
+  uploadsDir: string;
   frontendOrigin: string;
   sessionCookieName: string;
   sessionTtlHours: number;
@@ -85,10 +86,15 @@ export function loadEnvConfig(): BackendEnvConfig {
     };
   }
 
+  const configuredUploadsDir = process.env.UPLOADS_DIR?.trim();
+
   return {
     nodeEnv,
     port,
     databaseUrl: process.env.DATABASE_URL?.trim() || undefined,
+    uploadsDir: configuredUploadsDir
+      ? path.resolve(BACKEND_ROOT, configuredUploadsDir)
+      : path.join(BACKEND_ROOT, "uploads"),
     frontendOrigin:
       process.env.FRONTEND_ORIGIN?.trim() || "http://localhost:3000",
     sessionCookieName:

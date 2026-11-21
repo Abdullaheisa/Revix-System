@@ -97,7 +97,8 @@ export function WorkspaceStudioShell({
     const currentResourcePath = (pathname || "").replace(/^\/(en|ar)(?=\/|$)/, "");
     const isFleetResourceDetail =
       activeSection === "fleet" &&
-      /^\/workspace\/fleet\/(vehicles\/[^/]+|purchase-orders\/[^/]+)/.test(currentResourcePath);
+      ((activeSubPage === "vehicles" && /^\/workspace\/fleet\/vehicles\/[^/]+/.test(currentResourcePath)) ||
+        (activeSubPage === "purchase-orders" && /^\/workspace\/fleet\/purchase-orders\/[^/]+/.test(currentResourcePath)));
     if (isFleetResourceDetail) return;
 
     const routeKey = `${activeSection}/${activeSubPage}`;

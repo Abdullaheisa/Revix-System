@@ -7,10 +7,10 @@ import { type AuthenticatedTenantRequest } from "../../team/rbacMiddleware.ts";
 import type { FleetRouteContext } from "../fleetRouteContext.ts";
 import { paginateResponse, handleFleetError, detectImageExtension } from "../fleetHttp.ts";
 
-export function registerPhotosRoutes(router: Router, { guards, fleetService }: FleetRouteContext): void {
+export function registerPhotosRoutes(router: Router, { guards, fleetService, uploadsDir }: FleetRouteContext): void {
 router.get(
     "/photos",
-    guards.requirePermission("fleet", "read"),
+    guards.requirePermission("vehicle_photos", "read"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       try {
         const search = typeof req.query.search === "string" ? req.query.search : undefined;
@@ -24,7 +24,7 @@ router.get(
 
 router.post(
     "/photos/upload",
-    guards.requirePermission("fleet", "create"),
+    guards.requirePermission("vehicle_photos", "create"),
     express.raw({
       type: ["image/png", "image/jpeg", "image/jpg", "image/webp"],
       limit: "5mb",
@@ -75,12 +75,7 @@ router.post(
       try {
         const companyId = req.tenantActor!.company.id;
         const filename = `${crypto.randomUUID()}.${ext}`;
-        const targetDir = path.resolve(
-          process.cwd(),
-          "uploads",
-          "vehicle-photos",
-          companyId,
-        );
+        const targetDir = path.resolve(uploadsDir, "vehicle-photos", companyId);
         await fs.mkdir(targetDir, { recursive: true });
         await fs.writeFile(path.join(targetDir, filename), req.body);
 
@@ -99,7 +94,7 @@ router.post(
 
 router.post(
     "/photos",
-    guards.requirePermission("fleet", "create"),
+    guards.requirePermission("vehicle_photos", "create"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const parsed = createVehiclePhotoSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -125,7 +120,7 @@ router.post(
 
 router.delete(
     "/photos/:id",
-    guards.requirePermission("fleet", "update"),
+    guards.requirePermission("vehicle_photos", "update"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const rawId = req.params.id;
       const photoId = Array.isArray(rawId) ? rawId[0] : rawId;

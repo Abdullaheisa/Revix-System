@@ -21,7 +21,7 @@ export function createFleetRouter(options: {
  authService: AuthService; teamService: TeamService; fleetService: FleetService; env: BackendEnvConfig;
 }): Router {
  const router = Router();
- const context = { fleetService: options.fleetService, guards: createRbacGuards(options) };
+ const context = { fleetService: options.fleetService, guards: createRbacGuards(options), uploadsDir: options.env.uploadsDir };
  router.use(createRateLimiter({ windowMs: 60_000, maxRequests: 200 }));
  registerMetricsRoutes(router, context);
  registerPurchaseOrdersRoutes(router, context);

@@ -35,6 +35,7 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
     name: string;
   } | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [unavailablePhotoIds, setUnavailablePhotoIds] = useState<string[]>([]);
 
   const { data: photosRes, isLoading: isPhotosLoading } = useListVehiclePhotosQuery({
     search: search.trim() || undefined,
@@ -441,12 +442,20 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
                       <RevixIcon name="trash-2" className="w-3.5 h-3.5" />
                     </button>
 
-                    <NextImage unoptimized width={640} height={480}
-                      src={resolveAssetUrl(photo.photoUrl)}
-                      alt={photo.vehicleName}
-                      className="max-h-full max-w-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
+                    {unavailablePhotoIds.includes(photo.id) ? (
+                      <div role="img" aria-label={isAr ? "الصورة غير متاحة" : "Image unavailable"} className="flex h-full w-full flex-col items-center justify-center gap-2 text-center text-xs text-gray-500">
+                        <RevixIcon name="car-front" className="h-8 w-8 text-gray-400" />
+                        <span>{isAr ? "ملف الصورة غير متاح. أعد رفع الصورة." : "Image file unavailable. Please upload it again."}</span>
+                      </div>
+                    ) : (
+                      <NextImage unoptimized width={640} height={480}
+                        src={resolveAssetUrl(photo.photoUrl)}
+                        alt={photo.vehicleName}
+                        onError={() => setUnavailablePhotoIds((ids) => ids.includes(photo.id) ? ids : [...ids, photo.id])}
+                        className="max-h-full max-w-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    )}
                   </div>
 
                   {/* Card Info */}

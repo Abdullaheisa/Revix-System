@@ -27,6 +27,7 @@ describe("Backend Express Authentication Lifecycle (Integration)", () => {
     nodeEnv: "test",
     port: 0,
     databaseUrl: undefined,
+    uploadsDir: "uploads",
     frontendOrigin: "http://localhost:3000",
     sessionCookieName: "revix_session",
     sessionTtlHours: 168,

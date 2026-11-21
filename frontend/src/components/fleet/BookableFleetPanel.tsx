@@ -146,18 +146,6 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
       <SectionCard noPadding>
         {isLoading ? (
           <EmptyState message={isRtl ? "جاري تحميل الأسطول..." : "Loading fleet..."} />
-        ) : paginated.length === 0 ? (
-          <EmptyState
-            message={
-              viewMode === "bookable"
-                ? isRtl
-                  ? "لا توجد سيارات منشورة في الأسطول بعد. انتقل لتبويب (أصول غير منشورة) لتحويل السيارات للأسطول."
-                  : "No vehicles published to Fleet yet. Switch to Unpublished Assets to publish vehicles."
-                : isRtl
-                  ? "كل السيارات منشورة في الأسطول بالفعل."
-                  : "All vehicle assets are already published to Fleet."
-            }
-          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -172,7 +160,20 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-revix-border/70">
-                {paginated.map((v) => (
+                {paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-xs text-revix-secondary">
+                      {viewMode === "bookable"
+                        ? isRtl
+                          ? "لا توجد سيارات منشورة في الأسطول بعد. انتقل إلى تبويب الأصول غير المنشورة لنشر السيارات."
+                          : "No vehicles published yet. Switch to Unpublished Assets to publish vehicles."
+                        : isRtl
+                          ? "لا توجد أصول غير منشورة."
+                          : "No unpublished assets."}
+                    </td>
+                  </tr>
+                ) : (
+                paginated.map((v) => (
                   <tr key={v.id} className="hover:bg-revix-surface/35">
                     <td className="px-4 py-3">
                       <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono font-bold text-revix-dark">
@@ -242,7 +243,8 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                       </div>
                     </td>
                   </tr>
-                ))}
+))
+)}
               </tbody>
             </table>
           </div>

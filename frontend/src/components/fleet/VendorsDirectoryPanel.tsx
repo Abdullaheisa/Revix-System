@@ -387,115 +387,45 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {paginatedVendors.map((v) => (
-              <div
-                key={v.id}
-                className="flex flex-col justify-between rounded-xl border border-revix-border bg-revix-white p-4 shadow-xs transition hover:border-revix-primary/40 hover:shadow-sm"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="rounded-md bg-revix-surface px-2 py-0.5 text-[10px] font-semibold text-revix-primary">
-                        {VENDOR_CATEGORY_LABELS[v.category]?.[isRtl ? "ar" : "en"] ?? v.category}
-                      </span>
-                      <h3 className="mt-1.5 text-base font-bold text-revix-dark">
-                        {v.name}
-                      </h3>
-                      {v.legalName && (
-                        <p className="text-xs text-revix-secondary">{v.legalName}</p>
-                      )}
-                    </div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        v.status === "active"
-                          ? "bg-revix-accent-soft text-revix-accent"
-                          : "bg-revix-surface text-revix-muted"
-                      }`}
-                    >
-                      {v.status === "active" ? (isRtl ? "نشط" : "Active") : (isRtl ? "معطل" : "Inactive")}
-                    </span>
-                  </div>
-
-                  {/* Contact & Location Info */}
-                  <div className="mt-4 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 text-revix-dark">
-                      <RevixIcon name="users-round" className="h-3.5 w-3.5 text-revix-muted shrink-0" />
-                      <span className="font-medium">{v.contactPerson}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <RevixIcon name="phone" className="h-3.5 w-3.5 text-revix-muted shrink-0" />
-                      <a
-                        href={`tel:${v.phone}`}
-                        className="font-mono text-xs text-revix-primary hover:underline"
-                      >
-                        {v.phone}
-                      </a>
-                    </div>
-
-                    {v.email && (
-                      <div className="flex items-center gap-2">
-                        <RevixIcon name="mail" className="h-3.5 w-3.5 text-revix-muted shrink-0" />
-                        <a
-                          href={`mailto:${v.email}`}
-                          className="truncate text-xs text-revix-secondary hover:underline"
-                        >
-                          {v.email}
-                        </a>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 text-revix-secondary">
-                      <RevixIcon name="map-pin" className="h-3.5 w-3.5 text-revix-muted shrink-0" />
-                      <span>
-                        {v.city}, {v.countryCode} {v.address ? `• ${v.address}` : ""}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Commercial & Terms details */}
-                  <div className="mt-3.5 space-y-2 rounded-lg bg-revix-surface/70 p-2.5 text-[11px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-revix-muted">
-                        {isRtl ? "السجل التجاري (CR):" : "Commercial Reg:"}
-                      </span>
-                      <span className="font-mono font-semibold text-revix-dark">
-                        {v.commercialRegister || "—"}
-                      </span>
-                    </div>
-                    <div className="border-t border-revix-border/50 pt-1.5 flex items-center justify-between gap-2">
-                      <span className="text-[10px] text-revix-muted shrink-0">
-                        {isRtl ? "شروط الدفع:" : "Payment Terms:"}
-                      </span>
-                      {(() => {
-                        const terms = formatVendorPaymentTerms(v, isRtl);
-                        return (
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${terms.badgeClass}`}
-                            title={terms.details}
-                          >
-                            <RevixIcon name={terms.icon} className="h-3 w-3 shrink-0" />
-                            <span>{terms.label}</span>
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="mt-4 flex items-center justify-end gap-2 border-t border-revix-border/60 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditModal(v)}
-                    className="rounded-md border border-revix-border bg-revix-white px-2.5 py-1 text-xs font-medium text-revix-dark transition hover:bg-revix-surface"
-                  >
-                    {isRtl ? "تعديل البيانات" : "Edit"}
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto rounded-xl border border-revix-border bg-revix-white">
+            <table className="w-full min-w-[1050px] text-xs">
+              <thead>
+                <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold text-revix-muted">
+                  <th className="px-4 py-3 text-start">{isRtl ? "المورد" : "Vendor"}</th>
+                  <th className="px-3 py-3 text-start">{isRtl ? "التصنيف" : "Category"}</th>
+                  <th className="px-3 py-3 text-start">{isRtl ? "مسؤول التواصل" : "Contact"}</th>
+                  <th className="px-3 py-3 text-start">{isRtl ? "الهاتف" : "Phone"}</th>
+                  <th className="px-3 py-3 text-start">{isRtl ? "البريد الإلكتروني" : "Email"}</th>
+                  <th className="px-3 py-3 text-start">{isRtl ? "الموقع" : "Location"}</th>
+                  <th className="px-3 py-3 text-start">{isRtl ? "السجل التجاري" : "Commercial Reg."}</th>
+                  <th className="px-3 py-3 text-start">{isRtl ? "شروط الدفع" : "Payment Terms"}</th>
+                  <th className="px-3 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
+                  <th className="px-4 py-3 text-end">{isRtl ? "إجراءات" : "Actions"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-revix-border/70">
+                {paginatedVendors.map((v) => {
+                  const terms = formatVendorPaymentTerms(v, isRtl);
+                  return (
+                    <tr key={v.id} className="align-middle transition-colors hover:bg-revix-surface/35">
+                      <td className="px-4 py-3">
+                        <div className="font-bold text-revix-dark">{v.name}</div>
+                        {v.legalName && <div className="mt-0.5 text-[11px] text-revix-secondary">{v.legalName}</div>}
+                      </td>
+                      <td className="px-3 py-3 text-revix-secondary">{VENDOR_CATEGORY_LABELS[v.category]?.[isRtl ? "ar" : "en"] ?? v.category}</td>
+                      <td className="px-3 py-3 font-medium text-revix-dark">{v.contactPerson}</td>
+                      <td className="px-3 py-3 font-mono"><a href={`tel:${v.phone}`} className="text-revix-primary hover:underline">{v.phone}</a></td>
+                      <td className="max-w-48 truncate px-3 py-3 text-revix-secondary">{v.email ? <a href={`mailto:${v.email}`} className="hover:text-revix-primary hover:underline">{v.email}</a> : "—"}</td>
+                      <td className="px-3 py-3 text-revix-secondary">{v.city}, {v.countryCode}</td>
+                      <td className="px-3 py-3 font-mono text-revix-secondary">{v.commercialRegister || "—"}</td>
+                      <td className="px-3 py-3"><span className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-bold ${terms.badgeClass}`} title={terms.details}><RevixIcon name={terms.icon} className="h-3 w-3" />{terms.label}</span></td>
+                      <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${v.status === "active" ? "bg-revix-accent-soft text-revix-accent" : "bg-revix-surface text-revix-muted"}`}>{v.status === "active" ? (isRtl ? "نشط" : "Active") : (isRtl ? "معطل" : "Inactive")}</span></td>
+                      <td className="px-4 py-3 text-end"><button type="button" onClick={() => handleOpenEditModal(v)} className="rounded-md border border-revix-border bg-revix-white px-2.5 py-1.5 text-[11px] font-medium text-revix-dark transition hover:bg-revix-surface">{isRtl ? "تعديل" : "Edit"}</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
           {/* Unified Pagination */}

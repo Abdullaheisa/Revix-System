@@ -12,6 +12,7 @@ describe("Phase 2 — Company Onboarding, Multi-Country Branches & Tenant Isolat
     nodeEnv: "test",
     port: 0,
     databaseUrl: undefined,
+    uploadsDir: "uploads",
     frontendOrigin: "http://localhost:3000",
     sessionCookieName: "revix_session",
     sessionTtlHours: 168,

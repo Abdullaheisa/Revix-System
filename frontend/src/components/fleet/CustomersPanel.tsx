@@ -7,7 +7,6 @@ import {
   type CustomerDto,
 } from "@/store/api/fleetApi";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { CustomerFormModal } from "./CustomerFormModal";
@@ -92,13 +91,8 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
       </div>
 
       <SectionCard noPadding>
-        {isLoading ? (
-          <EmptyState message={isRtl ? "جاري تحميل بيانات العملاء..." : "Loading customers..."} />
-        ) : paginated.length === 0 ? (
-          <EmptyState message={isRtl ? "لا يوجد عملاء مسجلون حتى الآن." : "No customers registered yet."} />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-xs">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
                   <th className="px-4 py-3 text-start">{isRtl ? "العميل" : "Customer"}</th>
@@ -110,7 +104,12 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-revix-border/70">
-                {paginated.map((c) => (
+                {isLoading ? (
+                  <tr><td colSpan={6} className="px-4 py-10 text-center text-revix-secondary">{isRtl ? "جاري تحميل بيانات العملاء..." : "Loading customers..."}</td></tr>
+                ) : paginated.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-10 text-center text-revix-secondary">{isRtl ? "لا يوجد عملاء مسجلون حتى الآن." : "No customers registered yet."}</td></tr>
+                ) : (
+                paginated.map((c) => (
                   <tr key={c.id} className="hover:bg-revix-surface/35">
                     <td className="px-4 py-3">
                       <div className="font-bold text-revix-dark">{c.fullName}</div>
@@ -143,11 +142,11 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
                       </div>
                     </td>
                   </tr>
-                ))}
+))
+)}
               </tbody>
             </table>
-          </div>
-        )}
+        </div>
       </SectionCard>
 
       <RevixPagination

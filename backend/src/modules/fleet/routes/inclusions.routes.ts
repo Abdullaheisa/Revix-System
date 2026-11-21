@@ -7,7 +7,7 @@ import { paginateResponse, handleFleetError } from "../fleetHttp.ts";
 export function registerInclusionsRoutes(router: Router, { guards, fleetService }: FleetRouteContext): void {
 router.get(
     "/inclusions",
-    guards.requirePermission("fleet", "read"),
+    guards.requirePermission("rental_inclusions", "read"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       try {
         const search = typeof req.query.search === "string" ? req.query.search : undefined;
@@ -22,7 +22,7 @@ router.get(
 
 router.post(
     "/inclusions",
-    guards.requirePermission("fleet", "create"),
+    guards.requirePermission("rental_inclusions", "create"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const parsed = createRentalInclusionSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -48,7 +48,7 @@ router.post(
 
 router.patch(
     "/inclusions/:id",
-    guards.requirePermission("fleet", "update"),
+    guards.requirePermission("rental_inclusions", "update"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const rawId = req.params.id;
       const inclusionId = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -84,7 +84,7 @@ router.patch(
 
 router.delete(
     "/inclusions/:id",
-    guards.requirePermission("fleet", "update"),
+    guards.requirePermission("rental_inclusions", "update"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const rawId = req.params.id;
       const inclusionId = Array.isArray(rawId) ? rawId[0] : rawId;
