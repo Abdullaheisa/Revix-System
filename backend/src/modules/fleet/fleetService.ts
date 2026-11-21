@@ -879,7 +879,9 @@ export class FleetService {
       throw new FleetServiceError(404, "PO_NOT_FOUND", "Purchase order not found.");
     }
     const baseName = actor.user.fullName || actor.user.email || "Authorized Signer";
-    const roleTitle = actor.role?.name || "Authorized Signature";
+    const roleObj = actor.role as { nameEn?: string; name?: string; key?: string } | undefined;
+    const roleTitle =
+      roleObj?.nameEn || roleObj?.name || roleObj?.key || "Authorized Signature";
     const signerName = `${baseName}|${roleTitle}`;
     const updated = await this.store.signPurchaseOrder(poId, signatureDataUrl, signerName);
     await this.store.recordAuditLog({

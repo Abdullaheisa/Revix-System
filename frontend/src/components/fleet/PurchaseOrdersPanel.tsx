@@ -1,6 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import {
+  formatCompanyDate,
+  formatCompanyDateTime,
+  getCompanyTodayIso,
+} from "@/lib/date/companyDate";
 import { useAppDispatch } from "@/store/hooks";
 import {
   navigateToWorkspacePage,
@@ -277,11 +282,8 @@ export function PurchaseOrdersPanel({
       return;
     }
 
-    const orderDateStr = new Date(po.orderDate).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    const tz = po.companyTimezone || activeBranch?.timezone || undefined;
+    const orderDateStr = formatCompanyDate(po.orderDate, { timezone: tz, locale: "en-GB" });
     const companyTitle = po.companyName || po.branchName || "Company";
     const matchedVendor = vendors.find((v) => v.id === po.vendorId);
     const attentionPerson = matchedVendor?.contactPerson?.trim() || "";
@@ -340,7 +342,7 @@ export function PurchaseOrdersPanel({
       ? `<div style="text-align:center;">
            <img src="${po.signatureDataUrl}" alt="Signature" style="height:52px;max-width:180px;object-fit:contain;display:block;margin:0 auto -4px auto;" />
            <div style="border-top:1px solid #374151;padding-top:6px;font-weight:700;font-size:11px;color:#111;">${parsedSignerName || "Authorized Signer"}</div>
-           <div style="font-size:10px;color:#6b7280;margin-top:2px;">${parsedSignerRole || "Authorized Signature"}${po.signedAt ? ` • ${new Date(po.signedAt).toLocaleDateString("en-GB")}` : ""}</div>
+           <div style="font-size:10px;color:#6b7280;margin-top:2px;">${parsedSignerRole || "Authorized Signature"}${po.signedAt ? ` • ${formatCompanyDateTime(po.signedAt, { timezone: tz, locale: "en-GB" })}` : ""}</div>
          </div>`
       : `<div style="text-align:center;margin-top:44px;">
            <div style="border-top:1px solid #374151;padding-top:6px;font-size:11px;font-weight:600;color:#4b5563;">Authorized Signature</div>

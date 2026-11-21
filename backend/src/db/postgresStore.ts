@@ -471,6 +471,8 @@ function mapPurchaseOrderRow(row: DbPurchaseOrderRow): PurchaseOrderRecord {
     branchName: row.branch_name,
     companyName: (row as DbPurchaseOrderRow & { company_name?: string }).company_name,
     companyLogoUrl: (row as DbPurchaseOrderRow & { company_logo_url?: string | null }).company_logo_url ?? null,
+    companyTimezone: (row as DbPurchaseOrderRow & { company_timezone?: string | null }).company_timezone ?? null,
+    companyCountryCode: (row as DbPurchaseOrderRow & { company_country_code?: string | null }).company_country_code ?? null,
     parentCompanyName: (row as DbPurchaseOrderRow & { parent_company_name?: string | null }).parent_company_name ?? null,
     parentCompanyLogoUrl: (row as DbPurchaseOrderRow & { parent_company_logo_url?: string | null }).parent_company_logo_url ?? null,
     signatureDataUrl: (row as DbPurchaseOrderRow & { signature_data_url?: string | null }).signature_data_url ?? null,
@@ -2125,7 +2127,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
   async findPurchaseOrderById(poId: string): Promise<PurchaseOrderRecord | null> {
     const poRes = await this.pool.query<DbPurchaseOrderRow>(
       `SELECT po.*, v.name as vendor_name, b.name as branch_name, c.name as company_name,
-              c.logo_url as company_logo_url, pc.name as parent_company_name, pc.logo_url as parent_company_logo_url
+              c.logo_url as company_logo_url, c.timezone as company_timezone, c.country_code as company_country_code,
+              pc.name as parent_company_name, pc.logo_url as parent_company_logo_url
        FROM purchase_orders po
        LEFT JOIN vendors v ON v.id = po.vendor_id
        LEFT JOIN branches b ON b.id = po.branch_id
@@ -2157,7 +2160,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
   ): Promise<PurchaseOrderRecord[]> {
     let query = `
       SELECT po.*, v.name as vendor_name, b.name as branch_name, c.name as company_name,
-             c.logo_url as company_logo_url, pc.name as parent_company_name, pc.logo_url as parent_company_logo_url
+             c.logo_url as company_logo_url, c.timezone as company_timezone, c.country_code as company_country_code,
+             pc.name as parent_company_name, pc.logo_url as parent_company_logo_url
       FROM purchase_orders po
       LEFT JOIN vendors v ON v.id = po.vendor_id
       LEFT JOIN branches b ON b.id = po.branch_id

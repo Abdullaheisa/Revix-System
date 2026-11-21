@@ -879,6 +879,8 @@ export interface PurchaseOrderRecord {
   branchName?: string;
   companyName?: string;
   companyLogoUrl?: string | null;
+  companyTimezone?: string | null;
+  companyCountryCode?: string | null;
   parentCompanyName?: string | null;
   parentCompanyLogoUrl?: string | null;
   signatureDataUrl?: string | null;
@@ -996,6 +998,8 @@ export interface FleetVehicleRecord {
   branchName?: string;
   companyName?: string;
   companyLogoUrl?: string | null;
+  companyTimezone?: string | null;
+  companyCountryCode?: string | null;
   parentCompanyName?: string | null;
   parentCompanyLogoUrl?: string | null;
   signatureDataUrl?: string | null;

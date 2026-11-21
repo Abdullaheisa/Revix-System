@@ -152,6 +152,8 @@ export interface PurchaseOrderDto {
   branchName?: string;
   companyName?: string;
   companyLogoUrl?: string | null;
+  companyTimezone?: string | null;
+  companyCountryCode?: string | null;
   parentCompanyName?: string | null;
   parentCompanyLogoUrl?: string | null;
   signatureDataUrl?: string | null;
@@ -264,6 +266,8 @@ export interface FleetVehicleDto {
   branchName?: string;
   companyName?: string;
   companyLogoUrl?: string | null;
+  companyTimezone?: string | null;
+  companyCountryCode?: string | null;
   parentCompanyName?: string | null;
   parentCompanyLogoUrl?: string | null;
   isPartnerVehicle?: boolean;
