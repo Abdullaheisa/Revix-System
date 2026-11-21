@@ -91,7 +91,7 @@ const RESOURCE_ROWS = [
   },
   {
     key: "variants",
-    en: "Vehicle Variants (Templates)",
+    en: "Model Variant",
     ar: "كتالوج فئات السيارات (الفريان)",
     actions: [
       { key: "read", en: "View", ar: "عرض" },

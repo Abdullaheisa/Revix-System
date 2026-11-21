@@ -611,6 +611,35 @@ export interface AuthDataStore {
   listRentalInclusions(companyId: string, search?: string, activeOnly?: boolean): Promise<RentalInclusionRecord[]>;
   updateRentalInclusion(id: string, input: UpdateRentalInclusionInput): Promise<RentalInclusionRecord | null>;
   deleteRentalInclusion(id: string): Promise<boolean>;
+  signPurchaseOrder(
+    poId: string,
+    signatureDataUrl: string,
+    signedByName: string,
+  ): Promise<PurchaseOrderRecord | null>;
+
+  // Vehicle Makes & Models Catalog
+  listVehicleMakes(companyId: string): Promise<
+    Array<{
+      id: string;
+      companyId: string;
+      name: string;
+      models: Array<{ id: string; makeId: string; name: string }>;
+    }>
+  >;
+  createVehicleMake(
+    companyId: string,
+    name: string,
+  ): Promise<{
+    id: string;
+    companyId: string;
+    name: string;
+    models: Array<{ id: string; makeId: string; name: string }>;
+  }>;
+  createVehicleModel(
+    companyId: string,
+    makeId: string,
+    name: string,
+  ): Promise<{ id: string; makeId: string; name: string }>;
 
   recordAuditLog(input: AuditLogInput): Promise<void>;
 }
@@ -642,6 +671,7 @@ export type VehicleVariantStatus = "active" | "archived";
 
 export interface VehicleVariantRecord {
   id: string;
+  variantCode?: string;
   companyId: string;
   make: string;
   model: string;
@@ -818,6 +848,8 @@ export interface PurchaseOrderItemRecord {
   quantity: number;
   unitPrice: number;
   receivedCount: number;
+  vin?: string | null;
+  color?: string | null;
   notes: string | null;
   createdAt: Date;
 }
@@ -845,12 +877,21 @@ export interface PurchaseOrderRecord {
   items?: PurchaseOrderItemRecord[];
   vendorName?: string;
   branchName?: string;
+  companyName?: string;
+  companyLogoUrl?: string | null;
+  parentCompanyName?: string | null;
+  parentCompanyLogoUrl?: string | null;
+  signatureDataUrl?: string | null;
+  signedByName?: string | null;
+  signedAt?: Date | null;
 }
 
 export interface CreatePurchaseOrderItemInput {
   variantId: string;
   quantity: number;
   unitPrice: number;
+  vin?: string | null;
+  color?: string | null;
   notes?: string | null;
 }
 
@@ -954,6 +995,12 @@ export interface FleetVehicleRecord {
   variant?: VehicleVariantRecord;
   branchName?: string;
   companyName?: string;
+  companyLogoUrl?: string | null;
+  parentCompanyName?: string | null;
+  parentCompanyLogoUrl?: string | null;
+  signatureDataUrl?: string | null;
+  signedByName?: string | null;
+  signedAt?: Date | null;
   isPartnerVehicle?: boolean;
 }
 

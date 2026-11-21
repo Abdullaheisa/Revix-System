@@ -23,6 +23,7 @@ export type VehicleVariantStatus = "active" | "archived";
 
 export interface VehicleVariantDto {
   id: string;
+  variantCode?: string;
   companyId: string;
   make: string;
   model: string;
@@ -149,6 +150,13 @@ export interface PurchaseOrderDto {
   items?: PurchaseOrderItemDto[];
   vendorName?: string;
   branchName?: string;
+  companyName?: string;
+  companyLogoUrl?: string | null;
+  parentCompanyName?: string | null;
+  parentCompanyLogoUrl?: string | null;
+  signatureDataUrl?: string | null;
+  signedByName?: string | null;
+  signedAt?: string | null;
 }
 
 export interface CreatePurchaseOrderItemInput {
@@ -255,6 +263,9 @@ export interface FleetVehicleDto {
   variant?: VehicleVariantDto;
   branchName?: string;
   companyName?: string;
+  companyLogoUrl?: string | null;
+  parentCompanyName?: string | null;
+  parentCompanyLogoUrl?: string | null;
   isPartnerVehicle?: boolean;
 }
 
@@ -397,6 +408,66 @@ export const fleetApi = baseApi.injectEndpoints({
     }),
 
     // --- Variants ---
+    signPurchaseOrder: builder.mutation<
+      { ok: boolean; data: PurchaseOrderDto },
+      { id: string; signatureDataUrl: string }
+    >({
+      query: ({ id, signatureDataUrl }) => ({
+        url: `/fleet/purchase-orders/${id}/sign`,
+        method: "POST",
+        body: { signatureDataUrl },
+      }),
+      invalidatesTags: ["PurchaseOrder"],
+    }),
+
+    listVehicleMakes: builder.query<
+      {
+        ok: boolean;
+        data: Array<{
+          id: string;
+          companyId: string;
+          name: string;
+          models: Array<{ id: string; makeId: string; name: string }>;
+        }>;
+      },
+      void
+    >({
+      query: () => "/fleet/makes",
+      providesTags: ["VehicleVariant"],
+    }),
+
+    createVehicleMake: builder.mutation<
+      {
+        ok: boolean;
+        data: {
+          id: string;
+          companyId: string;
+          name: string;
+          models: Array<{ id: string; makeId: string; name: string }>;
+        };
+      },
+      { name: string }
+    >({
+      query: (body) => ({
+        url: "/fleet/makes",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["VehicleVariant"],
+    }),
+
+    createVehicleModel: builder.mutation<
+      { ok: boolean; data: { id: string; makeId: string; name: string } },
+      { makeId: string; name: string }
+    >({
+      query: ({ makeId, name }) => ({
+        url: `/fleet/makes/${makeId}/models`,
+        method: "POST",
+        body: { name },
+      }),
+      invalidatesTags: ["VehicleVariant"],
+    }),
+
     listVariants: builder.query<
       ApiResponse<VehicleVariantDto[]>,
       { category?: VehicleCategory; search?: string; page?: number; pageSize?: number } | void
@@ -679,6 +750,10 @@ export const fleetApi = baseApi.injectEndpoints({
 
 export const {
   useGetFleetMetricsQuery,
+  useSignPurchaseOrderMutation,
+  useListVehicleMakesQuery,
+  useCreateVehicleMakeMutation,
+  useCreateVehicleModelMutation,
   useListVariantsQuery,
   useCreateVariantMutation,
   useUpdateVariantMutation,

@@ -165,7 +165,7 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
             },
             {
               id: "variants",
-              titleEn: "Vehicle Variants (Templates)",
+              titleEn: "Model Variant",
               titleAr: "كتالوج فئات السيارات (الفريان)",
               descEn:
                 "Model specifications, SIPP codes, and daily rental rate bands (model templates, not physical cars).",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import {
   navigateToWorkspacePage,
@@ -19,6 +19,7 @@ import {
   useListVendorsQuery,
   useListVehiclesQuery,
   useReceiveVehicleMutation,
+  useSignPurchaseOrderMutation,
   useUpdatePurchaseOrderStatusMutation,
   type CreatePurchaseOrderItemInput,
   type PurchaseOrderDto,
@@ -87,7 +88,7 @@ export function PurchaseOrdersPanel({
     Boolean(membership.permissions.purchase_orders?.includes("approve")) ||
     Boolean(membership.permissions.finance?.includes("approve"));
 
-  const [selectedBranchId, setSelectedBranchId] = useState<string>(activeBranch?.id || "all");
+  const [selectedBranchId] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [page, setPage] = usePersistedPage("fleet/purchase-orders");
   const pageSize = 15;
@@ -110,6 +111,11 @@ export function PurchaseOrdersPanel({
   const [createPurchaseOrder, { isLoading: isCreating }] = useCreatePurchaseOrderMutation();
   const [updateStatus, { isLoading: isUpdatingStatus }] = useUpdatePurchaseOrderStatusMutation();
   const [receiveVehicle, { isLoading: isReceiving }] = useReceiveVehicleMutation();
+  const [signPurchaseOrder, { isLoading: isSigning }] = useSignPurchaseOrderMutation();
+  const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+  const sigCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDrawingSig, setIsDrawingSig] = useState(false);
+  const [hasDrawnSig, setHasDrawnSig] = useState(false);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [receivingPo, setReceivingPo] = useState<PurchaseOrderDto | null>(null);
@@ -129,6 +135,9 @@ export function PurchaseOrdersPanel({
   const [formItems, setFormItems] = useState<CreatePurchaseOrderItemInput[]>([
     { variantId: "", quantity: 1, unitPrice: 0, vin: "", color: "", notes: "" },
   ]);
+  const [isChassisModalOpen, setIsChassisModalOpen] = useState(false);
+  const [chassisByUnitKey, setChassisByUnitKey] = useState<Record<string, string>>({});
+  const [draftChassisByUnitKey, setDraftChassisByUnitKey] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState<string | null>(null);
 
   // Form State for Receiving Vehicle
@@ -146,6 +155,37 @@ export function PurchaseOrdersPanel({
   const purchaseOrders = useMemo(() => data?.data ?? [], [data?.data]);
   const totalPurchaseOrders = data?.pagination?.totalItems ?? purchaseOrders.length;
   const variants = useMemo(() => variantsData?.data ?? [], [variantsData?.data]);
+
+  const expandedVehicleUnits = useMemo(() => {
+    const units: Array<{
+      key: string;
+      rowIndex: number;
+      unitIndex: number;
+      variantId: string;
+      variantLabel: string;
+      color: string;
+      unitPrice: number;
+      notes?: string | null;
+    }> = [];
+    formItems.forEach((item, rowIndex) => {
+      const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
+      const v = variants.find((vr) => vr.id === item.variantId);
+      const variantLabel = v ? `${v.make} ${v.model} (${v.trim})` : "—";
+      for (let u = 0; u < qty; u++) {
+        units.push({
+          key: `${rowIndex}-${u}`,
+          rowIndex,
+          unitIndex: u,
+          variantId: item.variantId,
+          variantLabel,
+          color: item.color || "",
+          unitPrice: Number(item.unitPrice) || 0,
+          notes: item.notes ?? null,
+        });
+      }
+    });
+    return units;
+  }, [formItems, variants]);
   const vendors = useMemo(() => vendorsData?.data ?? [], [vendorsData?.data]);
   const allFleetVehicles = useMemo(() => vehiclesData?.data ?? [], [vehiclesData?.data]);
 
@@ -230,6 +270,159 @@ export function PurchaseOrdersPanel({
     });
   }
 
+  function handlePrintLpo(po: PurchaseOrderDto) {
+    const printWin = window.open("", "_blank", "width=900,height=1000");
+    if (!printWin) {
+      window.print();
+      return;
+    }
+
+    const orderDateStr = new Date(po.orderDate).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    const companyTitle = po.companyName || po.branchName || "Company";
+    const matchedVendor = vendors.find((v) => v.id === po.vendorId);
+    const attentionPerson = matchedVendor?.contactPerson?.trim() || "";
+    const companyHeaderHtml = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:2px solid #1f2937;padding-bottom:12px;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;">
+          ${po.companyLogoUrl ? `<img src="${po.companyLogoUrl}" alt="${companyTitle}" style="height:30px;max-width:120px;width:auto;object-fit:contain;" />` : `<div style="font-size:14px;font-weight:700;color:#111;">${companyTitle}</div>`}
+        </div>
+        ${
+          po.parentCompanyLogoUrl
+            ? `<div style="display:flex;align-items:center;">
+                <img src="${po.parentCompanyLogoUrl}" alt="${po.parentCompanyName || "Parent"}" style="height:28px;max-width:110px;width:auto;object-fit:contain;" />
+              </div>`
+            : ""
+        }
+      </div>
+    `;
+
+    const rowsHtml = (po.items ?? [])
+      .map((item, idx) => {
+        const v = variants.find((vr) => vr.id === item.variantId);
+        const variation = v ? `${v.make} ${v.model} ${v.trim}` : item.variantId;
+        const year = v?.modelYear || "—";
+        return `
+          <tr>
+            <td style="text-align:center;font-family:monospace;">${idx + 1}</td>
+            <td style="font-weight:600;">${variation}</td>
+            <td style="font-family:monospace;">${item.vin || "—"}</td>
+            <td style="text-align:center;font-family:monospace;">${year}</td>
+            <td style="text-align:center;">${item.color || "—"}</td>
+            <td style="text-align:center;font-family:monospace;">${item.quantity}</td>
+            <td style="text-align:right;font-family:monospace;font-weight:600;">${Number(item.unitPrice).toLocaleString()} ${po.currency}</td>
+          </tr>`;
+      })
+      .join("");
+
+    const termsLines = (po.notes || "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(
+        (l) =>
+          Boolean(l) &&
+          !l.startsWith("[Payment Terms & Schedule:") &&
+          !l.startsWith("[شروط الدفع والجدولة:"),
+      );
+    const termsHtml =
+      termsLines.length > 0
+        ? termsLines
+            .map((line, i) => `<div>${/^\d+[-.)]/.test(line) ? line : `${i + 1}- ${line}`}</div>`)
+            .join("")
+        : `<div>1- Payment: As per agreed purchase order terms.</div>
+           <div>2- Delivery: Vehicles must match the specified chassis numbers and colors.</div>`;
+
+    const [parsedSignerName, parsedSignerRole] = (po.signedByName || "").split("|");
+    const sigHtml = po.signatureDataUrl
+      ? `<div style="text-align:center;">
+           <img src="${po.signatureDataUrl}" alt="Signature" style="height:52px;max-width:180px;object-fit:contain;display:block;margin:0 auto -4px auto;" />
+           <div style="border-top:1px solid #374151;padding-top:6px;font-weight:700;font-size:11px;color:#111;">${parsedSignerName || "Authorized Signer"}</div>
+           <div style="font-size:10px;color:#6b7280;margin-top:2px;">${parsedSignerRole || "Authorized Signature"}${po.signedAt ? ` • ${new Date(po.signedAt).toLocaleDateString("en-GB")}` : ""}</div>
+         </div>`
+      : `<div style="text-align:center;margin-top:44px;">
+           <div style="border-top:1px solid #374151;padding-top:6px;font-size:11px;font-weight:600;color:#4b5563;">Authorized Signature</div>
+         </div>`;
+
+    printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>LPO - ${po.poNumber}</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 36px; font-size: 12px; }
+    .top-bar { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 24px; }
+    .header-box { border-bottom: 1px solid #ccc; padding-bottom: 14px; margin-bottom: 18px; }
+    .company-name { font-size: 16px; font-weight: 700; }
+    .subject { text-align: center; margin: 18px 0; }
+    .subject span { border-bottom: 2px solid #111; padding-bottom: 2px; font-size: 14px; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; }
+    th, td { border: 1px solid #999; padding: 7px 8px; }
+    th { background: #1f2937; color: #fff; font-size: 11px; }
+    tfoot td { background: #f9fafb; font-weight: 700; }
+    .terms { margin-bottom: 24px; line-height: 1.6; }
+    .terms-title { font-weight: 700; text-decoration: underline; margin-bottom: 6px; }
+    .sig-box { width: 240px; margin-top: 28px; }
+    @page { size: auto; margin: 0; }
+    @media print { body { margin: 0; padding: 16mm 14mm; } }
+  </style>
+</head>
+<body>
+  ${companyHeaderHtml}
+  <div class="top-bar" style="margin-bottom:14px;">
+    <div>Date : <span style="font-weight:400;">${orderDateStr}</span></div>
+    <div>Ref : <span style="font-family:monospace;">${po.poNumber}</span></div>
+  </div>
+  <div style="margin-bottom:18px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;line-height:1.6;">
+    <div><span style="color:#6b7280;font-weight:600;">To (Vendor) :</span> <strong style="color:#111;">${matchedVendor?.name || po.vendorName || "—"}</strong></div>
+    ${attentionPerson ? `<div><span style="color:#6b7280;font-weight:600;">Attention By :</span> <span style="color:#111;">${attentionPerson}</span></div>` : ""}
+  </div>
+  <div class="subject"><span>Subject: Vehicles Purchase</span></div>
+  <p style="line-height:1.6;">
+    We at <strong>${companyTitle}</strong> would like to thank you for your support.<br/>
+    Kindly find below our LPO.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:center;">NO</th>
+        <th style="text-align:left;">VARIATION</th>
+        <th style="text-align:left;">CHASSIS #</th>
+        <th style="text-align:center;">YEAR</th>
+        <th style="text-align:center;">EX COLOR</th>
+        <th style="text-align:center;">QTY</th>
+        <th style="text-align:right;">AMOUNT</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6" style="text-align:right;">Total Amount</td>
+        <td style="text-align:right;font-family:monospace;font-size:13px;">${Number(po.totalAmount).toLocaleString()} ${po.currency}</td>
+      </tr>
+    </tfoot>
+  </table>
+  <div class="terms">
+    <div class="terms-title">Terms &amp; Conditions:</div>
+    ${termsHtml}
+  </div>
+  <p style="line-height:1.6;">
+    Thank you and looking forward to doing more business with your company in the future.<br/>
+    <strong>Best Regards,</strong>
+  </p>
+  <div style="display:flex;justify-content:flex-end;margin-top:24px;">
+    <div style="width:220px;">${sigHtml}</div>
+  </div>
+  <script>
+    window.onload = function() { window.print(); };
+  </script>
+</body>
+</html>`);
+    printWin.document.close();
+  }
+
   async function handleCreateSubmit(e: React.FormEvent) {
     e.preventDefault();
     setCreateError(null);
@@ -252,6 +445,27 @@ export function PurchaseOrdersPanel({
       return;
     }
 
+    const missingChassisCount = expandedVehicleUnits.filter(
+      (u) => !chassisByUnitKey[u.key]?.trim(),
+    ).length;
+    if (missingChassisCount > 0) {
+      setCreateError(
+        isRtl
+          ? `يجب إدخال رقم الشاصي لجميع السيارات أولاً (متبقي ${missingChassisCount} سيارة بدون رقم شاصي). اضغط على "تحديد أرقام الشاصي".`
+          : `Please assign a Chassis Number for all vehicles before issuing the PO (${missingChassisCount} vehicle(s) missing). Click "Assign Chassis Numbers".`,
+      );
+      return;
+    }
+
+    if (!formNotes.trim()) {
+      setCreateError(
+        isRtl
+          ? "برجاء كتابة الشروط والأحكام (Terms & Conditions) الخاصة بأمر الشراء."
+          : "Please enter the Terms & Conditions for this purchase order.",
+      );
+      return;
+    }
+
     const combinedNotes = [
       formNotes.trim(),
       formPaymentScheduleSummary
@@ -262,7 +476,16 @@ export function PurchaseOrdersPanel({
       .join("\n");
 
     try {
-      await createPurchaseOrder({
+      const expandedItems = expandedVehicleUnits.map((unit) => ({
+        variantId: unit.variantId,
+        quantity: 1,
+        unitPrice: unit.unitPrice,
+        vin: chassisByUnitKey[unit.key]?.trim() || null,
+        color: unit.color?.trim() || null,
+        notes: unit.notes?.trim() || null,
+      }));
+
+      const created = await createPurchaseOrder({
         branchId: formBranchId,
         vendorId: formVendorId,
         orderDate: formOrderDate,
@@ -271,17 +494,18 @@ export function PurchaseOrdersPanel({
         upfrontPaid: Number(formUpfrontPaid) || 0,
         installmentsCount: Number(formInstallmentsCount) || 1,
         notes: combinedNotes || null,
-        items: formItems.map((it) => ({
-          variantId: it.variantId,
-          quantity: Number(it.quantity),
-          unitPrice: Number(it.unitPrice),
-          vin: it.vin?.trim() || null,
-          color: it.color?.trim() || null,
-          notes: it.notes?.trim() || null,
-        })),
+        items: expandedItems,
       }).unwrap();
 
       setIsCreateModalOpen(false);
+      setChassisByUnitKey({});
+      setSelectedPoForDetails(created?.data ?? (created as any));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (created?.data) {
+        setTimeout(() => {
+          handlePrintLpo(created.data);
+        }, 300);
+      }
     } catch (err: any) {
       setCreateError(
         err?.data?.error?.message ||
@@ -369,7 +593,167 @@ export function PurchaseOrdersPanel({
     const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
 
     return (
-      <div className="space-y-5">
+      <>
+        {/* Formal Printable LPO / Purchase Order Document */}
+        <div
+          className="hidden print:block bg-white p-8 text-black font-sans"
+          dir={isRtl ? "rtl" : "ltr"}
+        >
+          {/* Top Bar: Date & Ref */}
+          <div className="flex items-center justify-between text-xs font-semibold mb-6">
+            <div>
+              Date :{" "}
+              <span className="font-normal">
+                {new Date(po.orderDate).toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+            <div>
+              Ref : <span className="font-mono font-bold">{po.poNumber}</span>
+            </div>
+          </div>
+
+          {/* Company & Parent Company Header */}
+          <div className="flex items-center justify-between border-b border-gray-300 pb-4 mb-5">
+            <div>
+              <div className="text-base font-bold text-gray-900">
+                {po.companyName || po.branchName || "Company"}
+              </div>
+              <div className="text-xs text-gray-600 mt-1">
+                Attention By : <span className="font-semibold text-gray-900">{po.vendorName || "—"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Subject */}
+          <div className="text-center mb-5">
+            <h1 className="inline-block border-b-2 border-black pb-0.5 text-sm font-bold tracking-wide">
+              Subject: Vehicles Purchase
+            </h1>
+          </div>
+
+          {/* Intro */}
+          <p className="text-xs text-gray-800 leading-relaxed mb-4">
+            We at <span className="font-semibold">{po.companyName || po.branchName || "our company"}</span> would like to thank you for your support.
+            <br />
+            Kindly find below our LPO.
+          </p>
+
+          {/* Vehicles Table matching LPO format */}
+          <table className="w-full border-collapse border border-gray-400 text-xs mb-6">
+            <thead>
+              <tr className="bg-gray-800 text-white">
+                <th className="border border-gray-400 px-2.5 py-2 text-center">NO</th>
+                <th className="border border-gray-400 px-2.5 py-2 text-start">VARIATION</th>
+                <th className="border border-gray-400 px-2.5 py-2 text-start">CHASSIS #</th>
+                <th className="border border-gray-400 px-2.5 py-2 text-center">YEAR</th>
+                <th className="border border-gray-400 px-2.5 py-2 text-center">EX COLOR</th>
+                <th className="border border-gray-400 px-2.5 py-2 text-center">QTY</th>
+                <th className="border border-gray-400 px-2.5 py-2 text-end">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(po.items ?? []).map((item, idx) => {
+                const v = variants.find((vr) => vr.id === item.variantId);
+                return (
+                  <tr key={item.id}>
+                    <td className="border border-gray-300 px-2.5 py-2 text-center font-mono">
+                      {idx + 1}
+                    </td>
+                    <td className="border border-gray-300 px-2.5 py-2 font-semibold">
+                      {v ? `${v.make} ${v.model} ${v.trim}` : item.variantId}
+                    </td>
+                    <td className="border border-gray-300 px-2.5 py-2 font-mono">
+                      {item.vin || "—"}
+                    </td>
+                    <td className="border border-gray-300 px-2.5 py-2 text-center font-mono">
+                      {v?.modelYear || "—"}
+                    </td>
+                    <td className="border border-gray-300 px-2.5 py-2 text-center">
+                      {item.color || "—"}
+                    </td>
+                    <td className="border border-gray-300 px-2.5 py-2 text-center font-mono">
+                      {item.quantity}
+                    </td>
+                    <td className="border border-gray-300 px-2.5 py-2 text-end font-mono font-semibold">
+                      {Number(item.unitPrice).toLocaleString()} {po.currency}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-gray-50 font-bold">
+                <td colSpan={6} className="border border-gray-300 px-2.5 py-2 text-end">
+                  Total Amount
+                </td>
+                <td className="border border-gray-300 px-2.5 py-2 text-end font-mono text-sm">
+                  {Number(po.totalAmount).toLocaleString()} {po.currency}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          {/* Terms & Conditions (Numbered 1-, 2-, 3-...) */}
+          <div className="mb-6 text-xs">
+            <div className="font-bold underline mb-2">Terms &amp; Conditions:</div>
+            <div className="space-y-1 text-gray-800">
+              {(po.notes || "")
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line, i) => (
+                  <div key={i}>
+                    {/^\d+[-.)]/.test(line) ? line : `${i + 1}- ${line}`}
+                  </div>
+                ))}
+              {!po.notes && (
+                <>
+                  <div>1- Payment: As per agreed purchase order terms.</div>
+                  <div>2- Delivery: Vehicles must match the specified chassis numbers and colors.</div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-800 mb-8">
+            Thank you and looking forward to doing more business with your company in the future.
+            <br />
+            <span className="font-semibold">Best Regards,</span>
+          </p>
+
+          {/* Electronic Signature Block */}
+          <div className="flex items-end justify-between pt-4">
+            <div className="w-64">
+              {po.signatureDataUrl ? (
+                <div className="space-y-1">
+                  <img
+                    src={po.signatureDataUrl}
+                    alt="Authorized Signature"
+                    className="h-16 object-contain"
+                  />
+                  <div className="border-t border-gray-400 pt-1 text-[11px] font-semibold">
+                    {po.signedByName || "Authorized Signer"}
+                  </div>
+                  {po.signedAt && (
+                    <div className="text-[10px] text-gray-500">
+                      Signed: {new Date(po.signedAt).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border-t border-gray-400 pt-2 text-xs text-gray-600">
+                  Authorized Signature
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-5 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border pb-4">
           <div className="space-y-1">
             <button
@@ -399,6 +783,49 @@ export function PurchaseOrdersPanel({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handlePrintLpo(po)}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+            >
+              <RevixIcon name="file-text" size={14} />
+              <span>{isRtl ? "تحميل PDF / طباعة" : "Download PDF / Print"}</span>
+            </button>
+            {canApprovePo && (
+              <button
+                type="button"
+                onClick={() => {
+                  setHasDrawnSig(Boolean(po.signatureDataUrl));
+                  setIsSignModalOpen(true);
+                  if (po.signatureDataUrl) {
+                    setTimeout(() => {
+                      const canvas = sigCanvasRef.current;
+                      if (!canvas) return;
+                      const ctx = canvas.getContext("2d");
+                      if (!ctx) return;
+                      const img = new Image();
+                      img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                      };
+                      img.src = po.signatureDataUrl!;
+                    }, 50);
+                  }
+                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-1.5 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
+              >
+                <RevixIcon name="check-circle-2" size={14} />
+                <span>
+                  {po.signatureDataUrl
+                    ? isRtl
+                      ? "تحديث التوقيع الإلكتروني"
+                      : "Update E-Signature"
+                    : isRtl
+                      ? "توقيع أمر الشراء إلكترونياً"
+                      : "Sign PO (E-Signature)"}
+                </span>
+              </button>
+            )}
             {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
               <button
                 type="button"
@@ -440,7 +867,7 @@ export function PurchaseOrdersPanel({
           </div>
           <div>
             <span className="block text-[10px] text-revix-muted">{isRtl ? "فرع الاستلام" : "Target Branch"}</span>
-            <span className="font-semibold text-revix-dark">{po.branchName || "Branch"}</span>
+            <span className="font-semibold text-revix-dark">{po.companyName || po.branchName || "Company"}</span>
           </div>
           <div>
             <span className="block text-[10px] text-revix-muted">{isRtl ? "إجمالي المبلغ" : "Total Amount"}</span>
@@ -521,80 +948,118 @@ export function PurchaseOrdersPanel({
           </div>
         </div>
 
-        <div className="space-y-3">
-          {po.items?.map((item) => {
-            const matchedVariant = variantsData?.data?.find((v) => v.id === item.variantId);
-            const displayVariantName =
-              (item as any).variantName ||
-              (matchedVariant
-                ? `${matchedVariant.make} ${matchedVariant.model} ${matchedVariant.modelYear}`
-                : item.variantId);
-            const linkedVehicles = (item as any).receivedVehicles || [];
-            const slots = Array.from({ length: item.quantity }, (_, idx) => idx);
+        <div className="overflow-x-auto rounded-xl border border-revix-border bg-revix-white">
+          <table className="w-full text-start text-xs">
+            <thead>
+              <tr className="border-b border-revix-border bg-revix-surface/50 text-[11px] font-semibold uppercase tracking-wide text-revix-secondary">
+                <th className="px-4 py-3 text-start">#</th>
+                <th className="px-4 py-3 text-start">
+                  {isRtl ? "الفريان / الموديل" : "Variant"}
+                </th>
+                <th className="px-4 py-3 text-start">SIPP</th>
+                <th className="px-4 py-3 text-start">
+                  {isRtl ? "اللون" : "Color"}
+                </th>
+                <th className="px-4 py-3 text-start">
+                  {isRtl ? "رقم الشاصي (VIN)" : "Chassis Number"}
+                </th>
+                <th className="px-4 py-3 text-start">
+                  {isRtl ? "السعر" : "Unit Price"}
+                </th>
+                <th className="px-4 py-3 text-start">
+                  {isRtl ? "الحالة" : "Status"}
+                </th>
+                <th className="px-4 py-3 text-end">
+                  {isRtl ? "الإجراء" : "Action"}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-revix-border/70">
+              {po.items?.flatMap((item, itemIdx) => {
+                const matchedVariant = variantsData?.data?.find(
+                  (v) => v.id === item.variantId,
+                );
+                const displayVariantName =
+                  (item as any).variantName ||
+                  (matchedVariant
+                    ? `${matchedVariant.make} ${matchedVariant.model} ${matchedVariant.modelYear}`
+                    : item.variantId);
+                const sippCode =
+                  (item as any).sippCode || matchedVariant?.sippCode || "CAR";
+                const linkedVehicles = (item as any).receivedVehicles || [];
+                const slots = Array.from({ length: item.quantity }, (_, idx) => idx);
 
-            return (
-              <div key={item.id} className="rounded-xl border border-revix-border bg-revix-white p-4 text-xs space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-revix-border/60 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded bg-revix-primary/10 px-2 py-0.5 font-mono text-[11px] font-bold text-revix-primary">
-                      {(item as any).sippCode || matchedVariant?.sippCode || "CAR"}
-                    </span>
-                    <span className="text-sm font-bold text-revix-dark">{displayVariantName}</span>
-                    <span className="text-revix-secondary">• {isRtl ? `الكمية: ${item.quantity}` : `Qty: ${item.quantity}`}</span>
-                  </div>
-                  <span className="font-mono font-semibold text-revix-dark">
-                    {Number(item.unitPrice).toLocaleString()} {po.currency} / {isRtl ? "للسيارة" : "car"}
-                  </span>
-                </div>
+                return slots.map((slotIdx) => {
+                  const receivedCar = linkedVehicles[slotIdx];
+                  const isConverted = Boolean(receivedCar);
+                  const displayVin = receivedCar?.vin || item.vin || "—";
+                  const displayColor = receivedCar?.color || item.color || "—";
 
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                  {slots.map((slotIdx) => {
-                    const receivedCar = linkedVehicles[slotIdx];
-                    const isConverted = Boolean(receivedCar);
-                    return (
-                      <div
-                        key={slotIdx}
-                        className={`flex flex-col justify-between rounded-lg border p-3 ${
-                          isConverted ? "border-revix-accent/40 bg-revix-accent-soft/15" : "border-dashed border-revix-border bg-revix-surface/30"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="text-[11px] font-bold text-revix-dark">
-                              {isRtl ? `سيارة رقم ${slotIdx + 1}` : `Vehicle #${slotIdx + 1}`}
-                            </span>
-                            {isConverted ? (
-                              <div className="mt-1 space-y-0.5">
-                                <div className="font-mono font-bold text-revix-dark">{receivedCar.plateNumber} ({receivedCar.color})</div>
-                                <div className="font-mono text-[10px] text-revix-muted">VIN: {receivedCar.vin}</div>
-                              </div>
-                            ) : (
-                              <p className="mt-1 text-[11px] text-revix-secondary">
-                                {isRtl ? "بانتظار الوصول والتحويل للأسطول." : "Pending arrival & conversion."}
-                              </p>
-                            )}
-                          </div>
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${isConverted ? "bg-revix-accent-soft text-revix-accent" : "bg-revix-surface text-revix-secondary"}`}>
-                            {isConverted ? (isRtl ? "بالأسطول" : "In Fleet") : (isRtl ? "بانتظار الوصول" : "Pending")}
-                          </span>
-                        </div>
-                        {!isConverted && (po.status === "approved" || po.status === "partially_received") && (
+                  return (
+                    <tr
+                      key={`${item.id}-${slotIdx}`}
+                      className="transition-colors hover:bg-revix-surface/40"
+                    >
+                      <td className="px-4 py-3 font-mono font-semibold text-revix-secondary">
+                        {itemIdx + 1}
+                        {slots.length > 1 ? `.${slotIdx + 1}` : ""}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-revix-dark">
+                        {displayVariantName}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="rounded bg-revix-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary">
+                          {sippCode}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-revix-dark">{displayColor}</td>
+                      <td className="px-4 py-3 font-mono text-revix-dark">
+                        {displayVin}
+                      </td>
+                      <td className="px-4 py-3 font-mono font-semibold text-revix-dark">
+                        {Number(item.unitPrice).toLocaleString()} {po.currency}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                            isConverted
+                              ? "bg-revix-accent-soft text-revix-accent"
+                              : "bg-revix-warning-soft text-revix-warning"
+                          }`}
+                        >
+                          {isConverted
+                            ? isRtl
+                              ? `بالأسطول (${receivedCar.plateNumber})`
+                              : `In Fleet (${receivedCar.plateNumber})`
+                            : isRtl
+                              ? "بانتظار الوصول"
+                              : "Pending"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-end">
+                        {!isConverted &&
+                        (po.status === "approved" ||
+                          po.status === "partially_received") ? (
                           <button
                             type="button"
                             onClick={() => handleOpenReceiveModal(po, item.id)}
-                            className="mt-2.5 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md bg-revix-primary px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-revix-primary-hover"
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-revix-primary-hover transition-colors"
                           >
                             <RevixIcon name="car-front" size={13} />
-                            <span>{isRtl ? "تحويل السيارة للأسطول" : "Convert to Fleet Asset"}</span>
+                            <span>
+                              {isRtl ? "تحويل للأسطول" : "Convert to Fleet Asset"}
+                            </span>
                           </button>
+                        ) : (
+                          <span className="text-[11px] text-revix-muted">—</span>
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+                      </td>
+                    </tr>
+                  );
+                });
+              })}
+            </tbody>
+          </table>
         </div>
 
         <RevixConfirmModal
@@ -618,7 +1083,126 @@ export function PurchaseOrdersPanel({
           }}
           onCancel={() => setPendingDeletePo(null)}
         />
+
+        {/* Electronic Signature Modal */}
+        {isSignModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
+            dir={isRtl ? "rtl" : "ltr"}
+          >
+            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-revix-border bg-revix-surface/30 px-5 py-3.5">
+                <h3 className="text-sm font-bold text-revix-dark">
+                  {isRtl ? "التوقيع الإلكتروني لأمر الشراء" : "Electronic Signature"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsSignModalOpen(false)}
+                  className="rounded-lg p-1 text-revix-muted hover:bg-revix-surface hover:text-revix-dark"
+                >
+                  <RevixIcon name="x" className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-3">
+                <p className="text-xs text-revix-secondary">
+                  {isRtl
+                    ? "وقّع داخل المربع أدناه ليتم حفظ التوقيع في قاعدة البيانات وإظهاره في مستند أمر الشراء:"
+                    : "Draw your signature below. It will be stored in the database and printed on the LPO:"}
+                </p>
+                <div className="overflow-hidden rounded-xl border-2 border-dashed border-revix-border bg-white">
+                  <canvas
+                    ref={sigCanvasRef}
+                    width={380}
+                    height={160}
+                    className="w-full h-40 cursor-crosshair touch-none"
+                    onMouseDown={(e) => {
+                      const canvas = sigCanvasRef.current;
+                      if (!canvas) return;
+                      const ctx = canvas.getContext("2d");
+                      if (!ctx) return;
+                      const rect = canvas.getBoundingClientRect();
+                      ctx.beginPath();
+                      ctx.moveTo(
+                        ((e.clientX - rect.left) / rect.width) * canvas.width,
+                        ((e.clientY - rect.top) / rect.height) * canvas.height,
+                      );
+                      ctx.lineWidth = 2.2;
+                      ctx.lineCap = "round";
+                      ctx.strokeStyle = "#111827";
+                      setIsDrawingSig(true);
+                      setHasDrawnSig(true);
+                    }}
+                    onMouseMove={(e) => {
+                      if (!isDrawingSig) return;
+                      const canvas = sigCanvasRef.current;
+                      if (!canvas) return;
+                      const ctx = canvas.getContext("2d");
+                      if (!ctx) return;
+                      const rect = canvas.getBoundingClientRect();
+                      ctx.lineTo(
+                        ((e.clientX - rect.left) / rect.width) * canvas.width,
+                        ((e.clientY - rect.top) / rect.height) * canvas.height,
+                      );
+                      ctx.stroke();
+                    }}
+                    onMouseUp={() => setIsDrawingSig(false)}
+                    onMouseLeave={() => setIsDrawingSig(false)}
+                  />
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const canvas = sigCanvasRef.current;
+                      if (!canvas) return;
+                      const ctx = canvas.getContext("2d");
+                      ctx?.clearRect(0, 0, canvas.width, canvas.height);
+                      setHasDrawnSig(false);
+                    }}
+                    className="rounded-lg border border-revix-border px-3 py-1.5 text-xs font-semibold text-revix-secondary hover:bg-revix-surface"
+                  >
+                    {isRtl ? "مسح" : "Clear"}
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsSignModalOpen(false)}
+                      className="rounded-lg border border-revix-border px-3 py-1.5 text-xs font-semibold text-revix-secondary hover:bg-revix-surface"
+                    >
+                      {isRtl ? "إلغاء" : "Cancel"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!hasDrawnSig || isSigning}
+                      onClick={async () => {
+                        const canvas = sigCanvasRef.current;
+                        if (!canvas) return;
+                        const dataUrl = canvas.toDataURL("image/png");
+                        const res = await signPurchaseOrder({
+                          id: po.id,
+                          signatureDataUrl: dataUrl,
+                        }).unwrap();
+                        setSelectedPoForDetails(res.data);
+                        setIsSignModalOpen(false);
+                      }}
+                      className="rounded-lg bg-revix-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-revix-primary-hover disabled:opacity-50"
+                    >
+                      {isSigning
+                        ? isRtl
+                          ? "جاري الحفظ..."
+                          : "Saving..."
+                        : isRtl
+                          ? "حفظ التوقيع"
+                          : "Save Signature"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+      </>
     );
   }
 
@@ -725,32 +1309,6 @@ export function PurchaseOrdersPanel({
 
       {/* Filter Toolbar */}
       <div className="flex flex-col gap-3 rounded-xl border border-revix-border bg-revix-surface/60 p-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Branch Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-revix-secondary shrink-0">
-            {isRtl ? "الفرع:" : "Branch:"}
-          </span>
-          <div className="w-52">
-            <RevixSelect
-              size="sm"
-              isRtl={isRtl}
-              value={selectedBranchId}
-              onChange={(e) => {
-                setSelectedBranchId(e.target.value);
-                setPage(1);
-              }}
-              buttonClassName="h-8 rounded-lg text-xs"
-              options={[
-                { value: "all", label: isRtl ? "جميع الفروع" : "All Branches" },
-                ...branches.map((b) => ({
-                  value: b.id,
-                  label: `${b.name} (${b.currencyCode})`,
-                })),
-              ]}
-            />
-          </div>
-        </div>
-
         {/* Status Pills */}
         <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           <button
@@ -832,7 +1390,7 @@ export function PurchaseOrdersPanel({
                   <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
                     <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "رقم الطلب" : "PO Number"}</th>
                     <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "المورد" : "Vendor"}</th>
-                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "الفرع" : "Branch"}</th>
+                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "الشركة" : "Company"}</th>
                     <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "التاريخ" : "Order Date"}</th>
                     <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "السيارات" : "Cars"}</th>
                     <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "الإجمالي" : "Total"}</th>
@@ -854,7 +1412,7 @@ export function PurchaseOrdersPanel({
                       >
                         <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap">{po.poNumber}</td>
                         <td className="py-2.5 px-3 font-semibold text-revix-dark">{po.vendorName || "Vendor"}</td>
-                        <td className="py-2.5 px-3 text-revix-secondary">{po.branchName || "Branch"}</td>
+                        <td className="py-2.5 px-3 text-revix-secondary">{po.companyName || po.branchName || "—"}</td>
                         <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">{po.orderDate}</td>
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <span className="font-semibold text-revix-dark">{totalRcv}/{totalQty}</span>
@@ -870,7 +1428,50 @@ export function PurchaseOrdersPanel({
                         </td>
                         <td className="py-2.5 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <div className="inline-flex items-center justify-center gap-1.5">
-                            {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
+                            <button
+              type="button"
+              onClick={() => handlePrintLpo(po)}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+            >
+              <RevixIcon name="file-text" size={14} />
+              <span>{isRtl ? "تحميل PDF / طباعة" : "Download PDF / Print"}</span>
+            </button>
+            {canApprovePo && (
+              <button
+                type="button"
+                onClick={() => {
+                  setHasDrawnSig(Boolean(po.signatureDataUrl));
+                  setIsSignModalOpen(true);
+                  if (po.signatureDataUrl) {
+                    setTimeout(() => {
+                      const canvas = sigCanvasRef.current;
+                      if (!canvas) return;
+                      const ctx = canvas.getContext("2d");
+                      if (!ctx) return;
+                      const img = new Image();
+                      img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                      };
+                      img.src = po.signatureDataUrl!;
+                    }, 50);
+                  }
+                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-1.5 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
+              >
+                <RevixIcon name="check-circle-2" size={14} />
+                <span>
+                  {po.signatureDataUrl
+                    ? isRtl
+                      ? "تحديث التوقيع الإلكتروني"
+                      : "Update E-Signature"
+                    : isRtl
+                      ? "توقيع أمر الشراء إلكترونياً"
+                      : "Sign PO (E-Signature)"}
+                </span>
+              </button>
+            )}
+            {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
                               <button
                                 type="button"
                                 disabled={isUpdatingStatus}
@@ -979,19 +1580,12 @@ export function PurchaseOrdersPanel({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-revix-dark mb-1">
-                    {isRtl ? "الفرع المستلم" : "Receiving Branch"} *
+                    {isRtl ? "الشركة (الشاري)" : "Company (Buyer)"}
                   </label>
-                  <RevixSelect
-                    size="sm"
-                    isRtl={isRtl}
-                    value={formBranchId}
-                    onChange={(e) => setFormBranchId(e.target.value)}
-                    buttonClassName="h-9 rounded-lg text-xs"
-                    options={branches.map((b) => ({
-                      value: b.id,
-                      label: `${b.name} (${b.currencyCode})`,
-                    }))}
-                  />
+                  <div className="flex h-9 w-full items-center rounded-lg border border-revix-border bg-revix-surface/60 px-3 text-xs font-semibold text-revix-dark">
+                    {wsContext?.data.company?.name ||
+                      (isRtl ? "الشركة الرئيسية" : "Company")}
+                  </div>
                 </div>
 
                 <div>
@@ -1118,19 +1712,7 @@ export function PurchaseOrdersPanel({
                           className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                         />
                       </div>
-                      <div className="col-span-3">
-                        <label className="block text-[10px] text-revix-muted">
-                          {isRtl ? "رقم الشاصي" : "Chassis Number"}
-                        </label>
-                        <input
-                          type="text"
-                          value={item.vin ?? ""}
-                          onChange={(e) => handleItemChange(idx, "vin", e.target.value.toUpperCase())}
-                          placeholder="e.g. 1HGCR2F83HA001234"
-                          className="mt-0.5 h-8 w-full rounded-md border border-revix-border bg-revix-white px-2 text-xs font-mono text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                        />
-                      </div>
-                      <div className="col-span-2">
+                      <div className="col-span-4">
                         <label className="block text-[10px] text-revix-muted">
                           {isRtl ? "اللون" : "Color"}
                         </label>
@@ -1171,8 +1753,25 @@ export function PurchaseOrdersPanel({
                 </div>
 
                 {/* Total Summary */}
-                <div className="flex items-center justify-between border-t border-revix-border/70 pt-2 text-xs font-bold text-revix-dark">
-                  <span>{isRtl ? "إجمالي أمر الشراء:" : "Calculated Total:"}</span>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-revix-border/70 pt-2.5 text-xs font-bold text-revix-dark">
+                  <div className="flex items-center gap-3">
+                    <span>{isRtl ? "إجمالي أمر الشراء:" : "Calculated Total:"}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftChassisByUnitKey({ ...chassisByUnitKey });
+                        setIsChassisModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-1.5 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
+                    >
+                      <RevixIcon name="car-front" className="h-3.5 w-3.5" />
+                      <span>
+                        {isRtl
+                          ? `تحديد أرقام الشاصي (${expandedVehicleUnits.filter((u) => chassisByUnitKey[u.key]?.trim()).length}/${expandedVehicleUnits.length})`
+                          : `Assign Chassis Numbers (${expandedVehicleUnits.filter((u) => chassisByUnitKey[u.key]?.trim()).length}/${expandedVehicleUnits.length})`}
+                      </span>
+                    </button>
+                  </div>
                   <span className="text-base text-revix-primary">
                     {formCalculatedTotal.toLocaleString()}
                   </span>
@@ -1245,6 +1844,12 @@ export function PurchaseOrdersPanel({
               </div>
 
               </div>
+
+              {createError && (
+                <div className="mx-6 mb-2 rounded-lg border border-revix-alert/30 bg-revix-alert-soft p-3 text-xs font-medium text-revix-alert">
+                  {createError}
+                </div>
+              )}
 
               {/* Fixed Sticky Footer */}
               <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-revix-border bg-revix-surface/40 px-6 py-3.5">
@@ -1473,6 +2078,12 @@ export function PurchaseOrdersPanel({
                 </div>
               </div>
 
+              {createError && (
+                <div className="mx-6 mb-2 rounded-lg border border-revix-alert/30 bg-revix-alert-soft p-3 text-xs font-medium text-revix-alert">
+                  {createError}
+                </div>
+              )}
+
               {/* Fixed Sticky Footer */}
               <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-revix-border bg-revix-surface/40 px-6 py-3.5">
                 <button
@@ -1494,6 +2105,97 @@ export function PurchaseOrdersPanel({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Chassis Numbers Assignment Popup Modal */}
+      {isChassisModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
+          dir={isRtl ? "rtl" : "ltr"}
+        >
+          <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-revix-border bg-revix-surface/30 px-6 py-4">
+              <div>
+                <h3 className="text-base font-bold text-revix-dark">
+                  {isRtl
+                    ? "تحديد أرقام الشاصي لكل سيارة"
+                    : "Assign Chassis Number per Vehicle"}
+                </h3>
+                <p className="text-xs text-revix-secondary mt-0.5">
+                  {isRtl
+                    ? `إجمالي السيارات: ${expandedVehicleUnits.length} — أدخل رقم الشاصي الفريد لكل سيارة`
+                    : `Total vehicles: ${expandedVehicleUnits.length} — enter a unique chassis number for each car`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChassisModalOpen(false)}
+                className="rounded-lg p-1.5 text-revix-muted hover:bg-revix-surface hover:text-revix-dark transition-colors"
+              >
+                <RevixIcon name="x" className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-2.5">
+              {expandedVehicleUnits.map((unit, i) => (
+                <div
+                  key={unit.key}
+                  className="grid grid-cols-1 sm:grid-cols-12 items-center gap-3 rounded-xl border border-revix-border bg-revix-surface/20 p-3"
+                >
+                  <div className="sm:col-span-1 text-xs font-mono font-bold text-revix-secondary">
+                    #{i + 1}
+                  </div>
+                  <div className="sm:col-span-4">
+                    <div className="text-xs font-semibold text-revix-dark">
+                      {unit.variantLabel}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="inline-flex rounded-md border border-revix-border bg-revix-white px-2 py-0.5 text-[11px] font-medium text-revix-dark">
+                      {unit.color || (isRtl ? "غير محدد" : "—")}
+                    </span>
+                  </div>
+                  <div className="sm:col-span-2 text-xs font-mono font-semibold text-revix-primary">
+                    {unit.unitPrice.toLocaleString()}
+                  </div>
+                  <div className="sm:col-span-3">
+                    <input
+                      type="text"
+                      value={draftChassisByUnitKey[unit.key] ?? ""}
+                      onChange={(e) =>
+                        setDraftChassisByUnitKey((prev) => ({
+                          ...prev,
+                          [unit.key]: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      placeholder="e.g. 1HGCR2F83HA001234"
+                      className="h-8 w-full rounded-lg border border-revix-border bg-revix-white px-2.5 text-xs font-mono uppercase text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-revix-border bg-revix-surface/40 px-6 py-3.5">
+              <button
+                type="button"
+                onClick={() => setIsChassisModalOpen(false)}
+                className="rounded-lg border border-revix-border bg-revix-white px-4 py-2 text-xs font-semibold text-revix-secondary hover:bg-revix-surface hover:text-revix-dark transition-all"
+              >
+                {isRtl ? "إلغاء" : "Cancel"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChassisByUnitKey({ ...draftChassisByUnitKey });
+                  setIsChassisModalOpen(false);
+                }}
+                className="rounded-lg bg-revix-primary px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-all"
+              >
+                {isRtl ? "حفظ أرقام الشاصي" : "Save Chassis Numbers"}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1991,4 +1991,70 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     }
     return exists;
   }
+
+  async signPurchaseOrder(
+    poId: string,
+    signatureDataUrl: string,
+    signedByName: string,
+  ): Promise<PurchaseOrderRecord | null> {
+    const existing = this.purchaseOrdersById.get(poId);
+    if (!existing) return null;
+    const updated: PurchaseOrderRecord = {
+      ...existing,
+      signatureDataUrl,
+      signedByName,
+      signedAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.purchaseOrdersById.set(poId, updated);
+    this.saveToDisk();
+    return updated;
+  }
+
+  private vehicleMakesById = new Map<
+    string,
+    {
+      id: string;
+      companyId: string;
+      name: string;
+      models: Array<{ id: string; makeId: string; name: string }>;
+    }
+  >();
+
+  async listVehicleMakes(companyId: string) {
+    return Array.from(this.vehicleMakesById.values())
+      .filter((m) => m.companyId === companyId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createVehicleMake(companyId: string, name: string) {
+    const clean = name.trim();
+    const existing = Array.from(this.vehicleMakesById.values()).find(
+      (m) => m.companyId === companyId && m.name.toLowerCase() === clean.toLowerCase(),
+    );
+    if (existing) return existing;
+    const created = {
+      id: crypto.randomUUID(),
+      companyId,
+      name: clean,
+      models: [] as Array<{ id: string; makeId: string; name: string }>,
+    };
+    this.vehicleMakesById.set(created.id, created);
+    return created;
+  }
+
+  async createVehicleModel(companyId: string, makeId: string, name: string) {
+    const clean = name.trim();
+    const make = this.vehicleMakesById.get(makeId);
+    if (!make || make.companyId !== companyId) {
+      throw new Error("Vehicle make not found");
+    }
+    const existing = make.models.find(
+      (m) => m.name.toLowerCase() === clean.toLowerCase(),
+    );
+    if (existing) return existing;
+    const created = { id: crypto.randomUUID(), makeId, name: clean };
+    make.models.push(created);
+    return created;
+  }
 }

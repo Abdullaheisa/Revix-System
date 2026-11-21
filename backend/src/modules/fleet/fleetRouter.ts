@@ -152,6 +152,8 @@ const createPoItemSchema = z.object({
   variantId: z.string().uuid(),
   quantity: z.number().int().min(1).max(500),
   unitPrice: z.number().min(0),
+  vin: z.string().trim().max(40).nullable().optional(),
+  color: z.string().trim().max(40).nullable().optional(),
   notes: z.string().trim().max(300).nullable().optional(),
 });
 
@@ -367,6 +369,98 @@ export function createFleetRouter(options: {
   );
 
   // --------------------------------------------------------------------------
+  router.post(
+    "/purchase-orders/:id/sign",
+    guards.requirePermission("fleet", "update"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const poId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const signatureDataUrl =
+        typeof req.body?.signatureDataUrl === "string"
+          ? req.body.signatureDataUrl.trim()
+          : "";
+      if (!poId || !signatureDataUrl.startsWith("data:image/")) {
+        res.status(400).json({
+          ok: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Valid electronic signature image is required.",
+          },
+        });
+        return;
+      }
+      try {
+        const updated = await fleetService.signPurchaseOrder(
+          req.tenantActor!,
+          poId,
+          signatureDataUrl,
+        );
+        res.status(200).json({ ok: true, data: updated });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
+  // Vehicle Makes & Models Catalog
+  // --------------------------------------------------------------------------
+  router.get(
+    "/makes",
+    guards.requirePermission("fleet", "read"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      try {
+        const makes = await fleetService.listVehicleMakes(req.tenantActor!);
+        res.status(200).json({ ok: true, data: makes });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
+  router.post(
+    "/makes",
+    guards.requirePermission("fleet", "create"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+      if (!name) {
+        res.status(400).json({
+          ok: false,
+          error: { code: "VALIDATION_ERROR", message: "Manufacturer name is required." },
+        });
+        return;
+      }
+      try {
+        const make = await fleetService.createVehicleMake(req.tenantActor!, name);
+        res.status(201).json({ ok: true, data: make });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
+  router.post(
+    "/makes/:makeId/models",
+    guards.requirePermission("fleet", "create"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const makeId = Array.isArray(req.params.makeId)
+        ? req.params.makeId[0]
+        : req.params.makeId;
+      const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+      if (!makeId || !name) {
+        res.status(400).json({
+          ok: false,
+          error: { code: "VALIDATION_ERROR", message: "Make ID and model name are required." },
+        });
+        return;
+      }
+      try {
+        const model = await fleetService.createVehicleModel(req.tenantActor!, makeId, name);
+        res.status(201).json({ ok: true, data: model });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
   // Vehicle Variants
   // --------------------------------------------------------------------------
   router.get(

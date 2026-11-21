@@ -340,6 +340,7 @@ interface DbVehicleVariantRow {
 function mapVehicleVariantRow(row: DbVehicleVariantRow): VehicleVariantRecord {
   return {
     id: row.id,
+    variantCode: (row as DbVehicleVariantRow & { variant_code?: string | null }).variant_code ?? undefined,
     companyId: row.company_id,
     make: row.make,
     model: row.model,
@@ -443,11 +444,17 @@ function mapPurchaseOrderRow(row: DbPurchaseOrderRow): PurchaseOrderRecord {
     orderDate:
       typeof row.order_date === "string"
         ? row.order_date.slice(0, 10)
-        : new Date(row.order_date).toISOString().slice(0, 10),
+        : (() => {
+            const d = new Date(row.order_date);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          })(),
     expectedDeliveryDate: row.expected_delivery_date
       ? typeof row.expected_delivery_date === "string"
         ? row.expected_delivery_date.slice(0, 10)
-        : new Date(row.expected_delivery_date).toISOString().slice(0, 10)
+        : (() => {
+            const d = new Date(row.expected_delivery_date);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          })()
       : null,
     currency: row.currency,
     totalAmount: Number(row.total_amount),
@@ -462,6 +469,15 @@ function mapPurchaseOrderRow(row: DbPurchaseOrderRow): PurchaseOrderRecord {
     updatedAt: new Date(row.updated_at),
     vendorName: row.vendor_name,
     branchName: row.branch_name,
+    companyName: (row as DbPurchaseOrderRow & { company_name?: string }).company_name,
+    companyLogoUrl: (row as DbPurchaseOrderRow & { company_logo_url?: string | null }).company_logo_url ?? null,
+    parentCompanyName: (row as DbPurchaseOrderRow & { parent_company_name?: string | null }).parent_company_name ?? null,
+    parentCompanyLogoUrl: (row as DbPurchaseOrderRow & { parent_company_logo_url?: string | null }).parent_company_logo_url ?? null,
+    signatureDataUrl: (row as DbPurchaseOrderRow & { signature_data_url?: string | null }).signature_data_url ?? null,
+    signedByName: (row as DbPurchaseOrderRow & { signed_by_name?: string | null }).signed_by_name ?? null,
+    signedAt: (row as DbPurchaseOrderRow & { signed_at?: string | Date | null }).signed_at
+      ? new Date((row as DbPurchaseOrderRow & { signed_at?: string | Date | null }).signed_at!)
+      : null,
   };
 }
 
@@ -486,6 +502,8 @@ function mapPurchaseOrderItemRow(
     quantity: Number(row.quantity),
     unitPrice: Number(row.unit_price),
     receivedCount: Number(row.received_count),
+    vin: (row as DbPurchaseOrderItemRow & { vin?: string | null }).vin ?? null,
+    color: (row as DbPurchaseOrderItemRow & { color?: string | null }).color ?? null,
     notes: row.notes,
     createdAt: new Date(row.created_at),
   };
@@ -1785,14 +1803,16 @@ export class PostgresAuthDataStore implements AuthDataStore {
     input: CreateVehicleVariantInput,
   ): Promise<VehicleVariantRecord> {
     const id = input.id ?? crypto.randomUUID();
+    const variantCode = `V${Math.floor(100 + Math.random() * 900)}`;
     const res = await this.pool.query<DbVehicleVariantRow>(
       `INSERT INTO vehicle_variants
-        (id, company_id, make, model, model_year, trim, category, transmission, fuel_type,
+        (id, variant_code, company_id, make, model, model_year, trim, category, transmission, fuel_type,
          seating_capacity, sipp_code)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         id,
+        variantCode,
         input.companyId,
         input.make.trim(),
         input.model.trim(),
@@ -2021,12 +2041,24 @@ export class PostgresAuthDataStore implements AuthDataStore {
 
       let poNumber = input.poNumber?.trim();
       if (!poNumber) {
-        const countRes = await client.query(
-          `SELECT COUNT(*)::int as cnt FROM purchase_orders WHERE company_id = $1`,
-          [input.companyId],
-        );
-        const count = countRes.rows[0]?.cnt ?? 0;
-        poNumber = `PO-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`;
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        for (let attempt = 0; attempt < 20; attempt++) {
+          let candidate = "";
+          for (let i = 0; i < 4; i++) {
+            candidate += chars[Math.floor(Math.random() * chars.length)];
+          }
+          const existsRes = await client.query(
+            `SELECT 1 FROM purchase_orders WHERE company_id = $1 AND po_number = $2 LIMIT 1`,
+            [input.companyId, candidate],
+          );
+          if (existsRes.rowCount === 0) {
+            poNumber = candidate;
+            break;
+          }
+        }
+        if (!poNumber) {
+          poNumber = crypto.randomUUID().replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase();
+        }
       }
 
       const id = input.id ?? crypto.randomUUID();
@@ -2060,8 +2092,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
       for (const item of input.items) {
         const itemRes = await client.query<DbPurchaseOrderItemRow>(
           `INSERT INTO purchase_order_items
-            (id, purchase_order_id, variant_id, quantity, unit_price, received_count, notes)
-           VALUES ($1, $2, $3, $4, $5, 0, $6)
+            (id, purchase_order_id, variant_id, quantity, unit_price, received_count, vin, color, notes)
+           VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8)
            RETURNING *`,
           [
             crypto.randomUUID(),
@@ -2069,6 +2101,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
             item.variantId,
             item.quantity,
             item.unitPrice,
+            item.vin?.trim() || null,
+            item.color?.trim() || null,
             item.notes?.trim() || null,
           ],
         );
@@ -2090,10 +2124,13 @@ export class PostgresAuthDataStore implements AuthDataStore {
 
   async findPurchaseOrderById(poId: string): Promise<PurchaseOrderRecord | null> {
     const poRes = await this.pool.query<DbPurchaseOrderRow>(
-      `SELECT po.*, v.name as vendor_name, b.name as branch_name
+      `SELECT po.*, v.name as vendor_name, b.name as branch_name, c.name as company_name,
+              c.logo_url as company_logo_url, pc.name as parent_company_name, pc.logo_url as parent_company_logo_url
        FROM purchase_orders po
        LEFT JOIN vendors v ON v.id = po.vendor_id
        LEFT JOIN branches b ON b.id = po.branch_id
+       LEFT JOIN companies c ON c.id = po.company_id
+       LEFT JOIN companies pc ON pc.id = c.parent_company_id
        WHERE po.id = $1`,
       [poId],
     );
@@ -2119,10 +2156,13 @@ export class PostgresAuthDataStore implements AuthDataStore {
     },
   ): Promise<PurchaseOrderRecord[]> {
     let query = `
-      SELECT po.*, v.name as vendor_name, b.name as branch_name
+      SELECT po.*, v.name as vendor_name, b.name as branch_name, c.name as company_name,
+             c.logo_url as company_logo_url, pc.name as parent_company_name, pc.logo_url as parent_company_logo_url
       FROM purchase_orders po
       LEFT JOIN vendors v ON v.id = po.vendor_id
       LEFT JOIN branches b ON b.id = po.branch_id
+      LEFT JOIN companies c ON c.id = po.company_id
+      LEFT JOIN companies pc ON pc.id = c.parent_company_id
       WHERE po.company_id = $1
     `;
     const params: unknown[] = [companyId];
@@ -2690,6 +2730,178 @@ export class PostgresAuthDataStore implements AuthDataStore {
       [id],
     );
     return (res.rowCount ?? 0) > 0;
+  }
+
+  async signPurchaseOrder(
+    poId: string,
+    signatureDataUrl: string,
+    signedByName: string,
+  ): Promise<PurchaseOrderRecord | null> {
+    await this.pool.query(
+      `UPDATE purchase_orders
+       SET signature_data_url = $1,
+           signed_by_name = $2,
+           signed_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $3`,
+      [signatureDataUrl, signedByName, poId],
+    );
+    return this.findPurchaseOrderById(poId);
+  }
+
+  async listVehicleMakes(companyId: string): Promise<
+    Array<{
+      id: string;
+      companyId: string;
+      name: string;
+      models: Array<{ id: string; makeId: string; name: string }>;
+    }>
+  > {
+    const makesRes = await this.pool.query<{
+      id: string;
+      company_id: string;
+      name: string;
+    }>(
+      `SELECT id, company_id, name
+       FROM vehicle_makes
+       WHERE company_id = $1
+       ORDER BY LOWER(name) ASC`,
+      [companyId],
+    );
+
+    const modelsRes = await this.pool.query<{
+      id: string;
+      make_id: string;
+      name: string;
+    }>(
+      `SELECT id, make_id, name
+       FROM vehicle_models
+       WHERE company_id = $1
+       ORDER BY LOWER(name) ASC`,
+      [companyId],
+    );
+
+    const modelsByMake = new Map<
+      string,
+      Array<{ id: string; makeId: string; name: string }>
+    >();
+    for (const row of modelsRes.rows) {
+      const list = modelsByMake.get(row.make_id) ?? [];
+      list.push({ id: row.id, makeId: row.make_id, name: row.name });
+      modelsByMake.set(row.make_id, list);
+    }
+
+    return makesRes.rows.map((m) => ({
+      id: m.id,
+      companyId: m.company_id,
+      name: m.name,
+      models: modelsByMake.get(m.id) ?? [],
+    }));
+  }
+
+  async createVehicleMake(
+    companyId: string,
+    name: string,
+  ): Promise<{
+    id: string;
+    companyId: string;
+    name: string;
+    models: Array<{ id: string; makeId: string; name: string }>;
+  }> {
+    const cleanName = name.trim();
+    const existing = await this.pool.query<{
+      id: string;
+      company_id: string;
+      name: string;
+    }>(
+      `SELECT id, company_id, name
+       FROM vehicle_makes
+       WHERE company_id = $1 AND LOWER(name) = LOWER($2)
+       LIMIT 1`,
+      [companyId, cleanName],
+    );
+
+    if (existing.rows[0]) {
+      const m = existing.rows[0];
+      const modelsRes = await this.pool.query<{
+        id: string;
+        make_id: string;
+        name: string;
+      }>(
+        `SELECT id, make_id, name
+         FROM vehicle_models
+         WHERE make_id = $1
+         ORDER BY LOWER(name) ASC`,
+        [m.id],
+      );
+      return {
+        id: m.id,
+        companyId: m.company_id,
+        name: m.name,
+        models: modelsRes.rows.map((r) => ({
+          id: r.id,
+          makeId: r.make_id,
+          name: r.name,
+        })),
+      };
+    }
+
+    const inserted = await this.pool.query<{
+      id: string;
+      company_id: string;
+      name: string;
+    }>(
+      `INSERT INTO vehicle_makes (company_id, name)
+       VALUES ($1, $2)
+       RETURNING id, company_id, name`,
+      [companyId, cleanName],
+    );
+
+    const row = inserted.rows[0]!;
+    return {
+      id: row.id,
+      companyId: row.company_id,
+      name: row.name,
+      models: [],
+    };
+  }
+
+  async createVehicleModel(
+    companyId: string,
+    makeId: string,
+    name: string,
+  ): Promise<{ id: string; makeId: string; name: string }> {
+    const cleanName = name.trim();
+    const existing = await this.pool.query<{
+      id: string;
+      make_id: string;
+      name: string;
+    }>(
+      `SELECT id, make_id, name
+       FROM vehicle_models
+       WHERE company_id = $1 AND make_id = $2 AND LOWER(name) = LOWER($3)
+       LIMIT 1`,
+      [companyId, makeId, cleanName],
+    );
+
+    if (existing.rows[0]) {
+      const r = existing.rows[0];
+      return { id: r.id, makeId: r.make_id, name: r.name };
+    }
+
+    const inserted = await this.pool.query<{
+      id: string;
+      make_id: string;
+      name: string;
+    }>(
+      `INSERT INTO vehicle_models (company_id, make_id, name)
+       VALUES ($1, $2, $3)
+       RETURNING id, make_id, name`,
+      [companyId, makeId, cleanName],
+    );
+
+    const row = inserted.rows[0]!;
+    return { id: row.id, makeId: row.make_id, name: row.name };
   }
 }
 

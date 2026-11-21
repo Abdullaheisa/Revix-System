@@ -61,6 +61,31 @@ export class FleetService {
     actor: TenantActor,
     input: Omit<CreateVehicleVariantInput, "companyId">,
   ): Promise<VehicleVariantRecord> {
+    const existingVariants = await this.store.listVehicleVariants(actor.company.id);
+    const normMake = input.make.trim().toLowerCase();
+    const normModel = input.model.trim().toLowerCase();
+    const normTrim = (input.trim?.trim() || "Standard").toLowerCase();
+    const normSipp = (input.sippCode?.trim() || "ICAR").toLowerCase();
+
+    const duplicate = existingVariants.find(
+      (v) =>
+        v.make.trim().toLowerCase() === normMake &&
+        v.model.trim().toLowerCase() === normModel &&
+        v.modelYear === input.modelYear &&
+        v.trim.trim().toLowerCase() === normTrim &&
+        v.category === input.category &&
+        v.sippCode.trim().toLowerCase() === normSipp,
+    );
+
+    if (duplicate) {
+      const codeInfo = duplicate.variantCode ? ` (${duplicate.variantCode})` : "";
+      throw new FleetServiceError(
+        409,
+        "DUPLICATE_VARIANT",
+        `Duplicate variant: ${duplicate.modelYear} ${duplicate.make} ${duplicate.model} (${duplicate.trim}, ${duplicate.category}, ${duplicate.sippCode})${codeInfo} already exists with identical specifications.`,
+      );
+    }
+
     const variant = await this.store.createVehicleVariant({
       ...input,
       companyId: actor.company.id,
@@ -842,5 +867,41 @@ export class FleetService {
       });
     }
     return deleted;
+  }
+
+  async signPurchaseOrder(
+    actor: TenantActor,
+    poId: string,
+    signatureDataUrl: string,
+  ) {
+    const existing = await this.store.findPurchaseOrderById(poId);
+    if (!existing || existing.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "PO_NOT_FOUND", "Purchase order not found.");
+    }
+    const baseName = actor.user.fullName || actor.user.email || "Authorized Signer";
+    const roleTitle = actor.role?.name || "Authorized Signature";
+    const signerName = `${baseName}|${roleTitle}`;
+    const updated = await this.store.signPurchaseOrder(poId, signatureDataUrl, signerName);
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      actorUserId: actor.user.id,
+      action: "fleet.po_signed",
+      entityType: "purchase_order",
+      entityId: poId,
+      metadata: { signedBy: signerName },
+    });
+    return updated;
+  }
+
+  async listVehicleMakes(actor: TenantActor) {
+    return this.store.listVehicleMakes(actor.company.id);
+  }
+
+  async createVehicleMake(actor: TenantActor, name: string) {
+    return this.store.createVehicleMake(actor.company.id, name);
+  }
+
+  async createVehicleModel(actor: TenantActor, makeId: string, name: string) {
+    return this.store.createVehicleModel(actor.company.id, makeId, name);
   }
 }
