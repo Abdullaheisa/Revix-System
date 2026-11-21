@@ -1,5 +1,7 @@
 "use client";
 
+import { getApiErrorMessage } from "@/lib/api/errors";
+
 import { useMemo, useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
@@ -184,9 +186,9 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
         }).unwrap();
       }
       setIsModalOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setFormError(
-        err?.data?.error?.message ||
+        getApiErrorMessage(err) ||
           (isRtl ? "تعذر حفظ بيانات المورد." : "Failed to save vendor details."),
       );
     }

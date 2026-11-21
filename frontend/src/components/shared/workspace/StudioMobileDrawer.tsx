@@ -48,13 +48,12 @@ export function StudioMobileDrawer({
   onGoSecurity,
   onLogout,
 }: StudioMobileDrawerProps) {
-  const [expandedSection, setExpandedSection] =
-    useState<WorkspaceSectionId>(activeSection);
+  const [expandedOverride, setExpandedOverride] = useState<{ active: WorkspaceSectionId; expanded: WorkspaceSectionId } | null>(null);
+  const expandedSection = expandedOverride?.active === activeSection ? expandedOverride.expanded : activeSection;
+  const setExpandedSection = (section: WorkspaceSectionId) => setExpandedOverride({ active: activeSection, expanded: section });
 
   // Sync expanded section with active section whenever activeSection changes
-  useEffect(() => {
-    setExpandedSection(activeSection);
-  }, [activeSection]);
+
 
   // Lock body scroll when mobile drawer is open
   useEffect(() => {
@@ -86,7 +85,7 @@ export function StudioMobileDrawer({
     .toUpperCase();
 
   function toggleSection(secId: WorkspaceSectionId) {
-    setExpandedSection((prev) => (prev === secId ? ("" as WorkspaceSectionId) : secId));
+    setExpandedSection(expandedSection === secId ? ("" as WorkspaceSectionId) : secId);
   }
 
   return (

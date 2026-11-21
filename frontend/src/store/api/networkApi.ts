@@ -1,6 +1,16 @@
 import { baseApi } from "./baseApi";
 import type { BranchDto, CompanyDto } from "./workspaceApi";
 
+export interface NetworkLinkDto {
+ id: string; mainCompanyId: string; localCompanyId: string;
+ status: "pending" | "active" | "paused" | "terminated";
+ createdByUserId: string; activatedAt: string | null; terminatedAt: string | null;
+ createdAt: string; updatedAt: string;
+}
+export interface NetworkPermittedBranchDto {
+ id: string; networkLinkId: string; branchId: string; isActive: boolean; createdAt: string;
+}
+
 export type NetworkLinkStatus = "active" | "paused";
 
 export interface ConnectedLocalPartnerDto {
@@ -134,7 +144,7 @@ export const networkApi = baseApi.injectEndpoints({
     }),
 
     acceptNetworkInvitation: builder.mutation<
-      { ok: true; data: { link: any } },
+      { ok: true; data: { link: NetworkLinkDto } },
       AcceptNetworkInvitationInput
     >({
       query: (body) => ({
@@ -146,7 +156,7 @@ export const networkApi = baseApi.injectEndpoints({
     }),
 
     completeNetworkOnboarding: builder.mutation<
-      { ok: true; data: { link: any } },
+      { ok: true; data: { link: NetworkLinkDto } },
       { token: string; password: string; fullName?: string }
     >({
       query: (body) => ({
@@ -158,7 +168,7 @@ export const networkApi = baseApi.injectEndpoints({
     }),
 
     updateLinkStatus: builder.mutation<
-      { ok: true; data: { link: any } },
+      { ok: true; data: { link: NetworkLinkDto } },
       { linkId: string; status: NetworkLinkStatus }
     >({
       query: ({ linkId, status }) => ({
@@ -170,7 +180,7 @@ export const networkApi = baseApi.injectEndpoints({
     }),
 
     updatePermittedBranches: builder.mutation<
-      { ok: true; data: { permittedBranches: any[] } },
+      { ok: true; data: { permittedBranches: NetworkPermittedBranchDto[] } },
       { linkId: string; branchIds: string[] }
     >({
       query: ({ linkId, branchIds }) => ({

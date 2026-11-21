@@ -1,39 +1,23 @@
 "use client";
+import { WorkspacePageContent } from "./WorkspacePageContent";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { RevixIcon } from "@/components/ui/RevixIcons";
-import { PriceListPanel } from "@/components/fleet/PriceListPanel";
+
 import {
-  StudioIconRail,
   StudioMobileDrawer,
-  StudioSubSidebar,
   StudioTopBar,
 } from "@/components/shared/workspace";
-import { AccountSecurityPanel } from "@/components/workspace/AccountSecurityPanel";
+
 import { CommandPaletteModal } from "@/components/workspace/CommandPaletteModal";
-import { CompanyNetworkPanel } from "@/components/workspace/CompanyNetworkPanel";
-import { CompanySettingsPanel } from "@/components/workspace/CompanySettingsPanel";
-import { LocationsManager } from "@/components/workspace/LocationsManager";
-import { RolesMatrixPanel } from "@/components/workspace/RolesMatrixPanel";
-import { TeamMembersPanel } from "@/components/workspace/TeamMembersPanel";
-import { UpcomingModuleBlueprint } from "@/components/workspace/UpcomingModuleBlueprint";
-import { WorkspaceOverviewPanel } from "@/components/workspace/WorkspaceOverviewPanel";
-import { FleetVehiclesPanel } from "@/components/fleet/FleetVehiclesPanel";
-import { AddFleetVehiclePage } from "@/components/fleet/AddFleetVehiclePage";
-import { VehiclePhotosPage } from "@/components/fleet/VehiclePhotosPage";
-import { RentalInclusionsPage } from "@/components/fleet/RentalInclusionsPage";
-import { PurchaseOrdersPanel } from "@/components/fleet/PurchaseOrdersPanel";
-import { VehicleVariantsPanel } from "@/components/fleet/VehicleVariantsPanel";
-import { VendorsDirectoryPanel } from "@/components/fleet/VendorsDirectoryPanel";
+
 import {
   buildWorkspaceHref,
   canAccessWorkspacePage,
   getReadyWorkspaceNavigationSections,
   isOwnerOrCeo,
   parseWorkspacePathname,
-  READY_WORKSPACE_NAVIGATION_SECTIONS,
-  WORKSPACE_NAVIGATION_SECTIONS,
 } from "@/lib/workspace/navigationCatalog";
 import { useLogoutMutation } from "@/store/api/authApi";
 import { extractApiErrorCode } from "@/store/api/baseApi";
@@ -42,11 +26,9 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   clearPendingUrlPush,
   navigateToWorkspacePage,
-  setActiveSection,
   setCommandPaletteOpen,
   setSelectedBranchId,
   syncRouteFromUrl,
-  toggleIconRailPinned,
   type WorkspaceSectionId,
 } from "@/store/slices/workspaceSlice";
 
@@ -69,18 +51,16 @@ export function WorkspaceStudioShell({
     useGetWorkspaceContextQuery();
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
 
-  const activeSection = useAppSelector(
+  const storedSection = useAppSelector(
     (state) => state.workspace.activeSection,
   );
-  const activeSubPage = useAppSelector(
+  const storedSubPage = useAppSelector(
     (state) => state.workspace.activeSubPage,
   );
   const selectedBranchId = useAppSelector(
     (state) => state.workspace.selectedBranchId,
   );
-  const isIconRailPinned = useAppSelector(
-    (state) => state.workspace.isIconRailPinned,
-  );
+
   const isCommandPaletteOpen = useAppSelector(
     (state) => state.workspace.isCommandPaletteOpen,
   );
@@ -90,6 +70,10 @@ export function WorkspaceStudioShell({
   const pendingUrlPush = useAppSelector(
     (state) => state.workspace.pendingUrlPush,
   );
+
+  const route = pathname ? parseWorkspacePathname(pathname) : { section: initialSection ?? "overview", subPage: initialSubPage ?? "summary" };
+  const activeSection = pendingUrlPush ? storedSection : route.section;
+  const activeSubPage = pendingUrlPush ? storedSubPage : route.subPage;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openSidebarSections, setOpenSidebarSections] = useState<
@@ -108,6 +92,13 @@ export function WorkspaceStudioShell({
   useEffect(() => {
     if (!pendingUrlPush) return;
     dispatch(clearPendingUrlPush());
+
+    // Keep resource detail URLs intact while the workspace section remains the same.
+    const currentResourcePath = (pathname || "").replace(/^\/(en|ar)(?=\/|$)/, "");
+    const isFleetResourceDetail =
+      activeSection === "fleet" &&
+      /^\/workspace\/fleet\/(vehicles\/[^/]+|purchase-orders\/[^/]+)/.test(currentResourcePath);
+    if (isFleetResourceDetail) return;
 
     const routeKey = `${activeSection}/${activeSubPage}`;
     const targetHref = buildWorkspaceHref(activeSection, activeSubPage);
@@ -265,6 +256,7 @@ export function WorkspaceStudioShell({
 
   // Guard: if current activeSection/activeSubPage is not in available sections, redirect to first ready page
   useEffect(() => {
+    if (!company || !user) return;
     const matchedSection = availableSections.find((s) => s.id === activeSection);
     const hasSubPage = Boolean(
       matchedSection?.groups.some((g) =>
@@ -281,7 +273,7 @@ export function WorkspaceStudioShell({
         }),
       );
     }
-  }, [activeSection, activeSubPage, availableSections, dispatch]);
+  }, [activeSection, activeSubPage, availableSections, company, user, dispatch]);
 
   const currentSectionConfig = useMemo(() => {
     return (
@@ -291,11 +283,11 @@ export function WorkspaceStudioShell({
   }, [activeSection, availableSections]);
 
   const currentSubPageConfig = useMemo(() => {
-    for (const group of currentSectionConfig.groups) {
+    for (const group of currentSectionConfig?.groups ?? []) {
       const found = group.items.find((item) => item.id === activeSubPage);
       if (found) return found;
     }
-    return currentSectionConfig.groups[0]?.items[0];
+    return currentSectionConfig?.groups[0]?.items[0];
   }, [activeSubPage, currentSectionConfig]);
 
   const activeBranch = useMemo(() => {
@@ -311,6 +303,10 @@ export function WorkspaceStudioShell({
     } catch {
       router.push("/login");
     }
+  }
+
+  if (error && extractApiErrorCode(error) !== "UNAUTHORIZED" && extractApiErrorCode(error) !== "EMAIL_NOT_VERIFIED") {
+    return <div role="alert" dir={isRtl ? "rtl" : "ltr"} className="flex min-h-screen flex-col items-center justify-center gap-4 bg-revix-surface p-6 text-revix-dark"><p>{isRtl ? "تعذر تحميل مساحة العمل. تحقق من الاتصال وحاول مرة أخرى." : "Could not load your workspace. Check your connection and try again."}</p><button type="button" onClick={() => { void refetch(); }} className="rounded-lg bg-revix-primary px-5 py-2 text-white">{isRtl ? "إعادة المحاولة" : "Try again"}</button></div>;
   }
 
   if (isLoading || !company || !user) {
@@ -492,105 +488,19 @@ export function WorkspaceStudioShell({
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-revix-white p-3.5 sm:p-6 lg:p-7">
-          {!canAccessCurrentPage ? null : activeSection === "settings" && activeSubPage === "locations" ? (
-            <LocationsManager
-              isRtl={isRtl}
-              company={company}
-              branches={branches}
-              onRefresh={() => refetch()}
-              isRefreshing={isFetching}
-            />
-          ) : activeSection === "settings" &&
-            activeSubPage === "company-profile" ? (
-            <CompanySettingsPanel isRtl={isRtl} company={company} />
-          ) : activeSection === "settings" && activeSubPage === "security" ? (
-            <AccountSecurityPanel isRtl={isRtl} user={user} />
-          ) : activeSection === "team" && activeSubPage === "members" && canAccessTeam ? (
-            <TeamMembersPanel isRtl={isRtl} membership={membership} />
-          ) : activeSection === "team" && activeSubPage === "roles" && canAccessTeam ? (
-            <RolesMatrixPanel isRtl={isRtl} membership={membership} />
-          ) : activeSection === "network" &&
-            activeSubPage === "local-companies" &&
-            company?.operatingMode !== "independent" ? (
-            <CompanyNetworkPanel isRtl={isRtl} />
-          ) : activeSection === "fleet" && activeSubPage === "variants" ? (
-            <VehicleVariantsPanel
-              isRtl={isRtl}
-              baseCurrency={activeBranch?.currencyCode || company?.baseCurrency}
-              onGoFleetVehicles={() =>
-                dispatch(
-                  navigateToWorkspacePage({
-                    section: "fleet",
-                    subPage: "vehicles",
-                  }),
-                )
-              }
-            />
-          ) : activeSection === "fleet" && activeSubPage === "vendors" ? (
-            <VendorsDirectoryPanel isRtl={isRtl} />
-          ) : activeSection === "fleet" && activeSubPage === "purchase-orders" ? (
-            <PurchaseOrdersPanel
-              isRtl={isRtl}
-              branches={branches}
-              activeBranch={activeBranch}
-            />
-          ) : activeSection === "fleet" && activeSubPage === "add-vehicle" ? (
-            <AddFleetVehiclePage lang={isRtl ? "ar" : "en"} />
-          ) : activeSection === "fleet" && activeSubPage === "vehicle-photos" ? (
-            <VehiclePhotosPage lang={isRtl ? "ar" : "en"} />
-          ) : activeSection === "fleet" && activeSubPage === "rental-inclusions" ? (
-            <RentalInclusionsPage lang={isRtl ? "ar" : "en"} />
-          ) : activeSection === "fleet" && activeSubPage === "price-list" ? (
-            <PriceListPanel
-              isRtl={isRtl}
-              branchId={activeBranch?.id}
-              baseCurrency={activeBranch?.currencyCode || company?.baseCurrency}
-            />
-          ) : activeSection === "fleet" && activeSubPage === "vehicles" ? (
-            <FleetVehiclesPanel
-              isRtl={isRtl}
-              branches={branches}
-              activeBranch={activeBranch}
-              company={company}
-              onGoVariants={() =>
-                dispatch(
-                  navigateToWorkspacePage({
-                    section: "fleet",
-                    subPage: "variants",
-                  }),
-                )
-              }
-              onGoPurchaseOrders={() =>
-                dispatch(
-                  navigateToWorkspacePage({
-                    section: "fleet",
-                    subPage: "purchase-orders",
-                  }),
-                )
-              }
-            />
-          ) : activeSection === "overview" && activeSubPage === "summary" ? (
-            <WorkspaceOverviewPanel
-              isRtl={isRtl}
-              company={company}
-              branches={branches}
-              user={user}
-              membership={membership}
-              activeBranch={activeBranch}
-              onSelectBranch={(id) => dispatch(setSelectedBranchId(id))}
-              onNavigate={(section, subPage) =>
-                dispatch(navigateToWorkspacePage({ section, subPage }))
-              }
-              onOpenCommandPalette={() => dispatch(setCommandPaletteOpen(true))}
-            />
-          ) : (
-            <UpcomingModuleBlueprint
-              isRtl={isRtl}
-              company={company}
-              activeBranch={activeBranch}
-              subPage={currentSubPageConfig}
-            />
-          )}
+          <WorkspacePageContent isRtl={isRtl}
+            activeSection={activeSection}
+            activeSubPage={activeSubPage}
+            canAccessCurrentPage={canAccessCurrentPage}
+            canAccessTeam={canAccessTeam}
+            company={company}
+            branches={branches}
+            user={user}
+            membership={membership}
+            activeBranch={activeBranch}
+            currentSubPageConfig={currentSubPageConfig}
+            isFetching={isFetching}
+            onRefresh={() => { void refetch(); }} />
         </main>
       </div>
 

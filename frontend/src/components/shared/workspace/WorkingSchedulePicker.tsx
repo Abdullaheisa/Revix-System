@@ -172,12 +172,7 @@ export interface WorkingSchedulePickerProps {
   onChange: (next: { workingDays: string; workingHours: string }) => void;
 }
 
-export function WorkingSchedulePicker({
-  isRtl,
-  workingDays,
-  workingHours,
-  onChange,
-}: WorkingSchedulePickerProps) {
+export function WorkingSchedulePicker({ isRtl, workingDays, workingHours, onChange }: WorkingSchedulePickerProps) {
   const schedule = useMemo(
     () => parseWorkingSchedule(workingDays, workingHours),
     [workingDays, workingHours],
@@ -225,8 +220,6 @@ export function WorkingSchedulePicker({
     }));
     commit(next);
   }
-
-  const openCount = schedule.filter((d) => d.open).length;
 
   return (
     <div className="space-y-2.5">

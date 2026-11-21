@@ -21,6 +21,7 @@ export interface BackendEnvConfig {
   frontendOrigin: string;
   sessionCookieName: string;
   sessionTtlHours: number;
+  requireEmailVerification?: boolean;
   smtp?: SmtpConfig;
 }
 
@@ -93,6 +94,9 @@ export function loadEnvConfig(): BackendEnvConfig {
     sessionCookieName:
       process.env.SESSION_COOKIE_NAME?.trim() || "revix_session",
     sessionTtlHours,
+    requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION
+      ? process.env.REQUIRE_EMAIL_VERIFICATION === "true"
+      : nodeEnv === "production",
     smtp,
   };
 }

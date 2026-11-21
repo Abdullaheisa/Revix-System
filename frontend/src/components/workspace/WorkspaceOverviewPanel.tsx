@@ -1,27 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { StudioBadge, StudioTooltip } from "@/components/shared/workspace";
 import { findCountryMetadata } from "@/lib/workspace/countryCatalog";
-import {
-  canAccessWorkspacePage,
-  isOwnerOrCeo,
-} from "@/lib/workspace/navigationCatalog";
-import {
-  useGetFleetMetricsQuery,
-  useListPurchaseOrdersQuery,
-  useListVehiclesQuery,
-} from "@/store/api/fleetApi";
+import { canAccessWorkspacePage, isOwnerOrCeo } from "@/lib/workspace/navigationCatalog";
+import { useGetFleetMetricsQuery, useListPurchaseOrdersQuery, useListVehiclesQuery } from "@/store/api/fleetApi";
 import { useGetNetworkOverviewQuery } from "@/store/api/networkApi";
 import { useGetTeamOverviewQuery } from "@/store/api/teamApi";
 import type { AuthUserDto } from "@/store/api/authApi";
-import type {
-  BranchDto,
-  CompanyDto,
-  WorkspaceMembershipDto,
-} from "@/store/api/workspaceApi";
+import type { BranchDto, CompanyDto, WorkspaceMembershipDto } from "@/store/api/workspaceApi";
 import type { WorkspaceSectionId } from "@/store/slices/workspaceSlice";
 
 export interface WorkspaceOverviewPanelProps {
@@ -80,17 +69,7 @@ function isBranchOpenNow(workingDays?: string, workingHours?: string): boolean {
   }
 }
 
-export function WorkspaceOverviewPanel({
-  isRtl,
-  company,
-  branches,
-  user,
-  membership,
-  activeBranch,
-  onNavigate,
-  onSelectBranch,
-  onOpenCommandPalette,
-}: WorkspaceOverviewPanelProps) {
+export function WorkspaceOverviewPanel({ isRtl, company, branches, membership, activeBranch, onNavigate, onSelectBranch, onOpenCommandPalette }: WorkspaceOverviewPanelProps) {
   const canAccessTeam = isOwnerOrCeo(membership);
   const canManageSettings = isOwnerOrCeo(membership);
   const canReadFleet = canAccessWorkspacePage(
@@ -107,28 +86,25 @@ export function WorkspaceOverviewPanel({
   );
 
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
-  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>(
-    activeBranch?.id ?? "all",
-  );
-  useEffect(() => {
-    if (activeBranch?.id) {
-      setSelectedBranchFilter(activeBranch.id);
-    }
-  }, [activeBranch?.id]);
+  const [branchFilterOverride, setBranchFilterOverride] = useState<{ source: string | null; value: string } | null>(null);
+  const branchSource = activeBranch?.id ?? null;
+  const selectedBranchFilter = branchFilterOverride?.source === branchSource ? branchFilterOverride.value : branchSource ?? "all";
+  const setSelectedBranchFilter = (value: string) => setBranchFilterOverride({ source: branchSource, value });
+
   const [activeOpsTab, setActiveOpsTab] = useState<"pickups" | "returns">("pickups");
   const [hoveredChartIndex, setHoveredChartIndex] = useState<number | null>(null);
 
   const branchParam = selectedBranchFilter !== "all" ? selectedBranchFilter : undefined;
 
-  const { data: fleetMetricsResp, isLoading: isLoadingMetrics } = useGetFleetMetricsQuery(
+  const { data: fleetMetricsResp } = useGetFleetMetricsQuery(
     branchParam ? { branchId: branchParam } : undefined,
     { skip: !canReadFleet },
   );
-  const { data: vehiclesResp, isLoading: isLoadingVehicles } = useListVehiclesQuery(
+  const { data: vehiclesResp } = useListVehiclesQuery(
     branchParam ? { branchId: branchParam, includeNetwork: true } : { includeNetwork: true },
     { skip: !canReadFleet },
   );
-  const { data: purchaseOrdersResp, isLoading: isLoadingPOs } = useListPurchaseOrdersQuery(
+  const { data: purchaseOrdersResp } = useListPurchaseOrdersQuery(
     branchParam ? { branchId: branchParam } : undefined,
     { skip: !canReadFleet },
   );
@@ -175,8 +151,6 @@ export function WorkspaceOverviewPanel({
   const onRent = metrics?.onRentCount ?? vehicles.filter((v) => v.status === "on_rent").length;
   const available = metrics?.availableCount ?? vehicles.filter((v) => v.status === "available").length;
   const maintenance = metrics?.maintenanceCount ?? vehicles.filter((v) => v.status === "maintenance").length;
-  const reserved = metrics?.reservedCount ?? vehicles.filter((v) => v.status === "reserved").length;
-  const outOfService = metrics?.outOfServiceCount ?? vehicles.filter((v) => v.status === "out_of_service").length;
 
   const utilizationRate = totalFleet > 0 ? Math.round((onRent / totalFleet) * 1000) / 10 : 0;
 
@@ -424,7 +398,7 @@ export function WorkspaceOverviewPanel({
         subPage: "security",
       },
     ];
-  }, [isIndependent, isRtl]);
+  }, [isIndependent, isRtl, canAccessTeam, canManageSettings, canReadFleet, canReadNetwork]);
 
   return (
     <div className="space-y-5">

@@ -115,6 +115,9 @@ export type PurchaseOrderStatus =
   | "cancelled";
 
 export interface PurchaseOrderItemDto {
+  variantName?: string;
+  sippCode?: string;
+  receivedVehicles?: { id: string; vin: string; plateNumber: string; color: string }[];
   id: string;
   purchaseOrderId: string;
   variantId: string;
@@ -227,6 +230,7 @@ export type FleetVehicleStatus =
 
 export interface FleetVehicleDto {
   id: string;
+  assetCode?: string;
   companyId: string;
   branchId: string;
   variantId: string;
@@ -271,6 +275,154 @@ export interface FleetVehicleDto {
   parentCompanyName?: string | null;
   parentCompanyLogoUrl?: string | null;
   isPartnerVehicle?: boolean;
+  vendorName?: string | null;
+  poNumber?: string | null;
+  purchasePrice?: number | null;
+  purchaseOrderDate?: string | null;
+  insuranceCompany?: string | null;
+  insurancePolicyNumber?: string | null;
+  isBookable?: boolean;
+  publishedToFleetAt?: string | null;
+}
+
+export interface CustomerDto {
+  id: string;
+  companyId: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  nationalId: string | null;
+  driverLicenseNo: string | null;
+  licenseExpiry: string | null;
+  nationality: string | null;
+  address: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RentalContractStatus = "draft" | "active" | "completed" | "cancelled";
+
+export interface RentalContractDto {
+  id: string;
+  companyId: string;
+  branchId: string;
+  contractNumber: string;
+  vehicleId: string;
+  customerId: string;
+  status: RentalContractStatus;
+  startDate: string;
+  endDate: string;
+  pickupOdometer: number;
+  returnOdometer: number | null;
+  dailyRate: number;
+  totalDays: number;
+  subtotal: number;
+  discount: number;
+  insuranceFee: number;
+  extraCharges: number;
+  totalAmount: number;
+  paidAmount: number;
+  depositAmount: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vehiclePlate?: string;
+  vehicleName?: string;
+  customerName?: string;
+  customerPhone?: string;
+  branchName?: string;
+}
+
+export interface InsuranceCompanyDto {
+  id: string;
+  companyId: string;
+  name: string;
+  contactPerson: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  createdAt: string;
+}
+
+export interface VehicleInsurancePolicyDto {
+  id: string;
+  companyId: string;
+  vehicleId: string;
+  insuranceCompanyId: string | null;
+  providerName: string;
+  policyNumber: string;
+  coverageType: string;
+  premiumAmount: number;
+  deductibleAmount: number;
+  startDate: string;
+  expiryDate: string;
+  status: string;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface VehicleOdometerLogDto {
+  id: string;
+  companyId: string;
+  vehicleId: string;
+  source: string;
+  referenceLabel: string | null;
+  odometerKm: number;
+  deltaKm: number;
+  recordedBy: string | null;
+  recordedAt: string;
+}
+
+export interface VehicleMaintenanceLogDto {
+  id: string;
+  companyId: string;
+  vehicleId: string;
+  serviceType: string;
+  workshopName: string | null;
+  odometerAtService: number;
+  nextServiceKm: number | null;
+  nextServiceDate: string | null;
+  cost: number;
+  status: string;
+  notes: string | null;
+  serviceDate: string;
+  createdAt: string;
+}
+
+export interface VehicleDamagePointDto {
+  id: string;
+  inspectionId: string;
+  vehicleId: string;
+  zoneKey: string;
+  severity: string;
+  description: string | null;
+  repairCost: number;
+  isResolved: boolean;
+  createdAt: string;
+}
+
+export interface VehicleInspectionDto {
+  id: string;
+  companyId: string;
+  vehicleId: string;
+  inspectionType: string;
+  bookingRef: string | null;
+  customerName: string | null;
+  odometerKm: number;
+  hasAccident: boolean;
+  accidentNotes: string | null;
+  inspectedBy: string | null;
+  inspectedAt: string;
+  damagePoints: VehicleDamagePointDto[];
+}
+
+export interface VehicleLifecycleProfileDto {
+  insurancePolicies: VehicleInsurancePolicyDto[];
+  odometerLogs: VehicleOdometerLogDto[];
+  maintenanceLogs: VehicleMaintenanceLogDto[];
+  inspections: VehicleInspectionDto[];
+  damagePoints: VehicleDamagePointDto[];
 }
 
 export interface CreateFleetVehicleInput {
@@ -422,6 +574,141 @@ export const fleetApi = baseApi.injectEndpoints({
         body: { signatureDataUrl },
       }),
       invalidatesTags: ["PurchaseOrder"],
+    }),
+
+    listInsuranceCompanies: builder.query<
+      { ok: boolean; data: InsuranceCompanyDto[] },
+      void
+    >({
+      query: () => "/fleet/insurance-companies",
+      providesTags: ["Fleet"],
+    }),
+
+    createInsuranceCompany: builder.mutation<
+      { ok: boolean; data: InsuranceCompanyDto },
+      {
+        name: string;
+        contactPerson?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        address?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: "/fleet/insurance-companies",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    deleteInsuranceCompany: builder.mutation<{ ok: boolean }, string>({
+      query: (id) => ({
+        url: `/fleet/insurance-companies/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    getVehicleLifecycle: builder.query<
+      { ok: boolean; data: VehicleLifecycleProfileDto },
+      string
+    >({
+      query: (vehicleId) => `/fleet/vehicles/${vehicleId}/lifecycle`,
+      providesTags: ["Fleet"],
+    }),
+
+    saveVehicleInsurance: builder.mutation<
+      { ok: boolean; data: VehicleInsurancePolicyDto },
+      {
+        vehicleId: string;
+        insuranceCompanyId?: string | null;
+        providerName: string;
+        policyNumber: string;
+        coverageType: string;
+        premiumAmount: number;
+        deductibleAmount: number;
+        startDate: string;
+        expiryDate: string;
+        notes?: string | null;
+      }
+    >({
+      query: ({ vehicleId, ...body }) => ({
+        url: `/fleet/vehicles/${vehicleId}/insurance`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    updateVehiclePricing: builder.mutation<
+      { ok: boolean; data: FleetVehicleDto },
+      {
+        vehicleId: string;
+        dailyRate1to2: number;
+        dailyRate3to7: number;
+        dailyRate8Plus: number;
+        damageExcess: number;
+        mileagePolicy: "unlimited" | "limited";
+        dailyKmLimit: number;
+        extraKmRate: number;
+      }
+    >({
+      query: ({ vehicleId, ...body }) => ({
+        url: `/fleet/vehicles/${vehicleId}/pricing`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    addVehicleMaintenance: builder.mutation<
+      { ok: boolean; data: VehicleMaintenanceLogDto },
+      {
+        vehicleId: string;
+        serviceType: string;
+        workshopName?: string | null;
+        odometerAtService: number;
+        nextServiceKm?: number | null;
+        nextServiceDate?: string | null;
+        cost: number;
+        status: string;
+        notes?: string | null;
+        serviceDate: string;
+      }
+    >({
+      query: ({ vehicleId, ...body }) => ({
+        url: `/fleet/vehicles/${vehicleId}/maintenance`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    addVehicleInspection: builder.mutation<
+      { ok: boolean; data: VehicleInspectionDto },
+      {
+        vehicleId: string;
+        inspectionType: string;
+        bookingRef?: string | null;
+        customerName?: string | null;
+        odometerKm: number;
+        hasAccident: boolean;
+        accidentNotes?: string | null;
+        damagePoints: Array<{
+          zoneKey: string;
+          severity: string;
+          description?: string | null;
+          repairCost?: number;
+        }>;
+      }
+    >({
+      query: ({ vehicleId, ...body }) => ({
+        url: `/fleet/vehicles/${vehicleId}/inspections`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
     }),
 
     listVehicleMakes: builder.query<
@@ -593,6 +880,15 @@ export const fleetApi = baseApi.injectEndpoints({
       invalidatesTags: ["PurchaseOrder", "Fleet"],
     }),
 
+    getVehicle: builder.query<ApiResponse<FleetVehicleDto>, string>({
+      query: (id) => "/fleet/vehicles/" + encodeURIComponent(id),
+      providesTags: ["Fleet"],
+    }),
+    getPurchaseOrder: builder.query<ApiResponse<PurchaseOrderDto>, string>({
+      query: (id) => "/fleet/purchase-orders/" + encodeURIComponent(id),
+      providesTags: ["PurchaseOrder"],
+    }),
+
     // --- Vehicles ---
     listVehicles: builder.query<
       ApiResponse<FleetVehicleDto[]>,
@@ -749,11 +1045,155 @@ export const fleetApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["RentalInclusion"],
     }),
+
+    // Phase 2: Bookable Fleet, Customers & Rental Contracts
+    toggleVehicleBookable: builder.mutation<
+      { ok: boolean; data: FleetVehicleDto },
+      { id: string; isBookable: boolean }
+    >({
+      query: ({ id, isBookable }) => ({
+        url: `/fleet/vehicles/${id}/bookable`,
+        method: "PATCH",
+        body: { isBookable },
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    listCustomers: builder.query<{ ok: boolean; data: CustomerDto[] }, void>({
+      query: () => "/fleet/customers",
+      providesTags: ["Customer"],
+    }),
+
+    createCustomer: builder.mutation<
+      { ok: boolean; data: CustomerDto },
+      {
+        fullName: string;
+        phone: string;
+        email?: string | null;
+        nationalId?: string | null;
+        driverLicenseNo?: string | null;
+        licenseExpiry?: string | null;
+        nationality?: string | null;
+        address?: string | null;
+        notes?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: "/fleet/customers",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Customer"],
+    }),
+
+    updateCustomer: builder.mutation<
+      { ok: boolean; data: CustomerDto },
+      {
+        id: string;
+        fullName: string;
+        phone: string;
+        email?: string | null;
+        nationalId?: string | null;
+        driverLicenseNo?: string | null;
+        licenseExpiry?: string | null;
+        nationality?: string | null;
+        address?: string | null;
+        notes?: string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/fleet/customers/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Customer"],
+    }),
+
+    deleteCustomer: builder.mutation<{ ok: boolean; data: { deleted: boolean } }, string>({
+      query: (id) => ({
+        url: `/fleet/customers/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Customer"],
+    }),
+
+    listRentalContracts: builder.query<{ ok: boolean; data: RentalContractDto[] }, void>({
+      query: () => "/fleet/contracts",
+      providesTags: ["RentalContract"],
+    }),
+
+    createRentalContract: builder.mutation<
+      { ok: boolean; data: RentalContractDto },
+      {
+        vehicleId: string;
+        customerId: string;
+        startDate: string;
+        endDate: string;
+        pickupOdometer?: number;
+        dailyRate?: number;
+        discount?: number;
+        insuranceFee?: number;
+        extraCharges?: number;
+        paidAmount?: number;
+        depositAmount?: number;
+        notes?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: "/fleet/contracts",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["RentalContract", "Fleet"],
+    }),
+
+    completeRentalContract: builder.mutation<
+      { ok: boolean; data: RentalContractDto },
+      {
+        id: string;
+        returnOdometer: number;
+        extraCharges?: number;
+        paidAmount?: number;
+        notes?: string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/fleet/contracts/${id}/complete`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["RentalContract", "Fleet"],
+    }),
+
+    cancelRentalContract: builder.mutation<{ ok: boolean; data: RentalContractDto }, string>({
+      query: (id) => ({
+        url: `/fleet/contracts/${id}/cancel`,
+        method: "POST",
+      }),
+      invalidatesTags: ["RentalContract", "Fleet"],
+    }),
   }),
 });
 
 export const {
   useGetFleetMetricsQuery,
+  useListInsuranceCompaniesQuery,
+  useCreateInsuranceCompanyMutation,
+  useDeleteInsuranceCompanyMutation,
+  useGetVehicleLifecycleQuery,
+  useSaveVehicleInsuranceMutation,
+  useUpdateVehiclePricingMutation,
+  useAddVehicleMaintenanceMutation,
+  useAddVehicleInspectionMutation,
+  useToggleVehicleBookableMutation,
+  useListCustomersQuery,
+  useCreateCustomerMutation,
+  useUpdateCustomerMutation,
+  useDeleteCustomerMutation,
+  useListRentalContractsQuery,
+  useCreateRentalContractMutation,
+  useCompleteRentalContractMutation,
+  useCancelRentalContractMutation,
   useSignPurchaseOrderMutation,
   useListVehicleMakesQuery,
   useCreateVehicleMakeMutation,
@@ -770,6 +1210,8 @@ export const {
   useUpdatePurchaseOrderStatusMutation,
   useReceiveVehicleMutation,
   useListVehiclesQuery,
+  useGetVehicleQuery,
+  useGetPurchaseOrderQuery,
   useCreateVehicleMutation,
   useUpdateVehicleMutation,
   useUpdateVehicleStatusMutation,

@@ -3,7 +3,7 @@
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
-import { StudioBadge } from "@/components/shared/workspace/StudioBadge";
+
 import { StudioTooltip } from "@/components/shared/workspace/StudioTooltip";
 import { CompanyBrandLogo } from "@/components/shared/workspace/CompanyBrandLogo";
 import type { AuthUserDto } from "@/store/api/authApi";
@@ -25,20 +25,7 @@ export interface StudioTopBarProps {
   onLogout: () => void;
 }
 
-export function StudioTopBar({
-  isRtl,
-  company,
-  user,
-  branches,
-  activeBranch,
-  isLoggingOut,
-  onToggleMobileMenu,
-  onGoHome,
-  onGoCompanySettings,
-  onSelectBranch,
-  onOpenCommandPalette,
-  onLogout,
-}: StudioTopBarProps) {
+export function StudioTopBar({ isRtl, company, branches, activeBranch, isLoggingOut, onToggleMobileMenu, onGoHome, onSelectBranch, onOpenCommandPalette, onLogout }: StudioTopBarProps) {
   return (
     <header className="z-40 flex h-[48px] shrink-0 items-center justify-between border-b border-revix-border bg-revix-white px-3 sm:px-4">
       {/* =================================================== */}

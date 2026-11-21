@@ -166,14 +166,7 @@ export function RevixDatePicker({
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
 
   // Sync view when controlled value changes and popup opens
-  useEffect(() => {
-    if (parsedCurrent) {
-      setViewYear(parsedCurrent.year);
-      setViewMonth(parsedCurrent.month);
-      setSelectedHour(parsedCurrent.hour);
-      setSelectedMinute(parsedCurrent.minute);
-    }
-  }, [parsedCurrent]);
+
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
@@ -197,10 +190,14 @@ export function RevixDatePicker({
 
   const openPopup = useCallback(() => {
     if (disabled) return;
+    if (parsedCurrent) {
+      setViewYear(parsedCurrent.year); setViewMonth(parsedCurrent.month);
+      setSelectedHour(parsedCurrent.hour); setSelectedMinute(parsedCurrent.minute);
+    }
     updatePosition();
     setIsOpen(true);
     setIsYearPickerOpen(false);
-  }, [disabled, updatePosition]);
+  }, [disabled, parsedCurrent, updatePosition]);
 
   const closePopup = useCallback(() => {
     setIsOpen(false);
@@ -469,6 +466,7 @@ export function RevixDatePicker({
         type="button"
         role="combobox"
         aria-haspopup="dialog"
+        aria-controls={isOpen ? `${datePickerId}-popup` : undefined}
         aria-expanded={isOpen}
         aria-label={ariaLabel}
         aria-invalid={hasError || undefined}
@@ -525,6 +523,7 @@ export function RevixDatePicker({
             <div
               ref={popupRef}
               role="dialog"
+              id={`${datePickerId}-popup`}
               aria-label={isRtl ? "منتقي التاريخ" : "Date Picker"}
               dir={isRtl ? "rtl" : "ltr"}
               onKeyDown={handleKeyDown}

@@ -15,13 +15,7 @@ export interface CompanyBrandLogoProps {
   isRtl?: boolean;
 }
 
-export function CompanyBrandLogo({
-  company,
-  heightClassName = "h-[26px] sm:h-[28px]",
-  maxWidthClassName = "max-w-[140px] sm:max-w-[180px]",
-  className = "",
-  isRtl = false,
-}: CompanyBrandLogoProps) {
+export function CompanyBrandLogo({ company, heightClassName = "h-[26px] sm:h-[28px]", maxWidthClassName = "max-w-[140px] sm:max-w-[180px]", className = "" }: CompanyBrandLogoProps) {
   const [imgError, setImgError] = useState(false);
 
   const hasValidLogo = Boolean(company.logoUrl && !imgError);

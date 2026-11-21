@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import {
-  useListVehiclePhotosQuery,
-  useUploadVehiclePhotoMutation,
-  useDeleteVehiclePhotoMutation,
-  useListVehiclesQuery,
-} from "../../store/api/fleetApi";
+"use client";
+import NextImage from "next/image";
+
+import { getApiErrorMessage } from "@/lib/api/errors";
+import React, { useState, useRef, useEffect } from "react";
+import { useListVehiclePhotosQuery, useUploadVehiclePhotoMutation, useDeleteVehiclePhotoMutation, useListVehiclesQuery } from "../../store/api/fleetApi";
 import { resolveAssetUrl } from "../../store/api/baseApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
@@ -140,9 +139,9 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
       setVehicleName("");
       handleClearFile();
       setTimeout(() => setSuccessMessage(null), 3500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setFormError(
-        err?.data?.error?.message || (isAr ? "حدث خطأ أثناء رفع الصورة" : "Failed to upload photo."),
+        getApiErrorMessage(err) || (isAr ? "حدث خطأ أثناء رفع الصورة" : "Failed to upload photo."),
       );
     }
   };
@@ -158,8 +157,8 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
     try {
       await deletePhoto(pendingDeletePhoto.id).unwrap();
       setPendingDeletePhoto(null);
-    } catch (err: any) {
-      setDeleteError(err?.data?.error?.message || "Failed to delete");
+    } catch (err: unknown) {
+      setDeleteError(getApiErrorMessage(err) || "Failed to delete");
     }
   };
 
@@ -339,7 +338,7 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
           {previewObjectUrl && selectedFile && (
             <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-4">
               <div className="w-20 h-14 bg-white border border-gray-200 rounded overflow-hidden flex items-center justify-center shrink-0">
-                <img
+                <NextImage unoptimized width={640} height={480}
                   src={previewObjectUrl}
                   alt="Preview"
                   className="w-full h-full object-contain"
@@ -442,7 +441,7 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
                       <RevixIcon name="trash-2" className="w-3.5 h-3.5" />
                     </button>
 
-                    <img
+                    <NextImage unoptimized width={640} height={480}
                       src={resolveAssetUrl(photo.photoUrl)}
                       alt={photo.vehicleName}
                       className="max-h-full max-w-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"

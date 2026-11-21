@@ -1,17 +1,13 @@
 "use client";
 
+import { getApiErrorMessage } from "@/lib/api/errors";
+
 import React, { useState, useMemo } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
-import {
-  useListRentalInclusionsQuery,
-  useCreateRentalInclusionMutation,
-  useUpdateRentalInclusionMutation,
-  useDeleteRentalInclusionMutation,
-  type RentalInclusionDto,
-} from "../../store/api/fleetApi";
+import { useListRentalInclusionsQuery, useCreateRentalInclusionMutation, useUpdateRentalInclusionMutation, useDeleteRentalInclusionMutation, type RentalInclusionDto } from "../../store/api/fleetApi";
 import { useAppDispatch } from "../../store/hooks";
 import { navigateToWorkspacePage } from "../../store/slices/workspaceSlice";
 
@@ -40,15 +36,13 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
     pageSize,
   });
   const [createInclusion, { isLoading: isCreating }] = useCreateRentalInclusionMutation();
-  const [updateInclusion, { isLoading: isUpdating }] = useUpdateRentalInclusionMutation();
+  const [updateInclusion, {  }] = useUpdateRentalInclusionMutation();
   const [deleteInclusion, { isLoading: isDeleting }] = useDeleteRentalInclusionMutation();
 
   const inclusions = useMemo(() => inclusionsRes?.data ?? [], [inclusionsRes?.data]);
   const totalCount = inclusionsRes?.pagination?.totalItems ?? inclusions.length;
   const filteredInclusions = inclusions;
   const paginatedInclusions = inclusions;
-
-  const activeCount = inclusions.filter((i) => i.isActive).length;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,8 +67,8 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
         isAr ? "تمت إضافة الميزة بنجاح إلى قائمة المزايا المعتمدة!" : "Feature added successfully!",
       );
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
-      setFormError(err?.data?.error?.message || (isAr ? "تعذر حفظ الميزة." : "Failed to save feature."));
+    } catch (err: unknown) {
+      setFormError(getApiErrorMessage(err) || (isAr ? "تعذر حفظ الميزة." : "Failed to save feature."));
     }
   };
 
@@ -85,8 +79,8 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
         id: item.id,
         data: { isActive: !item.isActive },
       }).unwrap();
-    } catch (err: any) {
-      setFormError(err?.data?.error?.message || "Failed to update status.");
+    } catch (err: unknown) {
+      setFormError(getApiErrorMessage(err) || "Failed to update status.");
     }
   };
 
@@ -101,8 +95,8 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
     try {
       await deleteInclusion(pendingDeleteItem.id).unwrap();
       setPendingDeleteItem(null);
-    } catch (err: any) {
-      setDeleteError(err?.data?.error?.message || "Failed to delete.");
+    } catch (err: unknown) {
+      setDeleteError(getApiErrorMessage(err) || "Failed to delete.");
     }
   };
 

@@ -77,6 +77,8 @@ export const baseApi = createApi({
     "PurchaseOrder",
     "VehiclePhoto",
     "RentalInclusion",
+    "Customer",
+    "RentalContract",
   ],
   endpoints: () => ({}),
 });

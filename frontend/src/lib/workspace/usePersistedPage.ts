@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setRoutePage } from "@/store/slices/workspaceSlice";
+import { normalizePage } from "./pagination";
 
 /**
  * Persists table pagination across sub-page navigation, browser Back/Forward,
@@ -10,32 +12,21 @@ import { setRoutePage } from "@/store/slices/workspaceSlice";
  */
 export function usePersistedPage(routeKey: string): [number, (nextPage: number) => void] {
   const dispatch = useAppDispatch();
-  const page = useAppSelector(
+  const savedPage = useAppSelector(
     (state) => state.workspace.pageByRoute[routeKey] ?? 1,
   );
 
-  // Sync from URL `?page=` on mount and browser popstate
-  useEffect(() => {
-    const syncFromUrl = () => {
-      if (typeof window === "undefined") return;
-      const params = new URLSearchParams(window.location.search);
-      const raw = params.get("page");
-      if (raw) {
-        const parsed = Number.parseInt(raw, 10);
-        if (Number.isFinite(parsed) && parsed >= 1 && parsed !== page) {
-          dispatch(setRoutePage({ routeKey, page: parsed }));
-        }
-      }
-    };
+  const searchParams = useSearchParams();
+  const page = normalizePage(searchParams.get("page"));
 
-    syncFromUrl();
-    window.addEventListener("popstate", syncFromUrl);
-    return () => window.removeEventListener("popstate", syncFromUrl);
-  }, [routeKey, dispatch]);
+  // The URL also handles Back to page 1, where the page parameter is absent.
+  useEffect(() => {
+    if (savedPage !== page) dispatch(setRoutePage({ routeKey, page }));
+  }, [routeKey, dispatch, page, savedPage]);
 
   const setPage = useCallback(
     (nextPage: number) => {
-      const safePage = Math.max(1, Math.floor(nextPage));
+      const safePage = normalizePage(nextPage);
       dispatch(setRoutePage({ routeKey, page: safePage }));
 
       if (typeof window !== "undefined") {
@@ -45,7 +36,7 @@ export function usePersistedPage(routeKey: string): [number, (nextPage: number) 
         } else {
           url.searchParams.set("page", String(safePage));
         }
-        window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+        window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
       }
     },
     [routeKey, dispatch],

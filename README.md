@@ -1,7 +1,7 @@
 # Revix System 🚗🏢
 
-> **Enterprise B2B SaaS Platform for Car Rental & Fleet Operations**  
-> Built with Next.js 15, React 19, Redux Toolkit, Node.js + Express 5 (TypeScript), and PostgreSQL.
+> **Enterprise B2B SaaS Platform for Car Rental & Fleet Operations**
+> Built with Next.js 16, React 19, Redux Toolkit, Node.js + Express 5 (TypeScript), and PostgreSQL.
 
 ---
 
@@ -20,7 +20,7 @@
 | **Backend** | Node.js, Express 5, TypeScript |
 | **Database** | PostgreSQL (`pg` driver, parameterized SQL queries, versioned migrations) |
 | **Security** | Argon2id password hashing, `HttpOnly` secure cookies, 256-bit SHA-256 tokens, sliding-window rate limiting, Helmet |
-| **Architecture** | Supabase-Studio-style dual-sidebar dashboard (`Ctrl+K` command palette, contextual sub-sidebars) |
+| **Architecture** | Modular workspace with reusable navigation, domain panels, and a `Ctrl+K` command palette |
 
 ---
 

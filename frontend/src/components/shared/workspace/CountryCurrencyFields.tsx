@@ -1,12 +1,7 @@
 "use client";
 
 import { FormSelect } from "@/components/ui/FormField";
-import {
-  SUPPORTED_COUNTRIES,
-  getCitiesForCountry,
-  getCountryFlag,
-  resolveCurrencyForCountry,
-} from "@/lib/workspace/countryCatalog";
+import { SUPPORTED_COUNTRIES, getCitiesForCountry, getCountryFlag, resolveCurrencyForCountry } from "@/lib/workspace/countryCatalog";
 
 export interface CountrySelectFieldProps {
   isRtl: boolean;
@@ -16,15 +11,9 @@ export interface CountrySelectFieldProps {
   showCurrencyInOption?: boolean;
 }
 
-export function CountrySelectField({
-  isRtl,
-  label,
-  countryCode,
-  onChange,
-  showCurrencyInOption = true,
-}: CountrySelectFieldProps) {
+export function CountrySelectField({ isRtl, label, countryCode, onChange, showCurrencyInOption = true }: CountrySelectFieldProps) {
   const options = SUPPORTED_COUNTRIES.map((c) => {
-    const flag = getCountryFlag(c.code);
+
     const name = isRtl ? c.nameAr : c.nameEn;
     return {
       value: c.code,
@@ -54,14 +43,7 @@ export interface CitySelectFieldProps {
   placeholder?: string;
 }
 
-export function CitySelectField({
-  isRtl,
-  label,
-  countryCode,
-  city,
-  onChange,
-  placeholder,
-}: CitySelectFieldProps) {
+export function CitySelectField({ isRtl, label, countryCode, city, onChange, placeholder }: CitySelectFieldProps) {
   const cities = getCitiesForCountry(countryCode);
   const trimmedCity = city.trim();
   const hasMatch = cities.some(
@@ -128,13 +110,7 @@ export interface AutoBranchCurrencyFieldProps {
   helperTag?: string;
 }
 
-export function AutoBranchCurrencyField({
-  isRtl,
-  countryCode,
-  currencyCode,
-  onChange,
-  helperTag,
-}: AutoBranchCurrencyFieldProps) {
+export function AutoBranchCurrencyField({ isRtl, countryCode, currencyCode, onChange, helperTag }: AutoBranchCurrencyFieldProps) {
   const autoCurrency = resolveCurrencyForCountry(countryCode);
   const currentCurrency = (currencyCode || autoCurrency).toUpperCase();
 

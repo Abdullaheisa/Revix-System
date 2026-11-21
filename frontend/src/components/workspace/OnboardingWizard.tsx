@@ -82,27 +82,7 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
   >("independent");
 
   // Pre-fill company state when company already exists (so user can freely edit)
-  useEffect(() => {
-    if (company) {
-      setCompanyName(company.name);
-      setLegalName(company.legalName);
-      setBrandColor(company.brandColor || "#14532D");
-      setLogoUrl(company.logoUrl || "");
-      setCompanyPhone(company.phone);
-      setCompanyEmail(company.email);
-      setCompanyCountry(company.countryCode);
-      setCompanyCity(company.city);
-      setCompanyAddress(company.address);
-      setPostalCode(company.postalCode || "");
-      setBaseCurrency(company.baseCurrency);
-      setCompanyTimezone(company.timezone);
-      setBusinessRegNumber(company.businessRegNumber || "");
-      setTaxRegNumber(company.taxRegNumber || "");
-      setOperatingMode(
-        company.operatingMode === "network_main" ? "network_main" : "independent",
-      );
-    }
-  }, [company]);
+
 
   // Step 2: First Location Form State
   const [branchName, setBranchName] = useState("");
@@ -123,18 +103,40 @@ export function OnboardingWizard({ isRtl }: OnboardingWizardProps) {
   const [formError, setFormError] = useState<string | undefined>();
 
   // Initialize or align first branch code when company loads
-  useEffect(() => {
-    if (company && !isCodeTouched) {
-      if (!branchCountry || branchCountry === "SA") {
-        setBranchCountry(company.countryCode);
-      }
-      if (!branchCity) {
-        setBranchCity(company.city);
-      }
-      const initialCode = deriveBranchCode(company.city, company.countryCode, 1);
-      setBranchCode(initialCode);
+
+
+  // Initialize once per company; refetches must not overwrite an in-progress form.
+  const [initializedCompanyId, setInitializedCompanyId] = useState<string | null>(null);
+  if (company && initializedCompanyId !== company.id) {
+    setInitializedCompanyId(company.id);
+
+    if (company) {
+      setCompanyName(company.name);
+      setLegalName(company.legalName);
+      setBrandColor(company.brandColor || "#14532D");
+      setLogoUrl(company.logoUrl || "");
+      setCompanyPhone(company.phone);
+      setCompanyEmail(company.email);
+      setCompanyCountry(company.countryCode);
+      setCompanyCity(company.city);
+      setCompanyAddress(company.address);
+      setPostalCode(company.postalCode || "");
+      setBaseCurrency(company.baseCurrency);
+      setCompanyTimezone(company.timezone);
+      setBusinessRegNumber(company.businessRegNumber || "");
+      setTaxRegNumber(company.taxRegNumber || "");
+      setOperatingMode(
+        company.operatingMode === "network_main" ? "network_main" : "independent",
+      );
     }
-  }, [company, isCodeTouched]);
+
+    const country = findCountryMetadata(company.countryCode);
+    setBranchCountry(company.countryCode);
+    setBranchCity(company.city);
+    setBranchCurrency(country?.currencyCode ?? company.baseCurrency);
+    setBranchTimezone(country?.defaultTimezone ?? company.timezone);
+    setBranchCode(deriveBranchCode(company.city, company.countryCode, 1));
+  }
 
   function handleCompanyCountryChange(nextCode: string) {
     setCompanyCountry(nextCode);

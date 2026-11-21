@@ -7,14 +7,8 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
-import {
-  validateNewPassword,
-  type PasswordPolicyIssue,
-} from "@/lib/auth/passwordPolicy";
-import {
-  useResendVerificationMutation,
-  useSignupMutation,
-} from "@/store/api/authApi";
+import { validateNewPassword, type PasswordPolicyIssue } from "@/lib/auth/passwordPolicy";
+import { useResendVerificationMutation, useSignupMutation } from "@/store/api/authApi";
 import { extractApiErrorCode } from "@/store/api/baseApi";
 
 export interface SignupCopy {
@@ -188,7 +182,7 @@ export function SignupForm({ locale, isRtl, copy }: SignupFormProps) {
     }
 
     try {
-      const response = await signup({
+      await signup({
         fullName: valid.cleanName,
         email: valid.cleanEmail,
         password,
@@ -196,7 +190,7 @@ export function SignupForm({ locale, isRtl, copy }: SignupFormProps) {
       }).unwrap();
 
       // TEMPORARILY DISABLED FOR TESTING: skip /verify-email and enter workspace directly
-      router.push("/workspace");
+      router.push(process.env.NODE_ENV === "production" ? "/verify-email" : "/workspace");
       router.refresh();
     } catch (err) {
       setFormError(mapErrorCode(extractApiErrorCode(err)));

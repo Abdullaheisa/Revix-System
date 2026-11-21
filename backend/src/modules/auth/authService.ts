@@ -81,15 +81,18 @@ export class AuthService {
   private readonly store: AuthDataStore;
   private readonly emailAdapter: EmailDeliveryAdapter;
   private readonly sessionTtlMs: number;
+  private readonly requireEmailVerification: boolean;
 
   constructor(options: {
     store: AuthDataStore;
     emailAdapter: EmailDeliveryAdapter;
     sessionTtlHours?: number;
+    requireEmailVerification?: boolean;
   }) {
     this.store = options.store;
     this.emailAdapter = options.emailAdapter;
     this.sessionTtlMs = (options.sessionTtlHours ?? 168) * 60 * 60 * 1000;
+    this.requireEmailVerification = options.requireEmailVerification ?? true;
   }
 
   async signup(input: {
@@ -377,16 +380,15 @@ export class AuthService {
       expiresAt: sessionExpiresAt,
     });
 
-    // TEMPORARILY DISABLED FOR TESTING: skip email verification check on login
-    // if (user.emailVerifiedAt === null) {
-    //   throw new AuthServiceError(
-    //     "EMAIL_NOT_VERIFIED",
-    //     "Please verify your email address before signing in.",
-    //     403,
-    //     undefined,
-    //     { rawSessionToken, sessionExpiresAt },
-    //   );
-    // }
+    if (this.requireEmailVerification && user.emailVerifiedAt === null) {
+      throw new AuthServiceError(
+        "EMAIL_NOT_VERIFIED",
+        "Please verify your email address before signing in.",
+        403,
+        undefined,
+        { rawSessionToken, sessionExpiresAt },
+      );
+    }
 
     await this.store.recordAuditLog({
       actorUserId: user.id,

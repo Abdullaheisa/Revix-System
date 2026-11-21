@@ -1,18 +1,11 @@
 "use client";
+import NextImage from "next/image";
 
 import { CountrySelectField } from "@/components/shared/workspace";
 
 import React, { useState, useMemo } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
-import {
-  useGetNetworkOverviewQuery,
-  useInviteLocalPartnerMutation,
-  useUpdateLinkStatusMutation,
-  useUpdatePermittedBranchesMutation,
-  useTerminateLinkMutation,
-  type ConnectedLocalPartnerDto,
-  type ParentLinkDto,
-} from "@/store/api/networkApi";
+import { useGetNetworkOverviewQuery, useInviteLocalPartnerMutation, useUpdateLinkStatusMutation, useUpdatePermittedBranchesMutation, useTerminateLinkMutation, type ConnectedLocalPartnerDto, type ParentLinkDto } from "@/store/api/networkApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import { extractApiErrorCode, resolveAssetUrl } from "@/store/api/baseApi";
 import { FormInput } from "@/components/ui/FormField";
@@ -28,13 +21,9 @@ interface CompanyNetworkPanelProps {
 export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   const { data: wsData } = useGetWorkspaceContextQuery();
   const currentCompany = wsData?.data.company;
-  const currentBranches = wsData?.data.branches ?? [];
+  const currentBranches = useMemo(() => wsData?.data.branches ?? [], [wsData?.data.branches]);
 
-  const {
-    data: overviewData,
-    isFetching,
-    refetch,
-  } = useGetNetworkOverviewQuery();
+  const { data: overviewData, isFetching, refetch } = useGetNetworkOverviewQuery();
 
   const [inviteLocalPartner, { isLoading: isInviting }] = useInviteLocalPartnerMutation();
   const [updateLinkStatus, { isLoading: isUpdatingStatus }] = useUpdateLinkStatusMutation();
@@ -70,23 +59,24 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   const pageSize = 15;
 
   const overview = overviewData?.data;
+  const partners = overview?.connectedPartners;
   const isMainCompany =
     overview?.isMainCompany || currentCompany?.operatingMode === "network_main";
   const isLocalPartner =
     overview?.isLocalPartner || currentCompany?.operatingMode === "local_partner";
 
   const connectedPartners = useMemo(() => {
-    if (!overview?.connectedPartners) return [];
-    if (!searchTerm.trim()) return overview.connectedPartners;
+    if (!partners) return [];
+    if (!searchTerm.trim()) return partners;
     const q = searchTerm.toLowerCase();
-    return overview.connectedPartners.filter(
+    return partners.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.legalName.toLowerCase().includes(q) ||
         p.city.toLowerCase().includes(q) ||
         p.countryCode.toLowerCase().includes(q),
     );
-  }, [overview?.connectedPartners, searchTerm]);
+  }, [partners, searchTerm]);
 
   const paginatedPartners = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -94,12 +84,12 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   }, [connectedPartners, page, pageSize]);
 
   const totalSharedBranches = useMemo(() => {
-    if (!overview?.connectedPartners) return 0;
-    return overview.connectedPartners.reduce(
+    if (!partners) return 0;
+    return partners.reduce(
       (acc, p) => acc + (p.permittedBranches?.length || 0),
       0,
     );
-  }, [overview?.connectedPartners]);
+  }, [partners]);
 
   const localCountriesCount = useMemo(() => {
     return new Set(currentBranches.map((b) => b.countryCode).filter(Boolean)).size;
@@ -196,12 +186,6 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
     } catch (err) {
       console.error("Failed to terminate link:", err);
     }
-  };
-
-  const handleOpenManageBranches = (parentLink: ParentLinkDto) => {
-    setEditingParentLink(parentLink);
-    setSelectedBranchIdsToShare(parentLink.permittedBranches.map((b) => b.id));
-    setIsManageBranchesModalOpen(true);
   };
 
   const handleSavePermittedBranches = async () => {
@@ -349,7 +333,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
             </div>
           </div>
           <div className="mt-2 text-[24px] font-bold tabular-nums text-revix-dark">
-            {overview?.connectedPartners?.length || 0}
+            {partners?.length || 0}
           </div>
           <p className="mt-0.5 text-[11.5px] text-revix-secondary">
             {isRtl ? "شركات محلية نشطة بالشبكة" : "Active local partner firms"}
@@ -443,7 +427,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-revix-border bg-white">
                     {parent.mainCompany.logoUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
+                      <NextImage unoptimized width={640} height={480}
                         src={resolveAssetUrl(parent.mainCompany.logoUrl)}
                         alt={parent.mainCompany.name}
                         className="h-full w-full object-contain p-0.5"
@@ -514,10 +498,10 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
             <div className="text-[12px] text-revix-secondary">
               {isRtl
                 ? `عرض ${connectedPartners.length} من أصل ${
-                    overview?.connectedPartners?.length || 0
+                    partners?.length || 0
                   } شركة`
                 : `Showing ${connectedPartners.length} of ${
-                    overview?.connectedPartners?.length || 0
+                    partners?.length || 0
                   } partners`}
             </div>
           </div>
@@ -746,7 +730,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                         <td className="py-2.5 px-3 font-semibold text-revix-dark">
                           <div className="flex items-center gap-2">
                             {inv.logoUrl ? (
-                              <img
+                              <NextImage unoptimized width={640} height={480}
                                 src={inv.logoUrl}
                                 alt={inv.localCompanyName}
                                 className="h-7 w-7 rounded-[4px] border border-revix-border object-contain bg-white shrink-0"

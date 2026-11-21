@@ -10,12 +10,9 @@ export interface LanguageSwitcherProps {
   className?: string;
 }
 
-export function LanguageSwitcher({
-  label,
-  className = "",
-}: LanguageSwitcherProps) {
+export function LanguageSwitcher({ label, className = "" }: LanguageSwitcherProps) {
   const locale = useLocale();
-  const router = useRouter();
+
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 

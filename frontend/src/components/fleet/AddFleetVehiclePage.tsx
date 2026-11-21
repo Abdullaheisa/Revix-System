@@ -1,19 +1,11 @@
+"use client";
+import NextImage from "next/image";
+
+import { getApiErrorMessage } from "@/lib/api/errors";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import {
-  navigateToWorkspacePage,
-  clearPendingFleetReceiveContext,
-} from "../../store/slices/workspaceSlice";
-import {
-  useListVariantsQuery,
-  useCreateVariantMutation,
-  useListVehiclePhotosQuery,
-  useListRentalInclusionsQuery,
-  useCreateVehicleMutation,
-  useReceiveVehicleMutation,
-  useListPurchaseOrdersQuery,
-  type VehicleVariantDto,
-} from "../../store/api/fleetApi";
+import { navigateToWorkspacePage, clearPendingFleetReceiveContext } from "../../store/slices/workspaceSlice";
+import { useListVariantsQuery, useCreateVariantMutation, useListVehiclePhotosQuery, useListRentalInclusionsQuery, useCreateVehicleMutation, useReceiveVehicleMutation, useListPurchaseOrdersQuery, type CreateVehicleVariantInput } from "../../store/api/fleetApi";
 import { useGetWorkspaceContextQuery, type BranchDto } from "../../store/api/workspaceApi";
 import { resolveAssetUrl } from "../../store/api/baseApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
@@ -34,7 +26,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const selectedBranchId = useAppSelector((state) => state.workspace.selectedBranchId);
 
   // API Queries
-  const { data: variantsRes, isLoading: isVariantsLoading } = useListVariantsQuery();
+  const { data: variantsRes } = useListVariantsQuery();
   const { data: workspaceCtx } = useGetWorkspaceContextQuery();
   const { data: photosRes } = useListVehiclePhotosQuery();
   const { data: posRes } = useListPurchaseOrdersQuery();
@@ -45,28 +37,26 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const [receiveVehicle, { isLoading: isReceiving }] = useReceiveVehicleMutation();
   const [createVariant] = useCreateVariantMutation();
 
-  const variants = variantsRes?.data || [];
-  const branches: BranchDto[] = workspaceCtx?.data?.branches || [];
-  const photos = photosRes?.data || [];
-  const purchaseOrders = posRes?.data || [];
-  const availableInclusions = inclusionsRes?.data || [];
+  const variants = useMemo(() => variantsRes?.data ?? [], [variantsRes?.data]);
+  const branches: BranchDto[] = useMemo(() => workspaceCtx?.data?.branches ?? [], [workspaceCtx?.data?.branches]);
+  const photos = useMemo(() => photosRes?.data ?? [], [photosRes?.data]);
+  const purchaseOrders = useMemo(() => posRes?.data ?? [], [posRes?.data]);
+  const availableInclusions = useMemo(() => inclusionsRes?.data ?? [], [inclusionsRes?.data]);
 
   // Active PO and Line Item if arriving from PO
-  const activePo = useMemo(() => {
-    if (!pendingReceive?.purchaseOrderId) return null;
-    return purchaseOrders.find((p) => p.id === pendingReceive.purchaseOrderId) || null;
-  }, [purchaseOrders, pendingReceive]);
+
 
   // Form States
   const [vehicleName, setVehicleName] = useState<string>("");
-  const [selectedVariantId, setSelectedVariantId] = useState<string>("");
-  const [branchId, setBranchId] = useState<string>("");
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(pendingReceive?.variantId || "");
+  const [branchOverride, setBranchId] = useState<string>(pendingReceive?.branchId || "");
+  const branchId = branchOverride || selectedBranchId || branches[0]?.id || "";
 
   // Section 1: Identification & Physical
-  const [vin, setVin] = useState("");
+  const [vin, setVin] = useState(pendingReceive?.vin || "");
   const [licensePlate, setLicensePlate] = useState("");
   const [keyNumber, setKeyNumber] = useState("");
-  const [color, setColor] = useState("White");
+  const [color, setColor] = useState(pendingReceive?.color || "White");
   const [customColor, setCustomColor] = useState("");
   const [mileageOdometer, setMileageOdometer] = useState<number>(0);
   const [registrationExpiry, setRegistrationExpiry] = useState("");
@@ -93,10 +83,10 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const [transmission, setTransmission] = useState<string>("automatic");
 
   // Section 4: Daily Rental Pricing Tiers
-  const [dailyRate1to2, setDailyRate1to2] = useState<number>(0);
-  const [dailyRate3to7, setDailyRate3to7] = useState<number>(0);
-  const [dailyRate8Plus, setDailyRate8Plus] = useState<number>(0);
-  const [damageExcess, setDamageExcess] = useState<number>(0);
+  const [dailyRate1to2] = useState<number>(0);
+  const [dailyRate3to7] = useState<number>(0);
+  const [dailyRate8Plus] = useState<number>(0);
+  const [damageExcess] = useState<number>(0);
 
   // Section 5: Mileage Policy
   const [mileagePolicy, setMileagePolicy] = useState<"unlimited" | "limited">("unlimited");
@@ -158,29 +148,13 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const currencySymbol = selectedBranch?.currencyCode || "JOD";
 
   // Initialize from PO Context or Defaults
-  useEffect(() => {
-    if (pendingReceive) {
-      if (pendingReceive.variantId) {
-        setSelectedVariantId(pendingReceive.variantId);
-      }
-      if (pendingReceive.vin) {
-        setVin(pendingReceive.vin);
-      }
-      if (pendingReceive.color) {
-        setColor(pendingReceive.color);
-      }
-      if (pendingReceive.branchId) {
-        setBranchId(pendingReceive.branchId);
-      } else if (selectedBranchId) {
-        setBranchId(selectedBranchId);
-      }
-    } else if (selectedBranchId && !branchId) {
-      setBranchId(selectedBranchId);
-    }
-  }, [pendingReceive, selectedBranchId]);
+
 
   // When variant changes: Auto decode SIPP, set car name, and Auto-match photo!
-  useEffect(() => {
+  const [appliedVariantId, setAppliedVariantId] = useState<string | null>(null);
+  if (selectedVariant && appliedVariantId !== selectedVariant.id) {
+    setAppliedVariantId(selectedVariant.id);
+
     if (selectedVariant) {
       // 1. Auto-decode SIPP
       const decoded = decodeSipp(selectedVariant.sippCode);
@@ -209,7 +183,8 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
         setPhotoUrl(matchedPhoto.photoUrl);
       }
     }
-  }, [selectedVariant, photos]);
+
+  }
 
   // Handler: When user selects a photo from the verified library
   // (As user requested: "ولو اختارت صوره الاسم بيكون اسم الصوره")
@@ -518,13 +493,13 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
             model,
             modelYear: new Date().getFullYear(),
             trim: "Standard",
-            category: (category as any) || "sedan",
-            transmission: (transmission as any) || "automatic",
-            fuelType: (fuelType as any) || "petrol",
+            category: (category as CreateVehicleVariantInput["category"]) || "sedan",
+            transmission: (transmission as CreateVehicleVariantInput["transmission"]) || "automatic",
+            fuelType: (fuelType as CreateVehicleVariantInput["fuelType"]) || "petrol",
             seatingCapacity: Number(seats) || 5,
             sippCode: "ICAR",
           }).unwrap();
-          effectiveVariantId = (created as any)?.data?.id || (created as any)?.id;
+          effectiveVariantId = created.data.id;
         }
       }
 
@@ -559,9 +534,9 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
       setTimeout(() => {
         dispatch(navigateToWorkspacePage({ section: "fleet", subPage: "vehicles" }));
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMessage(
-        err?.data?.error?.message ||
+        getApiErrorMessage(err) ||
           (isAr ? "حدث خطأ أثناء حفظ السيارة. تأكد من عدم تكرار رقم الشاسيه أو اللوحة." : "Failed to register vehicle.")
       );
     }
@@ -787,7 +762,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                 {/* Thumbnail Preview */}
                 {photoUrl && (
                   <div className="w-20 h-[46px] bg-gray-50 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                    <img
+                    <NextImage unoptimized width={640} height={480}
                       src={resolveAssetUrl(photoUrl)}
                       alt="Selected car"
                       className="max-h-full max-w-full object-contain"
@@ -835,7 +810,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                           }`}
                         >
                           <div className="w-full h-16 bg-gray-50 rounded flex items-center justify-center overflow-hidden">
-                            <img src={resolveAssetUrl(p.photoUrl)} alt={p.vehicleName} className="max-h-full max-w-full object-contain" />
+                            <NextImage unoptimized width={640} height={480} src={resolveAssetUrl(p.photoUrl)} alt={p.vehicleName} className="max-h-full max-w-full object-contain" />
                           </div>
                           <span className="text-[11px] font-semibold text-gray-800 truncate w-full text-center">
                             {p.vehicleName}

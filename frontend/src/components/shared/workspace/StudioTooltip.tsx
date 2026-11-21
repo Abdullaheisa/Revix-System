@@ -77,12 +77,15 @@ export function StudioTooltip({
 
   // When disabled changes: if becoming enabled while cursor is already hovering, open immediately
   useEffect(() => {
+    const frame = requestAnimationFrame(() => {
     if (disabled) {
       setOpen(false);
     } else if (isHoveredRef.current && (label || shortcut)) {
       updatePosition();
       setOpen(true);
     }
+    });
+    return () => cancelAnimationFrame(frame);
   }, [disabled, label, shortcut, updatePosition]);
 
   // Close tooltip on window scroll or resize

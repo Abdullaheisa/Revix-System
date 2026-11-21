@@ -2,18 +2,14 @@
 
 import React, { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { validateNewPassword } from "@/lib/auth/passwordPolicy";
-import {
-  usePreviewNetworkInvitationQuery,
-  useAcceptNetworkInvitationMutation,
-  useCompleteNetworkOnboardingMutation,
-} from "@/store/api/networkApi";
+import { usePreviewNetworkInvitationQuery, useAcceptNetworkInvitationMutation, useCompleteNetworkOnboardingMutation } from "@/store/api/networkApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import { extractApiErrorCode, resolveAssetUrl } from "@/store/api/baseApi";
 
@@ -26,11 +22,7 @@ export function AcceptNetworkInviteView({ isRtl }: AcceptNetworkInviteViewProps)
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
 
-  const {
-    data: previewData,
-    isLoading: isLoadingPreview,
-    error: previewErrorRaw,
-  } = usePreviewNetworkInvitationQuery(token, { skip: !token });
+  const { data: previewData, isLoading: isLoadingPreview, error: previewErrorRaw } = usePreviewNetworkInvitationQuery(token, { skip: !token });
 
   const { data: wsData } = useGetWorkspaceContextQuery();
   const currentCompany = wsData?.data.company;

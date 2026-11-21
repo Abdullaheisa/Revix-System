@@ -6,11 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Alert } from "@/components/ui/Alert";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import {
-  useGetMeQuery,
-  useResendVerificationMutation,
-  useVerifyEmailMutation,
-} from "@/store/api/authApi";
+import { useGetMeQuery, useResendVerificationMutation, useVerifyEmailMutation } from "@/store/api/authApi";
 import { extractApiErrorCode } from "@/store/api/baseApi";
 import { useAppSelector } from "@/store/hooks";
 
@@ -52,13 +48,8 @@ export interface VerifyEmailViewProps {
   initialToken?: string;
 }
 
-export function VerifyEmailView({
-  locale,
-  isRtl,
-  copy,
-  initialToken,
-}: VerifyEmailViewProps) {
-  const router = useRouter();
+export function VerifyEmailView({ locale, isRtl, copy, initialToken }: VerifyEmailViewProps) {
+
   const searchParams = useSearchParams();
   const tokenFromQuery = searchParams.get("token") || undefined;
   const token = initialToken || tokenFromQuery;
@@ -67,7 +58,7 @@ export function VerifyEmailView({
     (state) => state.auth.pendingVerificationEmail || state.auth.user?.email,
   );
   const { data: meData } = useGetMeQuery();
-  const [verifyEmail, { isLoading: isVerifying }] = useVerifyEmailMutation();
+  const [verifyEmail, {  }] = useVerifyEmailMutation();
   const [resendVerification, { isLoading: isResending }] =
     useResendVerificationMutation();
 

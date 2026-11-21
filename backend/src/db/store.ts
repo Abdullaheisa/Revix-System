@@ -1,349 +1,10 @@
-export type UserStatus = "active" | "disabled";
-export type ActionTokenType = "verify_email" | "reset_password";
-export type CompanyOperatingMode =
-  | "independent"
-  | "network_main"
-  | "local_partner";
-
-export type RoleScopeType = "company_wide" | "assigned_branches";
-export type MembershipStatus = "active" | "suspended";
-export type PermissionResource =
-  | "company"
-  | "branches"
-  | "team"
-  | "fleet"
-  | "purchase_orders"
-  | "vendors"
-  | "variants"
-  | "vehicle_photos"
-  | "rental_inclusions"
-  | "sales"
-  | "operations"
-  | "finance"
-  | "network";
-
-export type PermissionMatrix = Partial<Record<PermissionResource, string[]>>;
-
-export interface CompanyRoleRecord {
-  id: string;
-  companyId: string;
-  code: string;
-  nameEn: string;
-  nameAr: string;
-  descriptionEn: string;
-  descriptionAr: string;
-  scopeType: RoleScopeType;
-  permissions: PermissionMatrix;
-  isSystem: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateCompanyRoleInput {
-  id: string;
-  companyId: string;
-  code: string;
-  nameEn: string;
-  nameAr: string;
-  descriptionEn: string;
-  descriptionAr: string;
-  scopeType: RoleScopeType;
-  permissions: PermissionMatrix;
-  isSystem: boolean;
-}
-
-export interface UpdateCompanyRoleInput {
-  nameEn?: string;
-  nameAr?: string;
-  descriptionEn?: string;
-  descriptionAr?: string;
-  scopeType: RoleScopeType;
-  permissions: PermissionMatrix;
-}
-
-export interface CompanyMembershipRecord {
-  id: string;
-  userId: string;
-  companyId: string;
-  roleId: string;
-  phone: string;
-  status: MembershipStatus;
-  branchIds: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateCompanyMembershipInput {
-  id: string;
-  userId: string;
-  companyId: string;
-  roleId: string;
-  phone: string;
-  status?: MembershipStatus;
-  branchIds: string[];
-}
-
-export interface UpdateCompanyMembershipInput {
-  roleId: string;
-  phone: string;
-  status: MembershipStatus;
-  branchIds: string[];
-}
-
-export interface EmployeeInvitationRecord {
-  id: string;
-  companyId: string;
-  email: string;
-  fullName: string;
-  phone: string;
-  roleId: string;
-  branchIds: string[];
-  tokenHash: string;
-  invitedByUserId: string;
-  expiresAt: Date;
-  acceptedAt: Date | null;
-  revokedAt: Date | null;
-  createdAt: Date;
-}
-
-// Phase 4: Company Network Types
-export type NetworkLinkStatus = "pending" | "active" | "paused" | "terminated";
-export type NetworkInvitationStatus =
-  | "pending"
-  | "accepted"
-  | "revoked"
-  | "expired";
-
-export interface CompanyNetworkLinkRecord {
-  id: string;
-  mainCompanyId: string;
-  localCompanyId: string;
-  status: NetworkLinkStatus;
-  permittedCountries: string[];
-  notes?: string;
-  createdByUserId?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface NetworkPermittedBranchRecord {
-  id: string;
-  linkId: string;
-  localCompanyId: string;
-  branchId: string;
-  createdAt: Date;
-}
-
-export interface CompanyNetworkInvitationRecord {
-  id: string;
-  mainCompanyId: string;
-  inviteeEmail: string;
-  localCompanyName: string;
-  contactName?: string;
-  contactPhone?: string;
-  logoUrl?: string | null;
-  tokenHash: string;
-  status: NetworkInvitationStatus;
-  invitedByUserId?: string;
-  expiresAt: Date;
-  acceptedAt?: Date | null;
-  createdAt: Date;
-}
-
-export interface CreateNetworkLinkInput {
-  id?: string;
-  mainCompanyId: string;
-  localCompanyId: string;
-  status?: NetworkLinkStatus;
-  permittedCountries?: string[];
-  notes?: string;
-  createdByUserId?: string;
-}
-
-export interface CreateNetworkInvitationInput {
-  id?: string;
-  mainCompanyId: string;
-  inviteeEmail: string;
-  localCompanyName: string;
-  contactName?: string;
-  contactPhone?: string;
-  logoUrl?: string | null;
-  tokenHash: string;
-  expiresAt: Date;
-  invitedByUserId?: string;
-}
-
-export interface CreateEmployeeInvitationInput {
-  id: string;
-  companyId: string;
-  email: string;
-  fullName: string;
-  phone: string;
-  roleId: string;
-  branchIds: string[];
-  tokenHash: string;
-  invitedByUserId: string;
-  expiresAt: Date;
-}
-
-export interface UserRecord {
-  id: string;
-  fullName: string;
-  email: string;
-  passwordHash: string;
-  emailVerifiedAt: Date | null;
-  status: UserStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface SessionRecord {
-  id: string;
-  userId: string;
-  tokenHash: string;
-  ipAddress: string | null;
-  userAgent: string | null;
-  expiresAt: Date;
-  revokedAt: Date | null;
-  createdAt: Date;
-}
-
-export interface ActionTokenRecord {
-  id: string;
-  userId: string;
-  tokenType: ActionTokenType;
-  tokenHash: string;
-  expiresAt: Date;
-  consumedAt: Date | null;
-  createdAt: Date;
-}
-
-export interface CompanyRecord {
-  id: string;
-  ownerUserId: string;
-  name: string;
-  legalName: string;
-  logoUrl: string | null;
-  brandColor: string;
-  phone: string;
-  email: string;
-  countryCode: string;
-  city: string;
-  address: string;
-  postalCode: string;
-  baseCurrency: string;
-  timezone: string;
-  businessRegNumber: string;
-  taxRegNumber: string;
-  operatingMode: CompanyOperatingMode;
-  parentCompanyId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateCompanyInput {
-  id: string;
-  ownerUserId: string;
-  name: string;
-  legalName: string;
-  logoUrl?: string | null;
-  brandColor: string;
-  phone: string;
-  email: string;
-  countryCode: string;
-  city: string;
-  address: string;
-  postalCode: string;
-  baseCurrency: string;
-  timezone: string;
-  businessRegNumber: string;
-  taxRegNumber: string;
-  operatingMode: CompanyOperatingMode;
-  parentCompanyId?: string | null;
-}
-
-export interface UpdateCompanyInput {
-  name: string;
-  legalName: string;
-  logoUrl?: string | null;
-  brandColor: string;
-  phone: string;
-  email: string;
-  countryCode: string;
-  city: string;
-  address: string;
-  postalCode: string;
-  baseCurrency: string;
-  timezone: string;
-  businessRegNumber: string;
-  taxRegNumber: string;
-  operatingMode: CompanyOperatingMode;
-}
-
-export interface BranchRecord {
-  id: string;
-  companyId: string;
-  name: string;
-  code: string;
-  countryCode: string;
-  city: string;
-  address: string;
-  phone: string;
-  email: string;
-  currencyCode: string;
-  timezone: string;
-  workingDays: string;
-  workingHours: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateBranchInput {
-  id: string;
-  companyId: string;
-  name: string;
-  code: string;
-  countryCode: string;
-  city: string;
-  address: string;
-  phone: string;
-  email: string;
-  currencyCode: string;
-  timezone: string;
-  workingDays: string;
-  workingHours: string;
-}
-
-export interface UpdateBranchInput {
-  name: string;
-  code: string;
-  countryCode: string;
-  city: string;
-  address: string;
-  phone: string;
-  email: string;
-  currencyCode: string;
-  timezone: string;
-  workingDays: string;
-  workingHours: string;
-  isActive: boolean;
-}
-
-export interface AuditLogInput {
-  companyId?: string | null;
-  branchId?: string | null;
-  actorUserId?: string | null;
-  action: string;
-  entityType: string;
-  entityId?: string | null;
-  metadata?: Record<string, unknown>;
-}
-
-export interface AuditLogRecord extends Required<AuditLogInput> {
-  id: string;
-  createdAt: Date;
-}
+import type { ActionTokenRecord, ActionTokenType, AuditLogInput, SessionRecord, UserRecord, UserStatus } from "./contracts/auth.ts";
+import type { BranchRecord, CompanyOperatingMode, CompanyRecord, CreateBranchInput, CreateCompanyInput, InsuranceCompanyRecord, UpdateBranchInput, UpdateCompanyInput } from "./contracts/workspace.ts";
+import type { CompanyMembershipRecord, CompanyRoleRecord, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, EmployeeInvitationRecord, UpdateCompanyMembershipInput, UpdateCompanyRoleInput } from "./contracts/team.ts";
+import type { CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CreateNetworkInvitationInput, CreateNetworkLinkInput, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord } from "./contracts/network.ts";
+import type { CreateFleetVehicleInput, CreateRentalInclusionInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, RentalInclusionRecord, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, VehicleCategory, VehicleInspectionRecord, VehicleInsurancePolicyRecord, VehicleLifecycleProfile, VehicleMaintenanceLogRecord, VehiclePhotoRecord, VehicleVariantRecord } from "./contracts/fleet.ts";
+import type { CreatePurchaseOrderInput, CreateVendorInput, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, UpdateVendorInput, VendorCategory, VendorRecord } from "./contracts/purchasing.ts";
+import type { CustomerRecord, RentalContractRecord } from "./contracts/rentals.ts";
 
 export interface AuthDataStore {
   findUserByEmail(email: string): Promise<UserRecord | null>;
@@ -641,445 +302,156 @@ export interface AuthDataStore {
     name: string,
   ): Promise<{ id: string; makeId: string; name: string }>;
 
+  // Insurance Companies & Vehicle Lifecycle
+  listInsuranceCompanies(companyId: string): Promise<InsuranceCompanyRecord[]>;
+  createInsuranceCompany(input: {
+    companyId: string;
+    name: string;
+    contactPerson?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+  }): Promise<InsuranceCompanyRecord>;
+  deleteInsuranceCompany(companyId: string, id: string): Promise<boolean>;
+  getVehicleLifecycleProfile(
+    companyId: string,
+    vehicleId: string,
+  ): Promise<VehicleLifecycleProfile>;
+  upsertVehicleInsurancePolicy(input: {
+    companyId: string;
+    vehicleId: string;
+    insuranceCompanyId?: string | null;
+    providerName: string;
+    policyNumber: string;
+    coverageType: string;
+    premiumAmount: number;
+    deductibleAmount: number;
+    startDate: string;
+    expiryDate: string;
+    notes?: string | null;
+  }): Promise<VehicleInsurancePolicyRecord>;
+  updateVehiclePricingTiers(
+    companyId: string,
+    vehicleId: string,
+    input: {
+      dailyRate1to2: number;
+      dailyRate3to7: number;
+      dailyRate8Plus: number;
+      damageExcess: number;
+      mileagePolicy: "unlimited" | "limited";
+      dailyKmLimit: number;
+      extraKmRate: number;
+    },
+  ): Promise<FleetVehicleRecord | null>;
+  addVehicleMaintenanceLog(input: {
+    companyId: string;
+    vehicleId: string;
+    serviceType: string;
+    workshopName?: string | null;
+    odometerAtService: number;
+    nextServiceKm?: number | null;
+    nextServiceDate?: string | null;
+    cost: number;
+    status: string;
+    notes?: string | null;
+    serviceDate: string;
+  }): Promise<VehicleMaintenanceLogRecord>;
+  addVehicleInspection(input: {
+    companyId: string;
+    vehicleId: string;
+    inspectionType: string;
+    bookingRef?: string | null;
+    customerName?: string | null;
+    odometerKm: number;
+    hasAccident: boolean;
+    accidentNotes?: string | null;
+    inspectedBy?: string | null;
+    damagePoints: Array<{
+      zoneKey: string;
+      severity: string;
+      description?: string | null;
+      repairCost?: number;
+    }>;
+  }): Promise<VehicleInspectionRecord>;
+
+  // Phase 2: Bookable Fleet, Customers & Rental Contracts
+  toggleFleetVehicleBookable(
+    companyId: string,
+    vehicleId: string,
+    isBookable: boolean,
+  ): Promise<FleetVehicleRecord | null>;
+  listCustomers(companyId: string): Promise<CustomerRecord[]>;
+  createCustomer(input: {
+    companyId: string;
+    fullName: string;
+    phone: string;
+    email?: string | null;
+    nationalId?: string | null;
+    driverLicenseNo?: string | null;
+    licenseExpiry?: string | null;
+    nationality?: string | null;
+    address?: string | null;
+    notes?: string | null;
+  }): Promise<CustomerRecord>;
+  updateCustomer(
+    companyId: string,
+    customerId: string,
+    input: {
+      fullName: string;
+      phone: string;
+      email?: string | null;
+      nationalId?: string | null;
+      driverLicenseNo?: string | null;
+      licenseExpiry?: string | null;
+      nationality?: string | null;
+      address?: string | null;
+      notes?: string | null;
+    },
+  ): Promise<CustomerRecord | null>;
+  deleteCustomer(companyId: string, customerId: string): Promise<boolean>;
+  listRentalContracts(companyId: string): Promise<RentalContractRecord[]>;
+  createRentalContract(input: {
+    companyId: string;
+    branchId: string;
+    vehicleId: string;
+    customerId: string;
+    startDate: string;
+    endDate: string;
+    pickupOdometer: number;
+    dailyRate: number;
+    totalDays: number;
+    subtotal: number;
+    discount?: number;
+    insuranceFee?: number;
+    extraCharges?: number;
+    totalAmount: number;
+    paidAmount?: number;
+    depositAmount?: number;
+    notes?: string | null;
+    createdByUserId?: string | null;
+  }): Promise<RentalContractRecord>;
+  completeRentalContract(
+    companyId: string,
+    contractId: string,
+    input: {
+      returnOdometer: number;
+      extraCharges?: number;
+      paidAmount?: number;
+      notes?: string | null;
+    },
+  ): Promise<RentalContractRecord | null>;
+  cancelRentalContract(
+    companyId: string,
+    contractId: string,
+  ): Promise<RentalContractRecord | null>;
+
   recordAuditLog(input: AuditLogInput): Promise<void>;
 }
 
-// ==============================================================================
-// Phase 5: Purchasing & Fleet Management Domain Models
-// ==============================================================================
-
-export type VehicleCategory =
-  | "mini"
-  | "economy"
-  | "compact"
-  | "intermediate"
-  | "standard"
-  | "fullsize"
-  | "sedan"
-  | "suv"
-  | "crossover"
-  | "luxury"
-  | "premium"
-  | "convertible"
-  | "coupe"
-  | "van"
-  | "pickup"
-  | "commercial";
-export type VehicleTransmission = "automatic" | "manual";
-export type VehicleFuelType = "petrol" | "diesel" | "hybrid" | "electric";
-export type VehicleVariantStatus = "active" | "archived";
-
-export interface VehicleVariantRecord {
-  id: string;
-  variantCode?: string;
-  companyId: string;
-  make: string;
-  model: string;
-  modelYear: number;
-  trim: string;
-  category: VehicleCategory;
-  transmission?: VehicleTransmission;
-  fuelType?: VehicleFuelType;
-  seatingCapacity?: number;
-  sippCode: string;
-  status: VehicleVariantStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateVehicleVariantInput {
-  id?: string;
-  companyId: string;
-  make: string;
-  model: string;
-  modelYear: number;
-  trim?: string;
-  category?: VehicleCategory;
-  transmission?: VehicleTransmission;
-  fuelType?: VehicleFuelType;
-  seatingCapacity?: number;
-  sippCode?: string;
-}
-
-export interface UpdateVehicleVariantInput {
-  make?: string;
-  model?: string;
-  modelYear?: number;
-  trim?: string;
-  category?: VehicleCategory;
-  transmission?: VehicleTransmission;
-  fuelType?: VehicleFuelType;
-  seatingCapacity?: number;
-  sippCode?: string;
-  status?: VehicleVariantStatus;
-}
-
-export interface VehiclePhotoRecord {
-  id: string;
-  companyId: string;
-  vehicleName: string;
-  photoUrl: string;
-  category: string;
-  createdAt: Date;
-}
-
-export interface CreateVehiclePhotoInput {
-  id?: string;
-  companyId: string;
-  vehicleName: string;
-  photoUrl: string;
-  category?: string;
-}
-
-export interface RentalInclusionRecord {
-  id: string;
-  companyId: string;
-  name: string;
-  description: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateRentalInclusionInput {
-  id?: string;
-  companyId: string;
-  name: string;
-  description?: string | null;
-  isActive?: boolean;
-}
-
-export interface UpdateRentalInclusionInput {
-  name?: string;
-  description?: string | null;
-  isActive?: boolean;
-}
-
-export type VendorCategory =
-  | "dealership"
-  | "leasing"
-  | "auction"
-  | "maintenance_parts";
-export type VendorStatus = "active" | "inactive";
-
-export type PaymentTermsType =
-  | "cash"
-  | "net_terms"
-  | "installments"
-  | "milestones";
-
-export interface VendorRecord {
-  id: string;
-  companyId: string;
-  name: string;
-  legalName: string | null;
-  category: VendorCategory;
-  contactPerson: string;
-  phone: string;
-  email: string | null;
-  countryCode: string;
-  city: string;
-  address: string | null;
-  taxNumber: string | null;
-  commercialRegister: string | null;
-  bankName: string | null;
-  iban: string | null;
-  paymentTermsDays: number;
-  paymentTermsType: PaymentTermsType;
-  paymentTermsConfig: string | null;
-  status: VendorStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateVendorInput {
-  id?: string;
-  companyId: string;
-  name: string;
-  legalName?: string | null;
-  category?: VendorCategory;
-  contactPerson: string;
-  phone: string;
-  email?: string | null;
-  countryCode: string;
-  city: string;
-  address?: string | null;
-  taxNumber?: string | null;
-  commercialRegister?: string | null;
-  bankName?: string | null;
-  iban?: string | null;
-  paymentTermsDays?: number;
-  paymentTermsType?: PaymentTermsType;
-  paymentTermsConfig?: string | null;
-}
-
-export interface UpdateVendorInput {
-  name?: string;
-  legalName?: string | null;
-  category?: VendorCategory;
-  contactPerson?: string;
-  phone?: string;
-  email?: string | null;
-  countryCode?: string;
-  city?: string;
-  address?: string | null;
-  taxNumber?: string | null;
-  commercialRegister?: string | null;
-  bankName?: string | null;
-  iban?: string | null;
-  paymentTermsDays?: number;
-  paymentTermsType?: PaymentTermsType;
-  paymentTermsConfig?: string | null;
-  status?: VendorStatus;
-}
-
-export type PurchaseOrderStatus =
-  | "draft"
-  | "pending_approval"
-  | "approved"
-  | "partially_received"
-  | "completed"
-  | "cancelled";
-
-export interface PurchaseOrderItemRecord {
-  id: string;
-  purchaseOrderId: string;
-  variantId: string;
-  quantity: number;
-  unitPrice: number;
-  receivedCount: number;
-  vin?: string | null;
-  color?: string | null;
-  notes: string | null;
-  createdAt: Date;
-}
-
-export interface PurchaseOrderRecord {
-  id: string;
-  companyId: string;
-  branchId: string;
-  vendorId: string;
-  poNumber: string;
-  status: PurchaseOrderStatus;
-  orderDate: string; // YYYY-MM-DD
-  expectedDeliveryDate: string | null;
-  currency: string;
-  totalAmount: number;
-  upfrontPaid: number;
-  remainingAmount: number;
-  installmentsCount: number;
-  notes: string | null;
-  createdByUserId: string | null;
-  approvedByUserId: string | null;
-  approvedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  items?: PurchaseOrderItemRecord[];
-  vendorName?: string;
-  branchName?: string;
-  companyName?: string;
-  companyLogoUrl?: string | null;
-  companyTimezone?: string | null;
-  companyCountryCode?: string | null;
-  parentCompanyName?: string | null;
-  parentCompanyLogoUrl?: string | null;
-  signatureDataUrl?: string | null;
-  signedByName?: string | null;
-  signedAt?: Date | null;
-}
-
-export interface CreatePurchaseOrderItemInput {
-  variantId: string;
-  quantity: number;
-  unitPrice: number;
-  vin?: string | null;
-  color?: string | null;
-  notes?: string | null;
-}
-
-export interface CreatePurchaseOrderInput {
-  id?: string;
-  companyId: string;
-  branchId: string;
-  vendorId: string;
-  poNumber?: string;
-  orderDate?: string;
-  expectedDeliveryDate?: string | null;
-  currency?: string;
-  totalAmount?: number;
-  upfrontPaid?: number;
-  installmentsCount?: number;
-  notes?: string | null;
-  createdByUserId?: string | null;
-  items: CreatePurchaseOrderItemInput[];
-}
-
-export interface ReceiveVehicleFromPoInput {
-  purchaseOrderId: string;
-  itemId: string;
-  branchId: string;
-  vin: string;
-  licensePlate: string;
-  keyNumber?: string | null;
-  color: string;
-  mileageOdometer?: number;
-  registrationExpiry?: string | null;
-  insuranceExpiry?: string | null;
-  notes?: string | null;
-  photoUrl?: string | null;
-  locationType?: string;
-  fuelPolicy?: string;
-  instantConfirmation?: boolean;
-  description?: string | null;
-  deliveryPolicy?: string | null;
-  dailyRate1to2?: number;
-  dailyRate3to7?: number;
-  dailyRate8Plus?: number;
-  damageExcess?: number;
-  mileagePolicy?: "unlimited" | "limited";
-  dailyKmLimit?: number | null;
-  extraKmRate?: number | null;
-  inclusions?: string[];
-  seats?: number;
-  doors?: number;
-  airConditioning?: boolean;
-  fuelType?: string;
-  luggageCapacity?: string;
-  transmission?: string;
-}
-
-export type FleetVehicleStatus =
-  | "available"
-  | "on_rent"
-  | "maintenance"
-  | "reserved"
-  | "out_of_service";
-
-export interface FleetVehicleRecord {
-  id: string;
-  companyId: string;
-  branchId: string;
-  variantId: string;
-  purchaseOrderId: string | null;
-  vin: string;
-  licensePlate: string;
-  keyNumber: string | null;
-  color: string;
-  mileageOdometer: number;
-  status: FleetVehicleStatus;
-  registrationExpiry: string | null;
-  insuranceExpiry: string | null;
-  notes: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  // Extended rental operations & specs fields
-  photoUrl: string | null;
-  locationType: string;
-  fuelPolicy: string;
-  instantConfirmation: boolean;
-  description: string | null;
-  deliveryPolicy: string | null;
-  dailyRate1to2: number;
-  dailyRate3to7: number;
-  dailyRate8Plus: number;
-  damageExcess: number;
-  mileagePolicy: "unlimited" | "limited";
-  dailyKmLimit: number;
-  extraKmRate: number;
-  inclusions: string[];
-  seats: number;
-  doors: number;
-  airConditioning: boolean;
-  fuelType: string;
-  luggageCapacity: string;
-  transmission: string;
-  // Enriched presentation fields
-  variant?: VehicleVariantRecord;
-  branchName?: string;
-  companyName?: string;
-  companyLogoUrl?: string | null;
-  companyTimezone?: string | null;
-  companyCountryCode?: string | null;
-  parentCompanyName?: string | null;
-  parentCompanyLogoUrl?: string | null;
-  signatureDataUrl?: string | null;
-  signedByName?: string | null;
-  signedAt?: Date | null;
-  isPartnerVehicle?: boolean;
-}
-
-export interface CreateFleetVehicleInput {
-  id?: string;
-  companyId: string;
-  branchId: string;
-  variantId: string;
-  purchaseOrderId?: string | null;
-  vin: string;
-  licensePlate: string;
-  keyNumber?: string | null;
-  color: string;
-  mileageOdometer?: number;
-  status?: FleetVehicleStatus;
-  registrationExpiry?: string | null;
-  insuranceExpiry?: string | null;
-  notes?: string | null;
-  photoUrl?: string | null;
-  locationType?: string;
-  fuelPolicy?: string;
-  instantConfirmation?: boolean;
-  description?: string | null;
-  deliveryPolicy?: string | null;
-  dailyRate1to2?: number;
-  dailyRate3to7?: number;
-  dailyRate8Plus?: number;
-  damageExcess?: number;
-  mileagePolicy?: "unlimited" | "limited";
-  dailyKmLimit?: number | null;
-  extraKmRate?: number | null;
-  inclusions?: string[];
-  seats?: number;
-  doors?: number;
-  airConditioning?: boolean;
-  fuelType?: string;
-  luggageCapacity?: string;
-  transmission?: string;
-}
-
-export interface UpdateFleetVehicleInput {
-  branchId?: string;
-  keyNumber?: string | null;
-  color?: string;
-  mileageOdometer?: number;
-  status?: FleetVehicleStatus;
-  registrationExpiry?: string | null;
-  insuranceExpiry?: string | null;
-  notes?: string | null;
-  photoUrl?: string | null;
-  locationType?: string;
-  fuelPolicy?: string;
-  instantConfirmation?: boolean;
-  description?: string | null;
-  deliveryPolicy?: string | null;
-  dailyRate1to2?: number;
-  dailyRate3to7?: number;
-  dailyRate8Plus?: number;
-  damageExcess?: number;
-  mileagePolicy?: "unlimited" | "limited";
-  dailyKmLimit?: number | null;
-  extraKmRate?: number | null;
-  inclusions?: string[];
-  seats?: number;
-  doors?: number;
-  airConditioning?: boolean;
-  fuelType?: string;
-  luggageCapacity?: string;
-  transmission?: string;
-}
-
-export interface FleetVehicleFilterOptions {
-  branchId?: string;
-  status?: FleetVehicleStatus;
-  variantId?: string;
-  search?: string;
-  includeNetwork?: boolean;
-}
+export type * from "./contracts/auth.ts";
+export type * from "./contracts/workspace.ts";
+export type * from "./contracts/team.ts";
+export type * from "./contracts/network.ts";
+export type * from "./contracts/fleet.ts";
+export type * from "./contracts/purchasing.ts";
+export type * from "./contracts/rentals.ts";

@@ -2057,4 +2057,158 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     make.models.push(created);
     return created;
   }
+
+  private insuranceCompaniesById = new Map<string, any>();
+  private vehiclePoliciesByVehicleId = new Map<string, any[]>();
+  private vehicleOdometerByVehicleId = new Map<string, any[]>();
+  private vehicleMaintByVehicleId = new Map<string, any[]>();
+  private vehicleInspectionsByVehicleId = new Map<string, any[]>();
+
+  async listInsuranceCompanies(companyId: string) {
+    return Array.from(this.insuranceCompaniesById.values()).filter(
+      (c) => c.companyId === companyId,
+    );
+  }
+
+  async createInsuranceCompany(input: any) {
+    const created = {
+      id: crypto.randomUUID(),
+      companyId: input.companyId,
+      name: input.name,
+      contactPerson: input.contactPerson ?? null,
+      phone: input.phone ?? null,
+      email: input.email ?? null,
+      address: input.address ?? null,
+      createdAt: new Date(),
+    };
+    this.insuranceCompaniesById.set(created.id, created);
+    return created;
+  }
+
+  async deleteInsuranceCompany(_companyId: string, id: string) {
+    return this.insuranceCompaniesById.delete(id);
+  }
+
+  async getVehicleLifecycleProfile(_companyId: string, vehicleId: string) {
+    const inspections = this.vehicleInspectionsByVehicleId.get(vehicleId) ?? [];
+    return {
+      insurancePolicies: this.vehiclePoliciesByVehicleId.get(vehicleId) ?? [],
+      odometerLogs: this.vehicleOdometerByVehicleId.get(vehicleId) ?? [],
+      maintenanceLogs: this.vehicleMaintByVehicleId.get(vehicleId) ?? [],
+      inspections,
+      damagePoints: inspections.flatMap((i: any) => i.damagePoints ?? []),
+    };
+  }
+
+  async upsertVehicleInsurancePolicy(input: any) {
+    const created = { ...input, id: crypto.randomUUID(), status: "active", createdAt: new Date() };
+    const list = this.vehiclePoliciesByVehicleId.get(input.vehicleId) ?? [];
+    this.vehiclePoliciesByVehicleId.set(input.vehicleId, [created, ...list]);
+    return created;
+  }
+
+  async updateVehiclePricingTiers(_companyId: string, vehicleId: string, input: any) {
+    const v = await this.findFleetVehicleById(vehicleId);
+    if (!v) return null;
+    return { ...v, ...input, updatedAt: new Date() };
+  }
+
+  async addVehicleMaintenanceLog(input: any) {
+    const created = { ...input, id: crypto.randomUUID(), createdAt: new Date() };
+    const list = this.vehicleMaintByVehicleId.get(input.vehicleId) ?? [];
+    this.vehicleMaintByVehicleId.set(input.vehicleId, [created, ...list]);
+    return created;
+  }
+
+  async addVehicleInspection(input: any) {
+    const inspId = crypto.randomUUID();
+    const damagePoints = (input.damagePoints ?? []).map((dp: any) => ({
+      ...dp,
+      id: crypto.randomUUID(),
+      inspectionId: inspId,
+      vehicleId: input.vehicleId,
+      repairCost: dp.repairCost ?? 0,
+      isResolved: false,
+      createdAt: new Date(),
+    }));
+    const created = { ...input, id: inspId, inspectedAt: new Date(), damagePoints };
+    const list = this.vehicleInspectionsByVehicleId.get(input.vehicleId) ?? [];
+    this.vehicleInspectionsByVehicleId.set(input.vehicleId, [created, ...list]);
+    return created;
+  }
+
+  private customersById = new Map<string, any>();
+  private contractsById = new Map<string, any>();
+
+  async toggleFleetVehicleBookable(companyId: string, vehicleId: string, isBookable: boolean) {
+    const v = this.vehiclesById.get(vehicleId);
+    if (!v || v.companyId !== companyId) return null;
+    v.isBookable = isBookable;
+    v.publishedToFleetAt = isBookable ? new Date() : null;
+    v.updatedAt = new Date();
+    return this.findFleetVehicleById(vehicleId);
+  }
+
+  async listCustomers(companyId: string) {
+    return Array.from(this.customersById.values()).filter((c) => c.companyId === companyId);
+  }
+
+  async createCustomer(input: any) {
+    const rec = { ...input, id: crypto.randomUUID(), createdAt: new Date(), updatedAt: new Date() };
+    this.customersById.set(rec.id, rec);
+    return rec;
+  }
+
+  async updateCustomer(companyId: string, customerId: string, input: any) {
+    const existing = this.customersById.get(customerId);
+    if (!existing || existing.companyId !== companyId) return null;
+    const updated = { ...existing, ...input, updatedAt: new Date() };
+    this.customersById.set(customerId, updated);
+    return updated;
+  }
+
+  async deleteCustomer(companyId: string, customerId: string) {
+    const existing = this.customersById.get(customerId);
+    if (!existing || existing.companyId !== companyId) return false;
+    return this.customersById.delete(customerId);
+  }
+
+  async listRentalContracts(companyId: string) {
+    return Array.from(this.contractsById.values()).filter((c) => c.companyId === companyId);
+  }
+
+  async createRentalContract(input: any) {
+    const rec = {
+      ...input,
+      id: crypto.randomUUID(),
+      contractNumber: `RC-${String(this.contractsById.size + 1).padStart(4, "0")}`,
+      status: "active",
+      returnOdometer: null,
+      discount: input.discount ?? 0,
+      insuranceFee: input.insuranceFee ?? 0,
+      extraCharges: input.extraCharges ?? 0,
+      paidAmount: input.paidAmount ?? 0,
+      depositAmount: input.depositAmount ?? 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.contractsById.set(rec.id, rec);
+    return rec;
+  }
+
+  async completeRentalContract(companyId: string, contractId: string, input: any) {
+    const existing = this.contractsById.get(contractId);
+    if (!existing || existing.companyId !== companyId) return null;
+    const updated = { ...existing, ...input, status: "completed", updatedAt: new Date() };
+    this.contractsById.set(contractId, updated);
+    return updated;
+  }
+
+  async cancelRentalContract(companyId: string, contractId: string) {
+    const existing = this.contractsById.get(contractId);
+    if (!existing || existing.companyId !== companyId) return null;
+    const updated = { ...existing, status: "cancelled", updatedAt: new Date() };
+    this.contractsById.set(contractId, updated);
+    return updated;
+  }
 }

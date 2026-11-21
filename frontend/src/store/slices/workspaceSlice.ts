@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { workspaceApi } from "../api/workspaceApi";
+import { normalizePage } from "../../lib/workspace/pagination";
 
 export type WorkspaceSectionId =
   | "overview"
@@ -106,10 +107,7 @@ export const workspaceSlice = createSlice({
       state,
       action: PayloadAction<{ routeKey: string; page: number }>,
     ) {
-      state.pageByRoute[action.payload.routeKey] = Math.max(
-        1,
-        Math.floor(action.payload.page),
-      );
+      state.pageByRoute[action.payload.routeKey] = normalizePage(action.payload.page);
     },
   },
   extraReducers: (builder) => {

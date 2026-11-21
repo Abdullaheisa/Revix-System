@@ -1,22 +1,14 @@
 "use client";
 
+import { getApiErrorMessage } from "@/lib/api/errors";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
-import {
-  useCreateVehicleMakeMutation,
-  useCreateVehicleModelMutation,
-  useCreateVariantMutation,
-  useDeleteVariantMutation,
-  useListVehicleMakesQuery,
-  useListVariantsQuery,
-  useUpdateVariantMutation,
-  type VehicleCategory,
-  type VehicleVariantDto,
-} from "@/store/api/fleetApi";
+import { useCreateVehicleMakeMutation, useCreateVehicleModelMutation, useCreateVariantMutation, useDeleteVariantMutation, useListVehicleMakesQuery, useListVariantsQuery, useUpdateVariantMutation, type VehicleCategory, type VehicleVariantDto } from "@/store/api/fleetApi";
 
 interface VehicleVariantsPanelProps {
   isRtl: boolean;
@@ -43,8 +35,6 @@ const CATEGORY_LABELS: Record<VehicleCategory, { en: string; ar: string }> = {
   commercial: { en: "Commercial", ar: "تجاري" },
 };
 
-const CUSTOM_CATALOG_STORAGE_KEY = "revix_custom_vehicle_catalog";
-
 const DEFAULT_VEHICLE_CATALOG: Record<string, string[]> = {
   Toyota: ["Camry", "Corolla", "RAV4", "Land Cruiser", "Hilux", "Yaris", "Prado"],
   Hyundai: ["Elantra", "Sonata", "Tucson", "Santa Fe", "Accent", "Creta"],
@@ -69,23 +59,11 @@ interface CatalogComboboxProps {
   addNewLabel: (val: string) => string;
 }
 
-function CatalogCombobox({
-  value,
-  options,
-  placeholder,
-  disabled = false,
-  isRtl,
-  onChange,
-  onAddNew,
-  addNewLabel,
-}: CatalogComboboxProps) {
+function CatalogCombobox({ value, options, placeholder, disabled = false, isRtl, onChange, onAddNew, addNewLabel }: CatalogComboboxProps) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState(value);
+  const [queryOverride, setQuery] = useState<string | null>(null);
+  const query = open ? (queryOverride ?? value) : value;
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -187,12 +165,9 @@ function CatalogCombobox({
   );
 }
 
-export function VehicleVariantsPanel({
-  isRtl,
-  onGoFleetVehicles,
-}: VehicleVariantsPanelProps) {
+export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategory] = useState<string>("all");
   const [page, setPage] = usePersistedPage("fleet/variants");
   const pageSize = 15;
   const { data, isLoading, refetch, isFetching } = useListVariantsQuery({
@@ -213,7 +188,7 @@ export function VehicleVariantsPanel({
   const [formModel, setFormModel] = useState("");
   const [formYear, setFormYear] = useState(new Date().getFullYear());
   const [formTrim, setFormTrim] = useState("Standard");
-  const [formDisplayName, setFormDisplayName] = useState("");
+  const [customDisplayName, setFormDisplayName] = useState("");
   const [isDisplayNameCustom, setIsDisplayNameCustom] = useState(false);
   const [formCategory, setFormCategory] = useState<VehicleCategory>("sedan");
   const [formSipp, setFormSipp] = useState("ICAR");
@@ -306,11 +281,7 @@ export function VehicleVariantsPanel({
       .join(" ");
   }, [formYear, formMake, formModel, formTrim]);
 
-  useEffect(() => {
-    if (!isDisplayNameCustom) {
-      setFormDisplayName(autoDisplayName);
-    }
-  }, [autoDisplayName, isDisplayNameCustom]);
+  const formDisplayName = isDisplayNameCustom ? customDisplayName : autoDisplayName;
   const totalVariants = data?.pagination?.totalItems ?? variants.length;
   const filteredVariants = variants;
   const paginatedVariants = variants;
@@ -427,9 +398,9 @@ export function VehicleVariantsPanel({
         }).unwrap();
       }
       setIsModalOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setFormError(
-        err?.data?.error?.message ||
+        getApiErrorMessage(err) ||
           (isRtl
             ? "تعذر حفظ فئة السيارة، برجاء التحقق من البيانات."
             : "Failed to save vehicle variant."),
@@ -617,7 +588,7 @@ export function VehicleVariantsPanel({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-revix-border/80">
-                  {paginatedVariants.map((v, idx) => (
+                  {paginatedVariants.map((v) => (
                     <tr
                       key={v.id}
                       className="transition-colors hover:bg-revix-surface/60"
@@ -814,7 +785,7 @@ export function VehicleVariantsPanel({
                       size="sm"
                       isRtl={isRtl}
                       value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value as any)}
+                      onChange={(e) => setFormCategory(e.target.value as VehicleCategory)}
                       buttonClassName="h-9 rounded-lg text-xs"
                       options={[
                         { value: "sedan", label: isRtl ? "سيدان (Sedan)" : "Sedan" },

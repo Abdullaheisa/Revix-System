@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  useId,
-  type InputHTMLAttributes,
-  type ReactNode,
-  type Ref,
-  type TextareaHTMLAttributes,
-} from "react";
-import { RevixIcon } from "@/components/ui/RevixIcons";
+import { useId, type InputHTMLAttributes, type ReactNode, type Ref, type TextareaHTMLAttributes } from "react";
+
 import { RevixSelect, type SelectOption } from "@/components/ui/RevixSelect";
 
 export type { SelectOption };
@@ -31,15 +25,7 @@ interface FieldShellProps {
   children: ReactNode;
 }
 
-function FieldShell({
-  fieldId,
-  label,
-  labelEnd,
-  helperText,
-  error,
-  className = "",
-  children,
-}: FieldShellProps) {
+function FieldShell({ fieldId, label, labelEnd, helperText, error, className = "", children }: FieldShellProps) {
   const hasError = Boolean(error);
   const errorId = `${fieldId}-error`;
   const helperId = `${fieldId}-helper`;
@@ -95,17 +81,7 @@ export interface FormInputProps extends InputHTMLAttributes<HTMLInputElement> {
   ref?: Ref<HTMLInputElement>;
 }
 
-export function FormInput({
-  label,
-  labelEnd,
-  helperText,
-  error,
-  rightElement,
-  id,
-  className = "",
-  ref,
-  ...props
-}: FormInputProps) {
+export function FormInput({ label, labelEnd, helperText, error, rightElement, id, className = "", ref, ...props }: FormInputProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const hasError = Boolean(error);
@@ -160,25 +136,7 @@ export interface FormSelectProps {
   onBlur?: () => void;
 }
 
-export function FormSelect({
-  label,
-  placeholder,
-  options,
-  helperText,
-  error,
-  id,
-  name,
-  className = "",
-  menuClassName = "",
-  value,
-  defaultValue,
-  disabled = false,
-  required = false,
-  searchable,
-  isRtl,
-  onChange,
-  onBlur,
-}: FormSelectProps) {
+export function FormSelect({ label, placeholder, options, helperText, error, id, name, className = "", menuClassName = "", value, defaultValue, disabled = false, required = false, searchable, isRtl, onChange, onBlur }: FormSelectProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
 
@@ -219,15 +177,7 @@ export interface FormTextareaProps
   ref?: Ref<HTMLTextAreaElement>;
 }
 
-export function FormTextarea({
-  label,
-  helperText,
-  error,
-  id,
-  className = "",
-  ref,
-  ...props
-}: FormTextareaProps) {
+export function FormTextarea({ label, helperText, error, id, className = "", ref, ...props }: FormTextareaProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const hasError = Boolean(error);

@@ -39,7 +39,7 @@ export function PriceListPanel({
   const [damageExcess, setDamageExcess] = useState<number>(0);
   const [formError, setFormError] = useState<string | undefined>();
 
-  const vehicles = vehiclesResp?.data ?? [];
+  const vehicles = useMemo(() => vehiclesResp?.data ?? [], [vehiclesResp?.data]);
 
   const filteredVehicles = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();

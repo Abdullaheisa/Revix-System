@@ -32,7 +32,8 @@ export function StudioIconRail({
       const timer = window.setTimeout(() => setIsExpandedStable(true), 210);
       return () => window.clearTimeout(timer);
     } else {
-      setIsExpandedStable(false);
+      const timer = window.setTimeout(() => setIsExpandedStable(false), 0);
+      return () => window.clearTimeout(timer);
     }
   }, [isExpanded]);
 

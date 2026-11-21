@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
+import { createCorsPolicy } from "./security/corsPolicy.ts";
 import type { BackendEnvConfig } from "./config/env.ts";
 import type { AuthDataStore } from "./db/store.ts";
 import { createAuthRouter } from "./modules/auth/authRouter.ts";
@@ -34,30 +35,7 @@ export function createApp(options: {
   const app = express();
   app.disable("x-powered-by");
 
-  app.use(
-    cors({
-      origin: (requestOrigin, callback) => {
-        // Allow requests with no origin (like mobile apps, curl, server-to-server)
-        if (!requestOrigin) return callback(null, true);
-
-        // If configured as wildcard, or matches exact configured origin, or preview deployments
-        if (
-          env.frontendOrigin === "*" ||
-          env.frontendOrigin === requestOrigin ||
-          requestOrigin.endsWith(".vercel.app") ||
-          requestOrigin.includes("localhost") ||
-          requestOrigin.includes("127.0.0.1")
-        ) {
-          return callback(null, true);
-        }
-
-        return callback(null, true);
-      },
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Accept", "X-Requested-With", "Authorization"],
-    }),
-  );
+  app.use(cors(createCorsPolicy(env)));
 
   app.use(
     helmet({
@@ -80,6 +58,7 @@ export function createApp(options: {
     store,
     emailAdapter,
     sessionTtlHours: env.sessionTtlHours,
+    requireEmailVerification: env.requireEmailVerification ?? env.nodeEnv !== "development",
   });
 
   const teamService = new TeamService({

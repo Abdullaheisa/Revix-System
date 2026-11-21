@@ -248,7 +248,7 @@ export function LocationsManager({
         </div>
       </div>
 
-      {/* Supabase-Studio-Style Toolbar */}
+      {/* Workspace-style toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex items-center">

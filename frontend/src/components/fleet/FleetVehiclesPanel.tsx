@@ -1,35 +1,25 @@
 "use client";
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
+import { parseFleetResourceRoute, vehicleHref, type VehicleProfileTab } from "@/lib/workspace/resourceRoutes";
+import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
+import { useGetVehicleQuery } from "@/store/api/fleetApi";
+import { VehicleProfilePage } from "./vehicle-profile/VehicleProfilePage";
 
-import { useMemo, useState } from "react";
+import { getApiErrorMessage } from "@/lib/api/errors";
+
+import { useEffect, useMemo, useState } from "react";
 import { useAppDispatch } from "@/store/hooks";
-import {
-  navigateToWorkspacePage,
-  setPendingFleetReceiveContext,
-  clearPendingFleetReceiveContext,
-} from "@/store/slices/workspaceSlice";
+import { navigateToWorkspacePage, setPendingFleetReceiveContext, clearPendingFleetReceiveContext } from "@/store/slices/workspaceSlice";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { VehicleInspectionsTab } from "./vehicle-profile/VehicleInspectionsTab";
+import { getExpiryMeta } from "@/lib/fleet/vehicleLifecycleData";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
-import {
-  useCreateVehicleMutation,
-  useListVehiclesQuery,
-  useListVariantsQuery,
-  useListPurchaseOrdersQuery,
-  useReceiveVehicleMutation,
-  useUpdateVehicleStatusMutation,
-  type FleetVehicleDto,
-  type FleetVehicleStatus,
-  type PurchaseOrderDto,
-  type PurchaseOrderItemDto,
-  type VehicleVariantDto,
-} from "@/store/api/fleetApi";
-import {
-  useGetWorkspaceContextQuery,
-  type BranchDto,
-  type CompanyDto,
-} from "@/store/api/workspaceApi";
+import { useCreateVehicleMutation, useListVehiclesQuery, useListVariantsQuery, useListPurchaseOrdersQuery, useReceiveVehicleMutation, useUpdateVehicleStatusMutation, useListInsuranceCompaniesQuery, useGetVehicleLifecycleQuery, useSaveVehicleInsuranceMutation, useUpdateVehiclePricingMutation, useAddVehicleMaintenanceMutation, useToggleVehicleBookableMutation, type FleetVehicleDto, type FleetVehicleStatus, type PurchaseOrderDto, type PurchaseOrderItemDto, type VehicleVariantDto } from "@/store/api/fleetApi";
+import { useGetWorkspaceContextQuery, type BranchDto, type CompanyDto } from "@/store/api/workspaceApi";
 
 interface FleetVehiclesPanelProps {
   isRtl: boolean;
@@ -85,19 +75,21 @@ interface PendingDeliveryItem {
   branchName?: string;
 }
 
-export function FleetVehiclesPanel({
-  isRtl,
-  branches,
-  activeBranch,
-  company,
-  onGoVariants,
-  onGoPurchaseOrders,
-}: FleetVehiclesPanelProps) {
+export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: FleetVehiclesPanelProps) {
+  const router = useRouter(); const pathname = usePathname(); const searchParams = useSearchParams();
+  const resourceRoute = parseFleetResourceRoute(pathname);
+  const detailId = resourceRoute?.id || searchParams.get("id");
+  const activeVehicleTab: VehicleProfileTab = resourceRoute?.tab ?? "overview";
+  const { data: detailResponse, isLoading: isLoadingDetail, error: detailError, refetch: refetchDetail } = useGetVehicleQuery(detailId ?? "", { skip: !detailId });
+  const selectedVehicleForDetails = detailId ? detailResponse?.data ?? null : null;
   const isNetworkMain = company?.operatingMode === "network_main";
-  const [selectedBranchId, setSelectedBranchId] = useState<string>(activeBranch?.id || "all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const selectedBranchId = activeBranch?.id || "all";
+  const [selectedStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [includeNetwork, setIncludeNetwork] = useState(false);
+
+
+
+  const [includeNetwork] = useState(false);
   const [page, setPage] = usePersistedPage("fleet/vehicles");
   const pageSize = 15;
   const dispatch = useAppDispatch();
@@ -109,7 +101,7 @@ export function FleetVehiclesPanel({
     membership.roleCode === "ceo" ||
     Boolean(membership.permissions.fleet?.includes("create"));
 
-  const { data, isLoading, refetch, isFetching } = useListVehiclesQuery({
+  const { data, isLoading } = useListVehiclesQuery({
     branchId: selectedBranchId !== "all" ? selectedBranchId : undefined,
     status: selectedStatus !== "all" ? (selectedStatus as FleetVehicleStatus) : undefined,
     search: search.trim() || undefined,
@@ -119,7 +111,7 @@ export function FleetVehiclesPanel({
   });
 
   const { data: variantsData } = useListVariantsQuery();
-  const { data: poData, refetch: refetchPos } = useListPurchaseOrdersQuery({
+  const { data: poData } = useListPurchaseOrdersQuery({
     branchId: selectedBranchId !== "all" ? selectedBranchId : undefined,
   });
 
@@ -128,6 +120,21 @@ export function FleetVehiclesPanel({
   const [updateStatus] = useUpdateVehicleStatusMutation();
 
   const vehicles = useMemo(() => data?.data ?? [], [data?.data]);
+
+  const syncVehicleUrl = (id: string | null, tab: VehicleProfileTab = "overview", push = false) => {
+ const params = new URLSearchParams(searchParams.toString()); for (const key of ["id", "tab", "mode"]) params.delete(key);
+ const path = id ? vehicleHref(id, tab) : "/workspace/fleet/vehicles";
+ const href = path + (params.size ? "?" + params : "");
+ if (push) router.push(href); else router.replace(href);
+};
+
+  const openVehicleDetails = (vehicle: FleetVehicleDto) => syncVehicleUrl(vehicle.id, "overview", true);
+
+  const closeVehicleDetails = () => syncVehicleUrl(null, "overview", true);
+
+  const switchVehicleTab = (tab: VehicleProfileTab, id?: string) => { if (id || detailId) syncVehicleUrl(id || detailId, tab); };
+
+
   const totalVehicles = data?.pagination?.totalItems ?? vehicles.length;
   const variants = useMemo(() => variantsData?.data ?? [], [variantsData?.data]);
   const purchaseOrders = useMemo(() => poData?.data ?? [], [poData?.data]);
@@ -158,25 +165,6 @@ export function FleetVehiclesPanel({
     }
     return list;
   }, [purchaseOrders, variants, branches]);
-
-  const pendingOrders = useMemo(() => {
-    return purchaseOrders
-      .filter((po) => po.status === "approved" || po.status === "partially_received")
-      .map((po) => {
-        const totalQty = po.items?.reduce((sum, it) => sum + it.quantity, 0) || 0;
-        const totalRcv = po.items?.reduce((sum, it) => sum + it.receivedCount, 0) || 0;
-        const remaining = totalQty - totalRcv;
-        const branch = branches.find((b) => b.id === po.branchId);
-        return {
-          po,
-          totalQty,
-          totalRcv,
-          remaining,
-          branchName: branch?.name || po.branchName,
-        };
-      })
-      .filter((p) => p.remaining > 0);
-  }, [purchaseOrders, branches]);
 
   const stats = useMemo(() => {
     const total = vehicles.length;
@@ -295,9 +283,9 @@ export function FleetVehiclesPanel({
         }).unwrap();
 
         setIsModalOpen(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setFormError(
-          err?.data?.error?.message ||
+          getApiErrorMessage(err) ||
             (isRtl
               ? "تعذر تحويل الشحنة إلى سيارة بالأسطول."
               : "Failed to convert shipment into fleet vehicle."),
@@ -328,9 +316,9 @@ export function FleetVehiclesPanel({
         }).unwrap();
 
         setIsModalOpen(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setFormError(
-          err?.data?.error?.message ||
+          getApiErrorMessage(err) ||
             (isRtl
               ? "تعذر تسجيل السيارة في الأسطول مباشرة."
               : "Failed to register vehicle asset directly."),
@@ -341,67 +329,19 @@ export function FleetVehiclesPanel({
 
   const isSubmitting = isCreatingDirect || isReceivingPo;
 
+  if (detailId && (!selectedVehicleForDetails || detailError)) {
+    return <ResourceFeedback isRtl={isRtl} isLoading={isLoadingDetail} onRetry={() => { void refetchDetail(); }} onBack={closeVehicleDetails} />;
+  }
+  if (selectedVehicleForDetails) {
+    return <VehicleProfilePage key={selectedVehicleForDetails.id} vehicle={selectedVehicleForDetails} isRtl={isRtl} company={company} activeVehicleTab={activeVehicleTab} onClose={closeVehicleDetails} onTabChange={switchVehicleTab} />;
+  }
   return (
     <div className="space-y-6" dir={isRtl ? "rtl" : "ltr"}>
       {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
-              {isRtl ? "سجل سيارات الأسطول" : "Fleet Vehicles Asset Register"}
-            </h1>
-          </div>
-          <p className="mt-1 text-xs text-revix-secondary sm:text-sm">
-            {isRtl
-              ? "متابعة سيارات الأسطول، تحويل الشحنات الواردة من أوامر الشراء، وتسجيل الأصول وأرقام اللوحات والجاهزية التشغيلية."
-              : "Manage fleet vehicles, convert incoming shipments from purchase orders, and register asset identifiers."}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              refetch();
-              refetchPos();
-            }}
-            disabled={isFetching}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 text-xs font-medium text-revix-dark shadow-xs transition hover:bg-revix-surface active:scale-95 disabled:opacity-50 shrink-0"
-            title={isRtl ? "تحديث البيانات" : "Refresh data"}
-          >
-            <RevixIcon
-              name="refresh-cw"
-              className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-revix-primary" : "text-revix-secondary"}`}
-            />
-            <span>{isRtl ? "تحديث" : "Refresh"}</span>
-          </button>
-
-          {pendingDeliveries.length > 0 && (
-            <button
-              type="button"
-              onClick={() => handleOpenConvertModal()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/5 px-3.5 text-xs font-semibold text-revix-primary shadow-xs transition hover:bg-revix-primary hover:text-revix-white active:scale-95 shrink-0"
-            >
-              <RevixIcon name="car-front" className="h-4 w-4" />
-              <span>{isRtl ? "تحويل شحنة واردة" : "Convert Arriving PO"}</span>
-              <span className="rounded-full bg-revix-primary text-revix-white px-1.5 py-0.2 text-[10px] font-bold">
-                {pendingDeliveries.reduce((a, b) => a + b.remainingCount, 0)}
-              </span>
-            </button>
-          )}
-
-          {/* Primary Action: Add Vehicle to Fleet Assets */}
-          {canCreateFleet && (
-            <button
-              type="button"
-              onClick={handleOpenDirectModal}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-revix-primary px-4 text-xs font-semibold text-revix-white shadow-xs transition hover:bg-revix-primary-hover active:scale-95 shrink-0"
-            >
-              <RevixIcon name="plus" className="h-4 w-4" />
-              <span>{isRtl ? "إضافة سيارة للأصول" : "Add Vehicle to Assets"}</span>
-            </button>
-          )}
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
+          {isRtl ? "أصول السيارات" : "Vehicle Assets"}
+        </h1>
       </div>
 
       {/* KPI Cards */}
@@ -487,87 +427,10 @@ export function FleetVehiclesPanel({
               }`}
             />
           </div>
-
-          {/* Branch Filter */}
-          <div className="w-44">
-            <RevixSelect
-              size="sm"
-              isRtl={isRtl}
-              value={selectedBranchId}
-              onChange={(e) => {
-                setSelectedBranchId(e.target.value);
-                setPage(1);
-              }}
-              buttonClassName="h-9 rounded-lg text-xs"
-              options={[
-                { value: "all", label: isRtl ? "جميع الفروع" : "All Branches" },
-                ...branches.map((b) => ({
-                  value: b.id,
-                  label: `${b.name} (${b.currencyCode})`,
-                })),
-              ]}
-            />
-          </div>
-
-          {/* Network Partner Toggle for Main Network Companies */}
-          {isNetworkMain && (
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-revix-border bg-revix-white px-2.5 py-1.5 text-xs font-semibold text-revix-secondary hover:bg-revix-surface">
-              <input
-                type="checkbox"
-                checked={includeNetwork}
-                onChange={(e) => {
-                  setIncludeNetwork(e.target.checked);
-                  setPage(1);
-                }}
-                className="h-3.5 w-3.5 accent-revix-primary"
-              />
-              <RevixIcon name="network" className="h-3.5 w-3.5 text-revix-primary" />
-              <span>
-                {isRtl ? "عرض سيارات الشركاء (شبكة الشركات)" : "Include Partner Fleet"}
-              </span>
-            </label>
-          )}
-        </div>
-
-        {/* Status Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedStatus("all");
-              setPage(1);
-            }}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-              selectedStatus === "all"
-                ? "bg-revix-primary text-revix-white"
-                : "border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-            }`}
-          >
-            {isRtl ? "الكل" : "All"} ({vehicles.length})
-          </button>
-          {(
-            ["available", "on_rent", "maintenance", "reserved", "out_of_service"] as FleetVehicleStatus[]
-          ).map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => {
-                setSelectedStatus(st);
-                setPage(1);
-              }}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                selectedStatus === st
-                  ? "bg-revix-primary text-revix-white"
-                  : "border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-              }`}
-            >
-              {isRtl ? VEHICLE_STATUS_CONFIG[st].ar : VEHICLE_STATUS_CONFIG[st].en}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Vehicles Grid */}
+      {/* Vehicles Table */}
       {isLoading ? (
         <div className="flex h-48 items-center justify-center rounded-xl border border-revix-border bg-revix-white text-xs text-revix-secondary">
           <RevixIcon name="refresh-cw" className="mr-2 h-4 w-4 animate-spin text-revix-primary" />
@@ -609,161 +472,112 @@ export function FleetVehiclesPanel({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {paginatedVehicles.map((vh) => {
-              const statusConfig =
-                VEHICLE_STATUS_CONFIG[vh.status] || VEHICLE_STATUS_CONFIG.available;
-              const variant = vh.variant;
+          <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-start text-xs">
+                <thead>
+                  <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wide text-revix-muted">
+                    <th className="px-4 py-3 text-start">{isRtl ? "اللوحة" : "Plate"}</th>
+                    <th className="px-4 py-3 text-start">{isRtl ? "السيارة" : "Vehicle"}</th>
+                    <th className="px-3 py-3 text-start">SIPP</th>
+                    <th className="px-3 py-3 text-start">{isRtl ? "اللون" : "Color"}</th>
+                    <th className="px-3 py-3 text-start">{isRtl ? "رقم الشاسيه" : "Chassis Number"}</th>
+                    <th className="px-3 py-3 text-start">{isRtl ? "المفتاح" : "Key"}</th>
+                    <th className="px-3 py-3 text-start">{isRtl ? "العداد" : "Odometer"}</th>
+                    <th className="px-3 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
+                    <th className="px-4 py-3 text-end w-40">{isRtl ? "تغيير الحالة" : "Quick Status"}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-revix-border/70">
+                  {paginatedVehicles.map((vh) => {
+                    const statusConfig = VEHICLE_STATUS_CONFIG[vh.status] || VEHICLE_STATUS_CONFIG.available;
 
-              return (
-                <div
-                  key={vh.id}
-                  className="flex flex-col justify-between rounded-xl border border-revix-border bg-revix-white p-4 shadow-xs transition hover:border-revix-primary/40 hover:shadow-sm"
-                >
-                  <div>
-                    {/* Top Badges */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-xs font-bold text-revix-dark">
-                          {vh.licensePlate}
-                        </span>
-                        {vh.isPartnerVehicle && (
-                          <span className="rounded-md bg-revix-info-soft px-1.5 py-0.5 text-[10px] font-semibold text-revix-info">
-                            {isRtl ? "شريك محلي" : "Partner Asset"}
+                    const variant = vh.variant;
+
+                    return (
+                      <tr
+                        key={vh.id}
+                        onClick={() => openVehicleDetails(vh)}
+                        className="cursor-pointer transition-colors hover:bg-revix-surface/40"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-xs font-bold text-revix-dark">
+                              {vh.licensePlate}
+                            </span>
+                            {vh.isPartnerVehicle && (
+                              <span className="rounded bg-revix-info-soft px-1.5 py-0.5 text-[10px] font-semibold text-revix-info">
+                                {isRtl ? "شريك" : "Partner"}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-revix-dark">
+                            {variant ? `${variant.make} ${variant.model} ${variant.modelYear}` : "Fleet Vehicle"}
+                          </div>
+                          {variant?.trim && (
+                            <div className="text-[11px] text-revix-muted">{variant.trim}</div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="rounded bg-revix-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary">
+                            {variant?.sippCode || "—"}
                           </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusConfig.badgeClass}`}
-                        >
-                          <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dotClass}`} />
-                          <span>{isRtl ? statusConfig.ar : statusConfig.en}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Make & Model */}
-                    <div className="mt-3">
-                      <h3 className="text-base font-bold text-revix-dark">
-                        {variant ? `${variant.make} ${variant.model}` : "Fleet Vehicle"}{" "}
-                        <span className="font-normal text-revix-secondary">
-                          {variant?.modelYear}
-                        </span>
-                      </h3>
-                      <p className="text-xs text-revix-secondary">
-                        {variant?.trim} • {vh.color}{" "}
-                        {vh.keyNumber ? `• Key: ${vh.keyNumber}` : ""}
-                      </p>
-                    </div>
-
-                    {/* VIN Monospace */}
-                    <div className="mt-3 flex items-center justify-between rounded-md bg-revix-surface/70 px-2.5 py-1.5 font-mono text-[11px] text-revix-secondary">
-                      <span className="text-[10px] text-revix-muted">VIN:</span>
-                      <span className="font-semibold text-revix-dark select-all">
-                        {vh.vin}
-                      </span>
-                    </div>
-
-                    {/* Specs & Branch */}
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="block text-[10px] text-revix-muted">
-                          {isRtl ? "الفرع المخصص" : "Branch"}
-                        </span>
-                        <span className="font-semibold text-revix-dark">
-                          {vh.branchName || "Branch"}
-                        </span>
-                      </div>
-
-                      <div>
-                        <span className="block text-[10px] text-revix-muted">
-                          {isRtl ? "العداد الحالي" : "Odometer"}
-                        </span>
-                        <span className="font-semibold text-revix-dark font-mono">
+                        </td>
+                        <td className="px-3 py-3 font-semibold text-revix-dark">
+                          {vh.color || "—"}
+                        </td>
+                        <td className="px-3 py-3 font-mono font-semibold text-revix-dark select-all">
+                          {vh.vin || "—"}
+                        </td>
+                        <td className="px-3 py-3 font-mono font-semibold text-revix-dark">
+                          {vh.keyNumber || "—"}
+                        </td>
+                        <td className="px-3 py-3 font-mono font-semibold text-revix-dark tabular-nums">
                           {vh.mileageOdometer.toLocaleString()} {isRtl ? "كم" : "km"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Vehicle Model Specifications */}
-                    {variant && (
-                      <div className="mt-3 grid grid-cols-3 gap-1.5 rounded-lg bg-revix-surface/60 p-2 text-center text-[10px]">
-                        <div>
-                          <span className="block text-revix-muted">
-                            {isRtl ? "ناقل الحركة" : "Trans"}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span
+                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            <span>{isRtl ? statusConfig.ar : statusConfig.en}</span>
                           </span>
-                          <span className="font-semibold text-revix-dark capitalize">
-                            {variant.transmission === "automatic"
-                              ? isRtl
-                                ? "أوتوماتيك"
-                                : "Auto"
-                              : isRtl
-                                ? "يدوي"
-                                : "Manual"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-revix-muted">
-                            {isRtl ? "الوقود" : "Fuel"}
-                          </span>
-                          <span className="font-semibold text-revix-dark capitalize">
-                            {variant.fuelType === "petrol"
-                              ? isRtl
-                                ? "بنزين"
-                                : "Petrol"
-                              : variant.fuelType === "diesel"
-                                ? isRtl
-                                  ? "ديزل"
-                                  : "Diesel"
-                                : variant.fuelType}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-revix-muted">
-                            {isRtl ? "كود SIPP" : "SIPP"}
-                          </span>
-                          <span className="font-mono font-bold text-revix-primary">
-                            {variant.sippCode}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Status Toggle Dropdown */}
-                  {!vh.isPartnerVehicle && (
-                    <div className="mt-4 flex items-center justify-between gap-2 border-t border-revix-border/60 pt-3 text-xs">
-                      <span className="text-revix-muted shrink-0">
-                        {isRtl ? "تغيير الحالة:" : "Quick Status:"}
-                      </span>
-                      <div className="w-36">
-                        <RevixSelect
-                          size="sm"
-                          isRtl={isRtl}
-                          value={vh.status}
-                          onChange={(e) =>
-                            updateStatus({
-                              id: vh.id,
-                              status: e.target.value as FleetVehicleStatus,
-                            })
-                          }
-                          buttonClassName="h-7 rounded-md text-[11px] font-semibold"
-                          options={[
-                            { value: "available", label: isRtl ? "جاهزة" : "Available" },
-                            { value: "on_rent", label: isRtl ? "مؤجرة" : "On Rent" },
-                            { value: "maintenance", label: isRtl ? "صيانة" : "Maintenance" },
-                            { value: "reserved", label: isRtl ? "محجوزة" : "Reserved" },
-                            { value: "out_of_service", label: isRtl ? "خارج الخدمة" : "Out of Service" },
-                          ]}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                        </td>
+                        <td className="px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
+                          {!vh.isPartnerVehicle ? (
+                            <div className="inline-block w-36 text-start">
+                              <RevixSelect
+                                size="sm"
+                                isRtl={isRtl}
+                                value={vh.status}
+                                onChange={(e) =>
+                                  updateStatus({
+                                    id: vh.id,
+                                    status: e.target.value as FleetVehicleStatus,
+                                  })
+                                }
+                                buttonClassName="h-8 rounded-lg text-[11px] font-semibold"
+                                options={[
+                                  { value: "available", label: isRtl ? "جاهزة" : "Available" },
+                                  { value: "on_rent", label: isRtl ? "مؤجرة" : "On Rent" },
+                                  { value: "maintenance", label: isRtl ? "صيانة" : "Maintenance" },
+                                  { value: "reserved", label: isRtl ? "محجوزة" : "Reserved" },
+                                  { value: "out_of_service", label: isRtl ? "خارج الخدمة" : "Out of Service" },
+                                ]}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-revix-muted">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Unified Pagination */}

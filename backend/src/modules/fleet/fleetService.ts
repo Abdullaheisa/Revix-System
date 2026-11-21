@@ -906,4 +906,293 @@ export class FleetService {
   async createVehicleModel(actor: TenantActor, makeId: string, name: string) {
     return this.store.createVehicleModel(actor.company.id, makeId, name);
   }
+
+  async listInsuranceCompanies(actor: TenantActor) {
+    return this.store.listInsuranceCompanies(actor.company.id);
+  }
+
+  async createInsuranceCompany(
+    actor: TenantActor,
+    input: {
+      name: string;
+      contactPerson?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      address?: string | null;
+    },
+  ) {
+    return this.store.createInsuranceCompany({
+      companyId: actor.company.id,
+      ...input,
+    });
+  }
+
+  async deleteInsuranceCompany(actor: TenantActor, id: string) {
+    return this.store.deleteInsuranceCompany(actor.company.id, id);
+  }
+
+  async getVehicleLifecycleProfile(actor: TenantActor, vehicleId: string) {
+    const vehicle = await this.store.findFleetVehicleById(vehicleId);
+    if (!vehicle || vehicle.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    }
+    return this.store.getVehicleLifecycleProfile(actor.company.id, vehicleId);
+  }
+
+  async upsertVehicleInsurancePolicy(
+    actor: TenantActor,
+    vehicleId: string,
+    input: {
+      insuranceCompanyId?: string | null;
+      providerName: string;
+      policyNumber: string;
+      coverageType: string;
+      premiumAmount: number;
+      deductibleAmount: number;
+      startDate: string;
+      expiryDate: string;
+      notes?: string | null;
+    },
+  ) {
+    const vehicle = await this.store.findFleetVehicleById(vehicleId);
+    if (!vehicle || vehicle.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    }
+    return this.store.upsertVehicleInsurancePolicy({
+      companyId: actor.company.id,
+      vehicleId,
+      ...input,
+    });
+  }
+
+  async updateVehiclePricingTiers(
+    actor: TenantActor,
+    vehicleId: string,
+    input: {
+      dailyRate1to2: number;
+      dailyRate3to7: number;
+      dailyRate8Plus: number;
+      damageExcess: number;
+      mileagePolicy: "unlimited" | "limited";
+      dailyKmLimit: number;
+      extraKmRate: number;
+    },
+  ) {
+    const vehicle = await this.store.findFleetVehicleById(vehicleId);
+    if (!vehicle || vehicle.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    }
+    return this.store.updateVehiclePricingTiers(actor.company.id, vehicleId, input);
+  }
+
+  async addVehicleMaintenanceLog(
+    actor: TenantActor,
+    vehicleId: string,
+    input: {
+      serviceType: string;
+      workshopName?: string | null;
+      odometerAtService: number;
+      nextServiceKm?: number | null;
+      nextServiceDate?: string | null;
+      cost: number;
+      status: string;
+      notes?: string | null;
+      serviceDate: string;
+    },
+  ) {
+    const vehicle = await this.store.findFleetVehicleById(vehicleId);
+    if (!vehicle || vehicle.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    }
+    return this.store.addVehicleMaintenanceLog({
+      companyId: actor.company.id,
+      vehicleId,
+      ...input,
+    });
+  }
+
+  async addVehicleInspection(
+    actor: TenantActor,
+    vehicleId: string,
+    input: {
+      inspectionType: string;
+      bookingRef?: string | null;
+      customerName?: string | null;
+      odometerKm: number;
+      hasAccident: boolean;
+      accidentNotes?: string | null;
+      damagePoints: Array<{
+        zoneKey: string;
+        severity: string;
+        description?: string | null;
+        repairCost?: number;
+      }>;
+    },
+  ) {
+    const vehicle = await this.store.findFleetVehicleById(vehicleId);
+    if (!vehicle || vehicle.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    }
+    return this.store.addVehicleInspection({
+      companyId: actor.company.id,
+      vehicleId,
+      inspectedBy: actor.user.fullName || actor.user.email || "Staff",
+      ...input,
+    });
+  }
+
+  // ============================================================================
+  // Phase 2: Bookable Fleet, Customers & Rental Contracts
+  // ============================================================================
+
+  async toggleVehicleBookable(actor: TenantActor, vehicleId: string, isBookable: boolean) {
+    const vehicle = await this.store.findFleetVehicleById(vehicleId);
+    if (!vehicle || vehicle.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    }
+    const updated = await this.store.toggleFleetVehicleBookable(actor.company.id, vehicleId, isBookable);
+    if (!updated) {
+      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    }
+    return updated;
+  }
+
+  async listCustomers(actor: TenantActor) {
+    return this.store.listCustomers(actor.company.id);
+  }
+
+  async createCustomer(
+    actor: TenantActor,
+    input: {
+      fullName: string;
+      phone: string;
+      email?: string | null;
+      nationalId?: string | null;
+      driverLicenseNo?: string | null;
+      licenseExpiry?: string | null;
+      nationality?: string | null;
+      address?: string | null;
+      notes?: string | null;
+    },
+  ) {
+    if (!input.fullName?.trim() || !input.phone?.trim()) {
+      throw new FleetServiceError(400, "VALIDATION_ERROR", "Customer name and phone are required.");
+    }
+    return this.store.createCustomer({ companyId: actor.company.id, ...input });
+  }
+
+  async updateCustomer(
+    actor: TenantActor,
+    customerId: string,
+    input: {
+      fullName: string;
+      phone: string;
+      email?: string | null;
+      nationalId?: string | null;
+      driverLicenseNo?: string | null;
+      licenseExpiry?: string | null;
+      nationality?: string | null;
+      address?: string | null;
+      notes?: string | null;
+    },
+  ) {
+    const updated = await this.store.updateCustomer(actor.company.id, customerId, input);
+    if (!updated) {
+      throw new FleetServiceError(404, "CUSTOMER_NOT_FOUND", "Customer not found.");
+    }
+    return updated;
+  }
+
+  async deleteCustomer(actor: TenantActor, customerId: string) {
+    return this.store.deleteCustomer(actor.company.id, customerId);
+  }
+
+  async listRentalContracts(actor: TenantActor) {
+    return this.store.listRentalContracts(actor.company.id);
+  }
+
+  async createRentalContract(
+    actor: TenantActor,
+    input: {
+      vehicleId: string;
+      customerId: string;
+      startDate: string;
+      endDate: string;
+      pickupOdometer?: number;
+      dailyRate?: number;
+      discount?: number;
+      insuranceFee?: number;
+      extraCharges?: number;
+      paidAmount?: number;
+      depositAmount?: number;
+      notes?: string | null;
+    },
+  ) {
+    const vehicle = await this.store.findFleetVehicleById(input.vehicleId);
+    if (!vehicle || vehicle.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    }
+    if (vehicle.status !== "available") {
+      throw new FleetServiceError(409, "VEHICLE_UNAVAILABLE", "Vehicle is not available for rental.");
+    }
+
+    const start = new Date(input.startDate);
+    const end = new Date(input.endDate);
+    const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+
+    const autoRate =
+      diffDays >= 8
+        ? Number(vehicle.dailyRate8Plus || vehicle.dailyRate3to7 || vehicle.dailyRate1to2 || 0)
+        : diffDays >= 3
+          ? Number(vehicle.dailyRate3to7 || vehicle.dailyRate1to2 || 0)
+          : Number(vehicle.dailyRate1to2 || 0);
+
+    const dailyRate = input.dailyRate !== undefined && input.dailyRate > 0 ? input.dailyRate : autoRate;
+    const subtotal = dailyRate * diffDays;
+    const discount = Number(input.discount ?? 0);
+    const insuranceFee = Number(input.insuranceFee ?? 0);
+    const extraCharges = Number(input.extraCharges ?? 0);
+    const totalAmount = Math.max(0, subtotal - discount + insuranceFee + extraCharges);
+
+    return this.store.createRentalContract({
+      companyId: actor.company.id,
+      branchId: vehicle.branchId,
+      vehicleId: vehicle.id,
+      customerId: input.customerId,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      pickupOdometer: input.pickupOdometer ?? vehicle.mileageOdometer,
+      dailyRate,
+      totalDays: diffDays,
+      subtotal,
+      discount,
+      insuranceFee,
+      extraCharges,
+      totalAmount,
+      paidAmount: Number(input.paidAmount ?? 0),
+      depositAmount: Number(input.depositAmount ?? 0),
+      notes: input.notes ?? null,
+      createdByUserId: actor.user.id,
+    });
+  }
+
+  async completeRentalContract(
+    actor: TenantActor,
+    contractId: string,
+    input: { returnOdometer: number; extraCharges?: number; paidAmount?: number; notes?: string | null },
+  ) {
+    const updated = await this.store.completeRentalContract(actor.company.id, contractId, input);
+    if (!updated) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    return updated;
+  }
+
+  async cancelRentalContract(actor: TenantActor, contractId: string) {
+    const updated = await this.store.cancelRentalContract(actor.company.id, contractId);
+    if (!updated) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    return updated;
+  }
 }

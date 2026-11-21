@@ -5,21 +5,9 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput, FormSelect } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
-import {
-  RevixConfirmModal,
-  StudioBadge,
-  StudioModal,
-} from "@/components/shared/workspace";
+import { RevixConfirmModal, StudioModal } from "@/components/shared/workspace";
 import { extractApiErrorCode } from "@/store/api/baseApi";
-import {
-  useCreateRoleMutation,
-  useDeleteRoleMutation,
-  useGetTeamOverviewQuery,
-  useUpdateRoleMutation,
-  type CompanyRoleDto,
-  type PermissionMatrix,
-  type RoleScopeType,
-} from "@/store/api/teamApi";
+import { useCreateRoleMutation, useDeleteRoleMutation, useGetTeamOverviewQuery, useUpdateRoleMutation, type CompanyRoleDto, type PermissionMatrix, type RoleScopeType } from "@/store/api/teamApi";
 import type { WorkspaceMembershipDto } from "@/store/api/workspaceApi";
 
 export interface RolesMatrixPanelProps {

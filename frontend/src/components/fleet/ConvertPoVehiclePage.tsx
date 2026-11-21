@@ -1,15 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
+"use client";
+
+import { getApiErrorMessage } from "@/lib/api/errors";
+import React, { useState, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import {
-  navigateToWorkspacePage,
-  clearPendingFleetReceiveContext,
-} from "../../store/slices/workspaceSlice";
-import {
-  useListVariantsQuery,
-  useCreateVehicleMutation,
-  useReceiveVehicleMutation,
-  useListPurchaseOrdersQuery,
-} from "../../store/api/fleetApi";
+import { navigateToWorkspacePage, clearPendingFleetReceiveContext } from "../../store/slices/workspaceSlice";
+import { useListVariantsQuery, useCreateVehicleMutation, useReceiveVehicleMutation, useListPurchaseOrdersQuery, type PurchaseOrderDto } from "../../store/api/fleetApi";
 import { useGetWorkspaceContextQuery, type BranchDto } from "../../store/api/workspaceApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
@@ -17,6 +12,7 @@ import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
 
 interface ConvertPoVehiclePageProps {
   lang?: "ar" | "en";
+  purchaseOrder?: PurchaseOrderDto | null;
   onBack?: () => void;
   onSuccess?: () => void;
 }
@@ -34,11 +30,7 @@ const COLOR_OPTIONS = [
   { value: "Beige", label: "Beige", ar: "بيج (Beige)" },
 ];
 
-export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({
-  lang = "ar",
-  onBack,
-  onSuccess,
-}) => {
+export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({ lang = "ar", purchaseOrder, onBack, onSuccess }) => {
   const isAr = lang === "ar";
   const dispatch = useAppDispatch();
 
@@ -52,40 +44,26 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({
   const [createVehicle, { isLoading: isCreating }] = useCreateVehicleMutation();
   const [receiveVehicle, { isLoading: isReceiving }] = useReceiveVehicleMutation();
 
-  const variants = variantsRes?.data || [];
-  const branches: BranchDto[] = workspaceCtx?.data?.branches || [];
-  const purchaseOrders = posRes?.data || [];
+  const variants = useMemo(() => variantsRes?.data ?? [], [variantsRes?.data]);
+  const branches: BranchDto[] = useMemo(() => workspaceCtx?.data?.branches ?? [], [workspaceCtx?.data?.branches]);
+  const purchaseOrders = useMemo(() => posRes?.data ?? [], [posRes?.data]);
 
   const activePo = useMemo(() => {
+    if (purchaseOrder) return purchaseOrder;
     if (!pendingReceive?.purchaseOrderId) return null;
     return purchaseOrders.find((p) => p.id === pendingReceive.purchaseOrderId) || null;
-  }, [purchaseOrders, pendingReceive]);
+  }, [purchaseOrder, purchaseOrders, pendingReceive]);
 
-  const [selectedVariantId, setSelectedVariantId] = useState<string>("");
-  const [vin, setVin] = useState("");
+  const [selectedVariantId] = useState<string>(pendingReceive?.variantId || "");
+  const [vin, setVin] = useState(pendingReceive?.vin || "");
   const [licensePlate, setLicensePlate] = useState("");
   const [keyNumber, setKeyNumber] = useState("");
-  const [color, setColor] = useState("White");
+  const [color, setColor] = useState(pendingReceive?.color || "White");
   const [mileageOdometer, setMileageOdometer] = useState<number>(0);
-  const [deliveryPolicy, setDeliveryPolicy] = useState("branch_pickup");
+  const [deliveryPolicy] = useState("branch_pickup");
   const [registrationExpiry, setRegistrationExpiry] = useState("");
   const [insuranceExpiry, setInsuranceExpiry] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (pendingReceive) {
-      setSelectedVariantId(pendingReceive.variantId || "");
-      setVin(pendingReceive.vin || "");
-      setColor(pendingReceive.color || "White");
-      setLicensePlate("");
-      setKeyNumber("");
-      setMileageOdometer(0);
-      setDeliveryPolicy("branch_pickup");
-      setRegistrationExpiry("");
-      setInsuranceExpiry("");
-      setErrorMsg(null);
-    }
-  }, [pendingReceive]);
 
   const selectedVariant = useMemo(
     () => variants.find((v) => v.id === selectedVariantId) || null,
@@ -167,9 +145,9 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({
           subPage: "vehicles",
         }),
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
-        err?.data?.error?.message ||
+        getApiErrorMessage(err) ||
           (isAr
             ? "تعذر تسجيل السيارة في الأسطول."
             : "Failed to register vehicle as a fleet asset."),
@@ -289,8 +267,8 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({
               </div>
             </div>
 
-            {/* Row 2: Color, Current Odometer, Delivery Policy */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Row 2: Color, Current Odometer */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
                   {isAr ? "اللون *" : "COLOR *"}
@@ -326,32 +304,6 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({
                     </span>
                   </span>
                 </div>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
-                  {isAr ? "سياسة التسليم" : "DELIVERY POLICY"}
-                </label>
-                <RevixSelect
-                  size="sm"
-                  isRtl={isAr}
-                  value={deliveryPolicy}
-                  onChange={(e) => setDeliveryPolicy(e.target.value)}
-                  buttonClassName="h-10 rounded-lg text-xs"
-                  options={[
-                    {
-                      value: "branch_pickup",
-                      label: isAr ? "استلام من الفرع فقط" : "Branch Pickup Only",
-                    },
-                    {
-                      value: "delivery_available",
-                      label: isAr ? "التوصيل متاح" : "Delivery Available",
-                    },
-                    {
-                      value: "airport_meetup",
-                      label: isAr ? "تسليم بالمطار" : "Airport Meetup",
-                    },
-                  ]}
-                />
               </div>
             </div>
 

@@ -1,37 +1,26 @@
 "use client";
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
+import { parseFleetResourceRoute, purchaseOrderHref } from "@/lib/workspace/resourceRoutes";
+import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
+import { useGetPurchaseOrderQuery } from "@/store/api/fleetApi";
+import NextImage from "next/image";
 
-import { useMemo, useRef, useState } from "react";
+import { getApiErrorMessage } from "@/lib/api/errors";
+
+import { useEffect, useMemo, useState } from "react";
 import { ConvertPoVehiclePage } from "./ConvertPoVehiclePage";
-import {
-  formatCompanyDate,
-  formatCompanyDateTime,
-  getCompanyTodayIso,
-} from "@/lib/date/companyDate";
+import { SignaturePadModal } from "@/components/shared/SignaturePadModal";
+import { formatCompanyDate, formatCompanyDateTime } from "@/lib/date/companyDate";
 import { useAppDispatch } from "@/store/hooks";
-import {
-  navigateToWorkspacePage,
-  setPendingFleetReceiveContext,
-} from "@/store/slices/workspaceSlice";
+import { navigateToWorkspacePage, setPendingFleetReceiveContext } from "@/store/slices/workspaceSlice";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
-import {
-  useCreatePurchaseOrderMutation,
-  useListPurchaseOrdersQuery,
-  useListVariantsQuery,
-  useListVendorsQuery,
-  useListVehiclesQuery,
-  useReceiveVehicleMutation,
-  useSignPurchaseOrderMutation,
-  useUpdatePurchaseOrderStatusMutation,
-  type CreatePurchaseOrderItemInput,
-  type PurchaseOrderDto,
-  type PurchaseOrderStatus,
-  type PaymentTermsType,
-} from "@/store/api/fleetApi";
+import { useCreatePurchaseOrderMutation, useListPurchaseOrdersQuery, useListVariantsQuery, useListVendorsQuery, useListVehiclesQuery, useReceiveVehicleMutation, useSignPurchaseOrderMutation, useUpdatePurchaseOrderStatusMutation, type CreatePurchaseOrderItemInput, type PurchaseOrderDto, type PurchaseOrderStatus, type PaymentTermsType } from "@/store/api/fleetApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import type { BranchDto } from "@/store/api/workspaceApi";
 import { PaymentTermsSelector } from "./PaymentTermsSelector";
@@ -79,11 +68,15 @@ const PO_STATUS_LABELS: Record<
   },
 };
 
-export function PurchaseOrdersPanel({
-  isRtl,
-  branches,
-  activeBranch,
-}: PurchaseOrdersPanelProps) {
+export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseOrdersPanelProps) {
+  const router = useRouter(); const pathname = usePathname(); const searchParams = useSearchParams();
+  const resourceRoute = parseFleetResourceRoute(pathname);
+  const detailId = resourceRoute?.id || searchParams.get("id");
+  const isCreateModalOpen = resourceRoute?.action === "create" || searchParams.get("mode") === "create";
+  const isConvertingVehicle = resourceRoute?.action === "receive";
+  const { data: detailResponse, isLoading: isLoadingDetail, error: detailError, refetch: refetchDetail } = useGetPurchaseOrderQuery(detailId ?? "", { skip: !detailId });
+  const selectedPoForDetails = detailId ? detailResponse?.data ?? null : null;
+  const setIsConvertingVehicle = (receive: boolean) => { if (detailId) router.push(purchaseOrderHref(detailId, receive ? "receive" : undefined)); };
   const { data: wsContext } = useGetWorkspaceContextQuery();
   const membership = wsContext?.data.membership ?? null;
   const canApprovePo =
@@ -94,11 +87,11 @@ export function PurchaseOrdersPanel({
     Boolean(membership.permissions.purchase_orders?.includes("approve")) ||
     Boolean(membership.permissions.finance?.includes("approve"));
 
-  const [selectedBranchId] = useState<string>("all");
+  const selectedBranchId = activeBranch?.id || "all";
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [page, setPage] = usePersistedPage("fleet/purchase-orders");
   const pageSize = 15;
-  const [selectedPoForDetails, setSelectedPoForDetails] = useState<PurchaseOrderDto | null>(null);
+
   const [pendingDeletePo, setPendingDeletePo] = useState<PurchaseOrderDto | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useListPurchaseOrdersQuery({
@@ -119,13 +112,10 @@ export function PurchaseOrdersPanel({
   const [receiveVehicle, { isLoading: isReceiving }] = useReceiveVehicleMutation();
   const [signPurchaseOrder, { isLoading: isSigning }] = useSignPurchaseOrderMutation();
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
-  const [isConvertingVehicle, setIsConvertingVehicle] = useState(false);
-  const [createStep, setCreateStep] = useState<1 | 2 | 3>(1);
-  const sigCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isDrawingSig, setIsDrawingSig] = useState(false);
-  const [hasDrawnSig, setHasDrawnSig] = useState(false);
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [] = useState<1 | 2 | 3>(1);
+
+
   const [receivingPo, setReceivingPo] = useState<PurchaseOrderDto | null>(null);
 
   // Form State for Create PO
@@ -164,6 +154,31 @@ export function PurchaseOrdersPanel({
   const totalPurchaseOrders = data?.pagination?.totalItems ?? purchaseOrders.length;
   const variants = useMemo(() => variantsData?.data ?? [], [variantsData?.data]);
 
+  const syncPoUrl = (opts: { id?: string | null; mode?: "create" | null }, push = false) => {
+ const params = new URLSearchParams(searchParams.toString()); for (const key of ["id", "mode", "tab"]) params.delete(key);
+ const path = purchaseOrderHref(opts.id, opts.mode === "create" ? "create" : undefined);
+ const href = path + (params.size ? "?" + params : "");
+ if (push) router.push(href); else router.replace(href);
+};
+
+  const openPoDetails = (po: PurchaseOrderDto) => {
+
+
+    syncPoUrl({ id: po.id }, true);
+  };
+
+  const closePoDetails = () => {
+
+    syncPoUrl({}, true);
+  };
+
+  const closeCreatePo = () => {
+
+    syncPoUrl({}, true);
+  };
+
+
+
   const expandedVehicleUnits = useMemo(() => {
     const units: Array<{
       key: string;
@@ -195,7 +210,7 @@ export function PurchaseOrdersPanel({
     return units;
   }, [formItems, variants]);
   const vendors = useMemo(() => vendorsData?.data ?? [], [vendorsData?.data]);
-  const allFleetVehicles = useMemo(() => vehiclesData?.data ?? [], [vehiclesData?.data]);
+
 
   const paginatedPurchaseOrders = purchaseOrders;
 
@@ -246,7 +261,8 @@ export function PurchaseOrdersPanel({
       { variantId: defaultVariantId, quantity: 1, unitPrice: 0, vin: "", color: "", notes: "" },
     ]);
     setCreateError(null);
-    setIsCreateModalOpen(true);
+
+    syncPoUrl({ mode: "create" }, true);
   }
 
   function handleAddLineItem() {
@@ -266,10 +282,10 @@ export function PurchaseOrdersPanel({
     setFormItems((prev) => prev.filter((_, idx) => idx !== index));
   }
 
-  function handleItemChange(
+  function handleItemChange<K extends keyof CreatePurchaseOrderItemInput>(
     index: number,
-    field: keyof CreatePurchaseOrderItemInput,
-    val: any,
+    field: K,
+    val: CreatePurchaseOrderItemInput[K],
   ) {
     setFormItems((prev) => {
       const copy = [...prev];
@@ -502,18 +518,20 @@ export function PurchaseOrdersPanel({
         items: expandedItems,
       }).unwrap();
 
-      setIsCreateModalOpen(false);
+      const nextPo = created.data;
+
       setChassisByUnitKey({});
-      setSelectedPoForDetails(created?.data ?? (created as any));
+
+      if (nextPo?.id) syncPoUrl({ id: nextPo.id }, true);
       window.scrollTo({ top: 0, behavior: "smooth" });
       if (created?.data) {
         setTimeout(() => {
           handlePrintLpo(created.data);
         }, 300);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setCreateError(
-        err?.data?.error?.message ||
+        getApiErrorMessage(err) ||
           (isRtl
             ? "تعذر إنشاء أمر الشراء."
             : "Failed to create purchase order."),
@@ -573,9 +591,9 @@ export function PurchaseOrdersPanel({
       }).unwrap();
 
       setReceivingPo(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setRecvError(
-        err?.data?.error?.message ||
+        getApiErrorMessage(err) ||
           (isRtl
             ? "تعذر تسجيل استلام السيارة."
             : "Failed to receive vehicle asset."),
@@ -583,10 +601,18 @@ export function PurchaseOrdersPanel({
     }
   }
 
+  if (detailId && (!selectedPoForDetails || detailError)) {
+    return <ResourceFeedback isRtl={isRtl} isLoading={isLoadingDetail} onRetry={() => { void refetchDetail(); }} onBack={closePoDetails} />;
+  }
   if (isConvertingVehicle) {
+    const activePoForConvert =
+      (selectedPoForDetails
+        ? purchaseOrders.find((p) => p.id === selectedPoForDetails.id) ?? selectedPoForDetails
+        : null);
     return (
       <ConvertPoVehiclePage
         lang={isRtl ? "ar" : "en"}
+        purchaseOrder={activePoForConvert}
         onBack={() => setIsConvertingVehicle(false)}
         onSuccess={() => setIsConvertingVehicle(false)}
       />
@@ -600,7 +626,7 @@ export function PurchaseOrdersPanel({
     const totalQty = po.items?.reduce((acc, it) => acc + it.quantity, 0) || 0;
     const totalRcv = po.items?.reduce((acc, it) => acc + it.receivedCount, 0) || 0;
     const progressPct = totalQty > 0 ? Math.round((totalRcv / totalQty) * 100) : 0;
-    const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
+
 
     return (
       <>
@@ -740,7 +766,7 @@ export function PurchaseOrdersPanel({
             <div className="w-64">
               {po.signatureDataUrl ? (
                 <div className="space-y-1">
-                  <img
+                  <NextImage unoptimized width={640} height={480}
                     src={po.signatureDataUrl}
                     alt="Authorized Signature"
                     className="h-16 object-contain"
@@ -763,76 +789,59 @@ export function PurchaseOrdersPanel({
           </div>
         </div>
 
-        <div className="space-y-5 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border pb-4">
-          <div className="space-y-1">
+        <div className="mx-auto max-w-6xl space-y-5 print:hidden">
+        {/* Clean Top Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-revix-border pb-4">
+          <div className="flex items-center gap-4">
             <button
               type="button"
-              onClick={() => setSelectedPoForDetails(null)}
-              className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-revix-primary hover:underline"
+              onClick={closePoDetails}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-2 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
             >
               <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
-              <span>{isRtl ? "الرجوع لأوامر الشراء" : "Back to Purchase Orders"}</span>
+              <span>{isRtl ? "رجوع" : "Back"}</span>
             </button>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="font-mono text-xl font-bold text-revix-dark">
+            <div className="h-8 w-px bg-revix-border" />
+            <div>
+              <h1 className="font-mono text-lg font-bold tracking-tight text-revix-dark">
                 {po.poNumber}
               </h1>
-              <span
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusConfig.badgeClass}`}
-              >
-                {isRtl ? statusConfig.ar : statusConfig.en}
-              </span>
+              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-revix-secondary">
+                <RevixIcon name="calendar" size={12} className="text-revix-muted" />
+                <span>
+                  {formatCompanyDate(po.orderDate, {
+                    timezone: po.companyTimezone || activeBranch?.timezone,
+                    locale: isRtl ? "ar-EG" : "en-GB",
+                  })}
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-revix-secondary">
-              {isRtl ? "تاريخ الطلب:" : "Order Date:"} {po.orderDate}
-              {po.expectedDeliveryDate
-                ? ` • ${isRtl ? "التسليم المتوقع:" : "Expected:"} ${po.expectedDeliveryDate}`
-                : ""}
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => handlePrintLpo(po)}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-2 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
             >
               <RevixIcon name="file-text" size={14} />
-              <span>{isRtl ? "تحميل PDF / طباعة" : "Download PDF / Print"}</span>
+              <span>{isRtl ? "تحميل PDF / طباعة" : "Download PDF"}</span>
             </button>
             {canApprovePo && (
               <button
                 type="button"
-                onClick={() => {
-                  setHasDrawnSig(Boolean(po.signatureDataUrl));
-                  setIsSignModalOpen(true);
-                  if (po.signatureDataUrl) {
-                    setTimeout(() => {
-                      const canvas = sigCanvasRef.current;
-                      if (!canvas) return;
-                      const ctx = canvas.getContext("2d");
-                      if (!ctx) return;
-                      const img = new Image();
-                      img.onload = () => {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                      };
-                      img.src = po.signatureDataUrl!;
-                    }, 50);
-                  }
-                }}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-1.5 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
+                onClick={() => setIsSignModalOpen(true)}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-2 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
               >
                 <RevixIcon name="check-circle-2" size={14} />
                 <span>
                   {po.signatureDataUrl
                     ? isRtl
-                      ? "تحديث التوقيع الإلكتروني"
-                      : "Update E-Signature"
+                      ? "تحديث التوقيع"
+                      : "Update Signature"
                     : isRtl
-                      ? "توقيع أمر الشراء إلكترونياً"
-                      : "Sign PO (E-Signature)"}
+                      ? "توقيع الطلب"
+                      : "Sign PO"}
                 </span>
               </button>
             )}
@@ -844,17 +853,7 @@ export function PurchaseOrdersPanel({
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50"
               >
                 <RevixIcon name="shield-check" size={14} />
-                <span>{isRtl ? "اعتماد أمر الشراء" : "Approve Purchase Order"}</span>
-              </button>
-            )}
-            {(po.status === "approved" || po.status === "partially_received") && totalQty - totalRcv > 0 && (
-              <button
-                type="button"
-                onClick={() => handleOpenReceiveModal(po)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover"
-              >
-                <RevixIcon name="car-front" size={14} />
-                <span>{isRtl ? "تحويل سيارة للأصول" : "Convert Car to Asset"}</span>
+                <span>{isRtl ? "اعتماد" : "Approve"}</span>
               </button>
             )}
             {po.status !== "cancelled" && po.status !== "completed" && (
@@ -864,101 +863,86 @@ export function PurchaseOrdersPanel({
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
               >
                 <RevixIcon name="trash-2" size={14} />
-                <span>{isRtl ? "حذف / إلغاء" : "Delete / Cancel"}</span>
+                <span>{isRtl ? "إلغاء" : "Cancel"}</span>
               </button>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 rounded-xl border border-revix-border bg-revix-surface/60 p-4 text-xs sm:grid-cols-4">
-          <div>
-            <span className="block text-[10px] text-revix-muted">{isRtl ? "المورد" : "Vendor"}</span>
-            <span className="font-semibold text-revix-dark">{po.vendorName || "Vendor"}</span>
+        {/* Premium 4-Card KPI Strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex items-start justify-between rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-revix-muted">
+                {isRtl ? "المورد" : "Vendor"}
+              </div>
+              <div className="mt-1.5 text-base font-bold text-revix-dark truncate">
+                {po.vendorName || "—"}
+              </div>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-revix-surface text-revix-secondary">
+              <RevixIcon name="users-round" size={16} />
+            </div>
           </div>
-          <div>
-            <span className="block text-[10px] text-revix-muted">{isRtl ? "فرع الاستلام" : "Target Branch"}</span>
-            <span className="font-semibold text-revix-dark">{po.companyName || po.branchName || "Company"}</span>
+
+          <div className="flex items-start justify-between rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-revix-muted">
+                {isRtl ? "الشركة" : "Company"}
+              </div>
+              <div className="mt-1.5 text-base font-bold text-revix-dark truncate">
+                {po.companyName || po.branchName || "—"}
+              </div>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-revix-surface text-revix-secondary">
+              <RevixIcon name="globe-2" size={16} />
+            </div>
           </div>
-          <div>
-            <span className="block text-[10px] text-revix-muted">{isRtl ? "إجمالي المبلغ" : "Total Amount"}</span>
-            <span className="font-mono font-bold text-revix-dark">{Number(po.totalAmount).toLocaleString()} {po.currency}</span>
+
+          <div className="flex items-start justify-between rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-revix-muted">
+                {isRtl ? "الإجمالي" : "Total Amount"}
+              </div>
+              <div className="mt-1.5 font-mono text-base font-bold text-revix-primary tabular-nums">
+                {Number(po.totalAmount).toLocaleString()} {po.currency}
+              </div>
+            </div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-revix-primary/10 text-revix-primary">
+              <RevixIcon name="file-text" size={16} />
+            </div>
           </div>
-          <div>
-            <span className="block text-[10px] text-revix-muted">{isRtl ? "المتبقي بالأقساط" : "Remaining Balance"}</span>
-            <span className="font-mono font-bold text-revix-primary">{Number(po.remainingAmount).toLocaleString()} {po.currency}</span>
+
+          <div className="rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-revix-muted">
+                {isRtl ? "حالة الأسطول" : "Fleet Progress"}
+              </span>
+              <span className="font-mono text-xs font-bold text-revix-primary">
+                {totalRcv} / {totalQty}
+              </span>
+            </div>
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-revix-surface">
+              <div
+                className="h-full rounded-full bg-revix-primary transition-all duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-revix-border bg-revix-white px-4 py-2.5 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-revix-secondary">{isRtl ? "خطة السداد:" : "Payment Terms:"}</span>
-            {(po as any).paymentMethod === "cash" && (
-              <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700 border border-emerald-200">
-                <RevixIcon name="check-circle-2" className="h-3 w-3" />
-                <span>{isRtl ? "كاش بالكامل" : "Full Cash"}</span>
+        <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xs">
+          <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-revix-dark">
+                {isRtl ? "السيارات" : "Vehicles"}
+              </h3>
+              <span className="rounded-full bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-bold text-revix-secondary">
+                {totalQty}
               </span>
-            )}
-            {(po as any).paymentMethod === "down_payment_installments" && (
-              <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 font-bold text-amber-800 border border-amber-200">
-                <RevixIcon name="wallet" className="h-3 w-3" />
-                <span>
-                  {isRtl
-                    ? `مقدم ${po.upfrontPaid.toLocaleString()} ${po.currency} + ${po.installmentsCount || 0} أقساط`
-                    : `Down ${po.upfrontPaid.toLocaleString()} ${po.currency} + ${po.installmentsCount || 0} installments`}
-                </span>
-              </span>
-            )}
-            {(po as any).paymentMethod === "deferred_credit" && (
-              <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 font-bold text-sky-700 border border-sky-200">
-                <RevixIcon name="clock" className="h-3 w-3" />
-                <span>
-                  {isRtl
-                    ? `آجل تجاري (المتبقي: ${po.remainingAmount.toLocaleString()} ${po.currency})`
-                    : `Credit Terms (Remaining: ${po.remainingAmount.toLocaleString()} ${po.currency})`}
-                </span>
-              </span>
-            )}
-            {(po as any).paymentMethod !== "cash" &&
-              (po as any).paymentMethod !== "down_payment_installments" &&
-              (po as any).paymentMethod !== "deferred_credit" && (
-                <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 font-bold text-sky-700 border border-sky-200">
-                  <RevixIcon name="clock" className="h-3 w-3" />
-                  <span>
-                    {Number(po.remainingAmount) === 0
-                      ? isRtl
-                        ? "مدفوع بالكامل"
-                        : "Paid in Full"
-                      : isRtl
-                        ? `آجل تجاري (المتبقي: ${Number(po.remainingAmount).toLocaleString()} ${po.currency})`
-                        : `Credit Terms (Remaining: ${Number(po.remainingAmount).toLocaleString()} ${po.currency})`}
-                  </span>
-                </span>
-              )}
+            </div>
           </div>
-          {po.notes && <span className="text-revix-secondary">{po.notes}</span>}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-revix-primary/20 bg-revix-primary/5 p-3 text-xs">
-          <div className="flex items-center gap-2">
-            <RevixIcon name="car-front" className="h-4 w-4 text-revix-primary" />
-            <span className="font-bold text-revix-dark">
-              {isRtl ? `إجمالي السيارات: ${totalQty}` : `Total Vehicles: ${totalQty}`}
-            </span>
-            <span className="text-revix-secondary">({progressPct}%)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-md bg-revix-accent-soft px-2 py-0.5 font-semibold text-revix-accent">
-              {totalRcv} {isRtl ? "تم تحويلها للأصول" : "in fleet"}
-            </span>
-            {totalQty - totalRcv > 0 && (
-              <span className="rounded-md bg-revix-warning-soft px-2 py-0.5 font-semibold text-revix-warning">
-                {totalQty - totalRcv} {isRtl ? "بانتظار الوصول" : "pending"}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="overflow-x-auto rounded-xl border border-revix-border bg-revix-white">
+          <div className="overflow-x-auto">
           <table className="w-full text-start text-xs">
             <thead>
               <tr className="border-b border-revix-border bg-revix-surface/50 text-[11px] font-semibold uppercase tracking-wide text-revix-secondary">
@@ -990,18 +974,18 @@ export function PurchaseOrdersPanel({
                   (v) => v.id === item.variantId,
                 );
                 const displayVariantName =
-                  (item as any).variantName ||
+                  item.variantName ||
                   (matchedVariant
                     ? `${matchedVariant.make} ${matchedVariant.model} ${matchedVariant.modelYear}`
                     : item.variantId);
                 const sippCode =
-                  (item as any).sippCode || matchedVariant?.sippCode || "CAR";
-                const linkedVehicles = (item as any).receivedVehicles || [];
+                  item.sippCode || matchedVariant?.sippCode || "CAR";
+                const linkedVehicles = item.receivedVehicles || [];
                 const slots = Array.from({ length: item.quantity }, (_, idx) => idx);
 
                 return slots.map((slotIdx) => {
                   const receivedCar = linkedVehicles[slotIdx];
-                  const isConverted = Boolean(receivedCar);
+                  const isConverted = Boolean(receivedCar) || slotIdx < Number(item.receivedCount || 0);
                   const displayVin = receivedCar?.vin || item.vin || "—";
                   const displayColor = receivedCar?.color || item.color || "—";
 
@@ -1031,25 +1015,32 @@ export function PurchaseOrdersPanel({
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
                             isConverted
-                              ? "bg-revix-accent-soft text-revix-accent"
-                              : "bg-revix-warning-soft text-revix-warning"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-amber-200 bg-amber-50 text-amber-700"
                           }`}
                         >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              isConverted ? "bg-emerald-500" : "bg-amber-500"
+                            }`}
+                          />
                           {isConverted
-                            ? isRtl
-                              ? `بالأسطول (${receivedCar.plateNumber})`
-                              : `In Fleet (${receivedCar.plateNumber})`
+                            ? receivedCar?.plateNumber
+                              ? isRtl
+                                ? `بالأسطول (${receivedCar.plateNumber})`
+                                : `In Fleet (${receivedCar.plateNumber})`
+                              : isRtl
+                                ? "بالأسطول"
+                                : "In Fleet"
                             : isRtl
                               ? "بانتظار الوصول"
                               : "Pending"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-end">
-                        {!isConverted &&
-                        (po.status === "approved" ||
-                          po.status === "partially_received") ? (
+                        {!isConverted && po.status !== "cancelled" && po.status !== "draft" ? (
                           <button
                             type="button"
                             onClick={() => handleOpenReceiveModal(po, item.id)}
@@ -1059,6 +1050,22 @@ export function PurchaseOrdersPanel({
                             <span>
                               {isRtl ? "تحويل للأسطول" : "Convert to Fleet Asset"}
                             </span>
+                          </button>
+                        ) : isConverted ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              dispatch(
+                                navigateToWorkspacePage({
+                                  section: "fleet",
+                                  subPage: "vehicles",
+                                }),
+                              )
+                            }
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-[11px] font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+                          >
+                            <RevixIcon name="arrow-right" size={12} />
+                            <span>{isRtl ? "عرض بالأسطول" : "View in Fleet"}</span>
                           </button>
                         ) : (
                           <span className="text-[11px] text-revix-muted">—</span>
@@ -1070,6 +1077,7 @@ export function PurchaseOrdersPanel({
               })}
             </tbody>
           </table>
+          </div>
         </div>
 
         <RevixConfirmModal
@@ -1089,128 +1097,33 @@ export function PurchaseOrdersPanel({
             if (!pendingDeletePo) return;
             await updateStatus({ id: pendingDeletePo.id, status: "cancelled" });
             setPendingDeletePo(null);
-            setSelectedPoForDetails(null);
+
           }}
           onCancel={() => setPendingDeletePo(null)}
         />
 
         {/* Electronic Signature Modal */}
-        {isSignModalOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
-            dir={isRtl ? "rtl" : "ltr"}
-          >
-            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-revix-border bg-revix-surface/30 px-5 py-3.5">
-                <h3 className="text-sm font-bold text-revix-dark">
-                  {isRtl ? "التوقيع الإلكتروني لأمر الشراء" : "Electronic Signature"}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsSignModalOpen(false)}
-                  className="rounded-lg p-1 text-revix-muted hover:bg-revix-surface hover:text-revix-dark"
-                >
-                  <RevixIcon name="x" className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="p-5 space-y-3">
-                <p className="text-xs text-revix-secondary">
-                  {isRtl
-                    ? "وقّع داخل المربع أدناه ليتم حفظ التوقيع في قاعدة البيانات وإظهاره في مستند أمر الشراء:"
-                    : "Draw your signature below. It will be stored in the database and printed on the LPO:"}
-                </p>
-                <div className="overflow-hidden rounded-xl border-2 border-dashed border-revix-border bg-white">
-                  <canvas
-                    ref={sigCanvasRef}
-                    width={380}
-                    height={160}
-                    className="w-full h-40 cursor-crosshair touch-none"
-                    onMouseDown={(e) => {
-                      const canvas = sigCanvasRef.current;
-                      if (!canvas) return;
-                      const ctx = canvas.getContext("2d");
-                      if (!ctx) return;
-                      const rect = canvas.getBoundingClientRect();
-                      ctx.beginPath();
-                      ctx.moveTo(
-                        ((e.clientX - rect.left) / rect.width) * canvas.width,
-                        ((e.clientY - rect.top) / rect.height) * canvas.height,
-                      );
-                      ctx.lineWidth = 2.2;
-                      ctx.lineCap = "round";
-                      ctx.strokeStyle = "#111827";
-                      setIsDrawingSig(true);
-                      setHasDrawnSig(true);
-                    }}
-                    onMouseMove={(e) => {
-                      if (!isDrawingSig) return;
-                      const canvas = sigCanvasRef.current;
-                      if (!canvas) return;
-                      const ctx = canvas.getContext("2d");
-                      if (!ctx) return;
-                      const rect = canvas.getBoundingClientRect();
-                      ctx.lineTo(
-                        ((e.clientX - rect.left) / rect.width) * canvas.width,
-                        ((e.clientY - rect.top) / rect.height) * canvas.height,
-                      );
-                      ctx.stroke();
-                    }}
-                    onMouseUp={() => setIsDrawingSig(false)}
-                    onMouseLeave={() => setIsDrawingSig(false)}
-                  />
-                </div>
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const canvas = sigCanvasRef.current;
-                      if (!canvas) return;
-                      const ctx = canvas.getContext("2d");
-                      ctx?.clearRect(0, 0, canvas.width, canvas.height);
-                      setHasDrawnSig(false);
-                    }}
-                    className="rounded-lg border border-revix-border px-3 py-1.5 text-xs font-semibold text-revix-secondary hover:bg-revix-surface"
-                  >
-                    {isRtl ? "مسح" : "Clear"}
-                  </button>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsSignModalOpen(false)}
-                      className="rounded-lg border border-revix-border px-3 py-1.5 text-xs font-semibold text-revix-secondary hover:bg-revix-surface"
-                    >
-                      {isRtl ? "إلغاء" : "Cancel"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!hasDrawnSig || isSigning}
-                      onClick={async () => {
-                        const canvas = sigCanvasRef.current;
-                        if (!canvas) return;
-                        const dataUrl = canvas.toDataURL("image/png");
-                        const res = await signPurchaseOrder({
-                          id: po.id,
-                          signatureDataUrl: dataUrl,
-                        }).unwrap();
-                        setSelectedPoForDetails(res.data);
-                        setIsSignModalOpen(false);
-                      }}
-                      className="rounded-lg bg-revix-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-revix-primary-hover disabled:opacity-50"
-                    >
-                      {isSigning
-                        ? isRtl
-                          ? "جاري الحفظ..."
-                          : "Saving..."
-                        : isRtl
-                          ? "حفظ التوقيع"
-                          : "Save Signature"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <SignaturePadModal
+          isOpen={isSignModalOpen}
+          isRtl={isRtl}
+          title={isRtl ? "التوقيع الإلكتروني لأمر الشراء" : "Electronic Signature"}
+          description={
+            isRtl
+              ? "وقّع داخل المربع أدناه ليتم حفظ التوقيع في قاعدة البيانات وإظهاره في مستند أمر الشراء:"
+              : "Draw your signature below. It will be stored in the database and printed on the LPO:"
+          }
+          initialSignatureUrl={po.signatureDataUrl}
+          isSaving={isSigning}
+          onClose={() => setIsSignModalOpen(false)}
+          onSave={async (dataUrl) => {
+            const res = await signPurchaseOrder({
+              id: po.id,
+              signatureDataUrl: dataUrl,
+            }).unwrap();
+
+            setIsSignModalOpen(false);
+          }}
+        />
       </div>
       </>
     );
@@ -1410,14 +1323,15 @@ export function PurchaseOrdersPanel({
                 </thead>
                 <tbody className="divide-y divide-revix-border/60">
                   {paginatedPurchaseOrders.map((po) => {
+                    const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
                     const totalQty = po.items?.reduce((acc, it) => acc + it.quantity, 0) || 0;
                     const totalRcv = po.items?.reduce((acc, it) => acc + it.receivedCount, 0) || 0;
-                    const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
+
 
                     return (
                       <tr
                         key={po.id}
-                        onClick={() => setSelectedPoForDetails(po)}
+                        onClick={() => openPoDetails(po)}
                         className="cursor-pointer transition-colors hover:bg-revix-surface/60"
                       >
                         <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap">{po.poNumber}</td>
@@ -1449,24 +1363,7 @@ export function PurchaseOrdersPanel({
             {canApprovePo && (
               <button
                 type="button"
-                onClick={() => {
-                  setHasDrawnSig(Boolean(po.signatureDataUrl));
-                  setIsSignModalOpen(true);
-                  if (po.signatureDataUrl) {
-                    setTimeout(() => {
-                      const canvas = sigCanvasRef.current;
-                      if (!canvas) return;
-                      const ctx = canvas.getContext("2d");
-                      if (!ctx) return;
-                      const img = new Image();
-                      img.onload = () => {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                      };
-                      img.src = po.signatureDataUrl!;
-                    }, 50);
-                  }
-                }}
+                onClick={() => setIsSignModalOpen(true)}
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-1.5 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
               >
                 <RevixIcon name="check-circle-2" size={14} />
@@ -1494,7 +1391,7 @@ export function PurchaseOrdersPanel({
                             )}
                             <button
                               type="button"
-                              onClick={() => setSelectedPoForDetails(po)}
+                              onClick={() => openPoDetails(po)}
                               title={isRtl ? "عرض التفاصيل" : "View Details"}
                               className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:border-revix-primary/40 hover:text-revix-primary"
                             >
@@ -1520,7 +1417,7 @@ export function PurchaseOrdersPanel({
             </div>
           </div>
 
-          
+
 
           <RevixConfirmModal
             isOpen={Boolean(pendingDeletePo)}
@@ -1570,11 +1467,7 @@ export function PurchaseOrdersPanel({
         const selectedVendorObj = vendors.find((v) => v.id === formVendorId);
         const currencyCode = activeBranch?.currencyCode || "EGP";
 
-        const steps: Array<{ id: 1 | 2 | 3; label: string }> = [
-          { id: 1, label: isRtl ? "١. البيانات والسيارات" : "1. Order & Vehicles" },
-          { id: 2, label: isRtl ? "٢. أرقام الشاصي" : "2. Chassis Numbers" },
-          { id: 3, label: isRtl ? "٣. الدفع والشروط" : "3. Payment & Terms" },
-        ];
+
 
         return (
           <form onSubmit={handleCreateSubmit} className="mx-auto max-w-5xl space-y-4">
@@ -1583,7 +1476,7 @@ export function PurchaseOrdersPanel({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={closeCreatePo}
                   className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-2 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
                 >
                   <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
@@ -1597,7 +1490,7 @@ export function PurchaseOrdersPanel({
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={closeCreatePo}
                   className="rounded-lg border border-revix-border bg-revix-white px-4 py-2 text-xs font-semibold text-revix-secondary hover:bg-revix-surface transition-colors"
                 >
                   {isRtl ? "إلغاء" : "Cancel"}
@@ -1938,7 +1831,7 @@ export function PurchaseOrdersPanel({
                     <div className="flex items-center justify-end gap-2.5 border-t border-revix-border/70 bg-revix-surface/30 px-5 py-3.5">
                       <button
                         type="button"
-                        onClick={() => setIsCreateModalOpen(false)}
+                        onClick={closeCreatePo}
                         className="rounded-lg border border-revix-border bg-revix-white px-4 py-2 text-xs font-semibold text-revix-secondary hover:bg-revix-surface transition-colors"
                       >
                         {isRtl ? "إلغاء" : "Cancel"}

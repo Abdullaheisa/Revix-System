@@ -164,6 +164,46 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
               isReady: true,
             },
             {
+              id: "insurance-companies",
+              titleEn: "Insurance Companies",
+              titleAr: "شركات التأمين",
+              descEn: "Insurance providers, contacts, and policy management.",
+              descAr: "دليل شركات التأمين وربطها ببوالص السيارات.",
+              shortcut: "G I",
+              keyCode: "i",
+              isReady: true,
+            },
+            {
+              id: "fleet-live",
+              titleEn: "Fleet",
+              titleAr: "الأسطول الجاهز للحجز (Fleet)",
+              descEn: "Bookable vehicles published to the commercial rental market.",
+              descAr: "السيارات المنشورة في الأسطول الجاهز للحجز والتأجير.",
+              shortcut: "G F",
+              keyCode: "f",
+              isReady: true,
+            },
+            {
+              id: "customers",
+              titleEn: "Customers",
+              titleAr: "العملاء",
+              descEn: "Renter directory, national IDs, and driver licenses.",
+              descAr: "دليل العملاء وبيانات الهوية ورخص القيادة.",
+              shortcut: "G C",
+              keyCode: "c",
+              isReady: true,
+            },
+            {
+              id: "rental-contracts",
+              titleEn: "Rental Contracts",
+              titleAr: "عقود التأجير",
+              descEn: "Create, track, and close vehicle rental contracts.",
+              descAr: "إنشاء وإدارة عقود التأجير واستلام السيارات.",
+              shortcut: "G R",
+              keyCode: "r",
+              isReady: true,
+            },
+            {
               id: "variants",
               titleEn: "Model Variant",
               titleAr: "كتالوج فئات السيارات (الفريان)",
@@ -183,7 +223,7 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
           items: [
             {
               id: "vehicles",
-              titleEn: "Fleet Vehicles Register",
+              titleEn: "Vehicle Assets",
               titleAr: "سجل سيارات الأسطول",
               descEn:
                 "Browse fleet assets, availability status, daily rates, and quick operations.",
@@ -542,9 +582,9 @@ export function canAccessWorkspacePage(
             perms?.purchase_orders?.includes("approve")),
       );
     }
-    if (subPageId === "vendors") {
+    if (subPageId === "vendors" || subPageId === "insurance-companies") {
       return Boolean(
-        perms?.vendors?.includes("read") && perms?.vendors?.includes("create"),
+        perms?.vendors?.includes("read") || perms?.fleet?.includes("read"),
       );
     }
     if (subPageId === "variants") {

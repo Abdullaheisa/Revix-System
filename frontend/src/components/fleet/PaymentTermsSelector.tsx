@@ -1,13 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
-import {
-  type PaymentTermsType,
-  PAYMENT_TERMS_INFO,
-  NET_TERMS_PRESETS,
-  INSTALLMENT_MONTHS_PRESETS,
-  DOWN_PAYMENT_PERCENT_PRESETS,
-  MILESTONE_PRESETS,
-} from "@/lib/fleet/paymentTerms";
+import { type PaymentTermsType, PAYMENT_TERMS_INFO, NET_TERMS_PRESETS, INSTALLMENT_MONTHS_PRESETS, DOWN_PAYMENT_PERCENT_PRESETS, MILESTONE_PRESETS } from "@/lib/fleet/paymentTerms";
 
 export interface PaymentTermsChangePayload {
   type: PaymentTermsType;
@@ -31,23 +24,12 @@ interface PaymentTermsSelectorProps {
   compact?: boolean;
 }
 
-export function PaymentTermsSelector({
-  valueType,
-  valueDays,
-  valueConfig,
-  onChange,
-  totalAmount,
-  currency = "JOD",
-  upfrontPaid = 0,
-  installmentsCount = 1,
-  isRtl = true,
-  compact = false,
-}: PaymentTermsSelectorProps) {
+export function PaymentTermsSelector({ valueType, valueDays, valueConfig, onChange, totalAmount, currency = "JOD", upfrontPaid = 0, installmentsCount = 1, isRtl = true }: PaymentTermsSelectorProps) {
   // Local states for sub-controls
-  const [selectedType, setSelectedType] = useState<PaymentTermsType>(valueType || "net_terms");
+  const selectedType = valueType || "net_terms";
   const [days, setDays] = useState<number>(valueDays ?? 30);
   const [selectedPresetDays, setSelectedPresetDays] = useState<number | "custom">(
-    NET_TERMS_PRESETS.includes(valueDays as any) ? valueDays : "custom",
+    NET_TERMS_PRESETS.some((days) => days === valueDays) ? valueDays : "custom",
   );
   const [monthsCount, setMonthsCount] = useState<number>(
     installmentsCount > 1
@@ -57,7 +39,7 @@ export function PaymentTermsSelector({
   const [downPaymentPercent, setDownPaymentPercent] = useState<number>(() => {
     if (totalAmount && totalAmount > 0 && upfrontPaid > 0) {
       const pct = Math.round((upfrontPaid / totalAmount) * 100);
-      return DOWN_PAYMENT_PERCENT_PRESETS.includes(pct as any) ? pct : -1;
+      return DOWN_PAYMENT_PERCENT_PRESETS.some((percent) => percent === pct) ? pct : -1;
     }
     return 10;
   });
@@ -67,14 +49,8 @@ export function PaymentTermsSelector({
   );
 
   // Sync when prop value changes
-  useEffect(() => {
-    if (valueType && valueType !== selectedType) {
-      setSelectedType(valueType);
-    }
-  }, [valueType]);
 
   const handleSelectType = (type: PaymentTermsType) => {
-    setSelectedType(type);
 
     if (type === "cash") {
       onChange({
