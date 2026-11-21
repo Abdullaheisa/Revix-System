@@ -66,7 +66,6 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const [photoUrl, setPhotoUrl] = useState("");
   const [photoPickerOpen, setPhotoPickerOpen] = useState(false);
   const [photoSearch, setPhotoSearch] = useState("");
-  const [fleetCompany, setFleetCompany] = useState("Revix Fleet");
   const [category, setCategory] = useState<string>("sedan");
   const [locationType, setLocationType] = useState("airport_terminal");
   const [fuelPolicy, setFuelPolicy] = useState("full_to_full");
@@ -634,22 +633,19 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                 <RevixIcon name="car-front" className="w-4 h-4" />
               </div>
               <h2 className="font-bold text-gray-900 text-sm">
-                {isAr ? "بيانات وهوية السيارة (Car Details)" : "Car Details"}
+                {isAr ? "بيانات السيارة" : "Vehicle details"}
               </h2>
             </div>
-            <span className="text-[11px] text-gray-400">
-              {isAr ? "الحقول المميزة بـ * مطلوبة" : "* required"}
-            </span>
           </div>
 
           <div className="p-6 space-y-5">
             {/* Vehicle Name, Catalog Variant, and Branch */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`grid grid-cols-1 gap-4 ${pendingReceive ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
               {/* 1. Vehicle Name / Model */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-gray-700">
-                    {isAr ? "اسم السيارة / الموديل المعتمد *" : "CAR / VEHICLE NAME *"}
+                    {isAr ? "اسم السيارة *" : "Vehicle name *"}
                   </label>
                   {selectedVariant && (
                     <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
@@ -663,7 +659,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                   </div>
                   <input
                     type="text"
-                    placeholder={isAr ? "مثال: Toyota Camry أو اختر صورة..." : "e.g. Toyota Camry 2026..."}
+                    placeholder={isAr ? "مثال: تويوتا كامري" : "e.g. Toyota Camry"}
                     value={vehicleName}
                     onChange={(e) => handleVehicleNameChange(e.target.value)}
                     className="w-full h-[46px] ps-9 pe-3.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:border-emerald-700 focus:ring-3 focus:ring-emerald-700/15 transition-colors"
@@ -675,7 +671,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
               {pendingReceive && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    {isAr ? "فئة وموديل الشراء (الفريان) *" : "PURCHASE VARIANT (CATALOG) *"}
+                    {isAr ? "الفئة والموديل *" : "Model variant *"}
                   </label>
                   <RevixSelect
                     size="md"
@@ -700,7 +696,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
               {/* 3. Branch / Pickup Location */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {isAr ? "فرع وموقع الاستلام والتمركز *" : "PICKUP LOCATION (AIRPORT/STATION/BRANCH) *"}
+                  {isAr ? "فرع الاستلام *" : "Pickup branch *"}
                 </label>
                 <RevixSelect
                   size="md"
@@ -719,13 +715,8 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
             <div ref={photoPickerRef} className="relative">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-semibold text-gray-700">
-                  {isAr ? "صورة السيارة المعتمدة *" : "VEHICLE PHOTO *"}
+                  {isAr ? "صورة السيارة" : "Vehicle photo"}
                 </label>
-                <span className="text-[11px] text-gray-400">
-                  {photoUrl
-                    ? (isAr ? "(تم ربط الصورة باسم السيارة ومواصفات الأسطول)" : "(photo linked to vehicle name)")
-                    : (isAr ? "(اختر صورة من المكتبة لتعبئة الاسم والمواصفات تلقائياً)" : "(select from library to auto-fill name)")}
-                </span>
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch gap-3">
@@ -735,7 +726,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                   </div>
                   <input
                     type="text"
-                    placeholder={isAr ? "اضغط لاختيار صورة من المكتبة أو ألصق الرابط..." : "Click to choose from library or paste URL..."}
+                    placeholder={isAr ? "اختر صورة من المكتبة" : "Choose a photo"}
                     value={
                       photos.find((p) => p.photoUrl === photoUrl)?.vehicleName ??
                       photoUrl
@@ -828,20 +819,8 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
               )}
             </div>
 
-            {/* Row: Fleet Company, Category, Location Type, Fuel Policy */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {isAr ? "الشركة المشغلة *" : "FLEET COMPANY *"}
-                </label>
-                <input
-                  type="text"
-                  value={fleetCompany}
-                  onChange={(e) => setFleetCompany(e.target.value)}
-                  className="w-full h-[46px] px-3.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-emerald-700 focus:ring-3 focus:ring-emerald-700/15 transition-colors"
-                />
-              </div>
-
+            {/* Category, location type, and fuel policy */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   {isAr ? "التصنيف *" : "CATEGORY *"}
@@ -889,7 +868,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
             <div className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl">
               <div>
                 <h4 className="text-sm font-bold text-gray-900">
-                  {isAr ? "تأكيد فوري للحجز (Instant Confirmation / Auto-Accept)" : "Instant Confirmation (Auto-Accept)"}
+                  {isAr ? "تأكيد الحجز تلقائيًا" : "Confirm bookings automatically"}
                 </h4>
               </div>
 
@@ -907,11 +886,11 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
             {/* Vehicle Description */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
-                {isAr ? "وصف وملاحظات السيارة (VEHICLE DESCRIPTION)" : "VEHICLE DESCRIPTION"}
+                {isAr ? "ملاحظات" : "Notes"}
               </label>
               <textarea
                 rows={3}
-                placeholder={isAr ? "أضف ملاحظات عن مواصفات السيارة، حالتها التشغيلية، أو شروط الاستلام..." : "Tell customers more about this vehicle, features, condition, or rental guidelines..."}
+                placeholder={isAr ? "أضف ملاحظة" : "Add a note"}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 transition"
@@ -931,7 +910,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
               </div>
               <div>
                 <h2 className="font-bold text-gray-900 text-sm">
-                  {isAr ? "بيانات الهوية ورقم الشاسيه واللوحة (Asset Identifiers)" : "Asset Identifiers & Physical Specs"}
+                  {isAr ? "بيانات التسجيل" : "Registration details"}
                 </h2>
               </div>
             </div>
@@ -1092,14 +1071,9 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
               <div className="w-8 h-8 rounded-lg bg-indigo-100/60 text-indigo-800 flex items-center justify-center">
                 <RevixIcon name="wrench" className="w-4 h-4" />
               </div>
-              <div>
-                <h2 className="font-bold text-gray-900 text-sm">
-                  {isAr ? "المواصفات الفنية للسيارة (Technical Specifications)" : "Specifications"}
-                </h2>
-                <p className="text-[11px] text-gray-400">
-                  {isAr ? "تم تعبئة الحقول تلقائيًا بناءً على كود SIPP للموديل ويمكنك التعديل عليها" : "Auto-filled from SIPP code with manual edit support"}
-                </p>
-              </div>
+              <h2 className="font-bold text-gray-900 text-sm">
+                {isAr ? "المواصفات" : "Specifications"}
+              </h2>
             </div>
             {selectedVariant && (
               <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 font-mono text-xs font-bold rounded border border-indigo-200">
@@ -1202,8 +1176,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
           <div className="flex items-center gap-2.5 border-b border-emerald-100 bg-emerald-50/60 px-6 py-4">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800"><RevixIcon name="wallet" className="h-4 w-4" /></span>
             <div>
-              <h2 className="text-sm font-bold text-gray-900">{isAr ? "أسعار التأجير والحجز" : "Rental & Booking Rates"}</h2>
-              <p className="mt-0.5 text-[11px] text-gray-500">{isAr ? `الأسعار بعملة الفرع (${currencySymbol}). السيارة ستظهر للحجز بعد تسجيل السعر.` : `Rates use the branch currency (${currencySymbol}). A rate is required to publish this vehicle for booking.`}</p>
+              <h2 className="text-sm font-bold text-gray-900">{isAr ? "أسعار التأجير" : "Rental rates"}</h2>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -1235,19 +1208,13 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
               </div>
               <h2 className="font-bold text-gray-900 text-sm">
                 {isAr
-                  ? `سياسة الكيلومترات ورسوم الزيادة (${currencySymbol})`
+                  ? `الكيلومترات والزيادة (${currencySymbol})`
                   : `Mileage Allowance & Extra KM Rate (${currencySymbol})`}
               </h2>
             </div>
           </div>
 
           <div className="p-6 space-y-4">
-            <p className="text-xs text-gray-500">
-              {isAr
-                ? "تحديد سقف الكيلومترات اليومي. إذا كان محددًا، فسيتم احتساب إجمالي الكيلومترات المسموحة بناءً على مدة الحجز، ويظهر سعر الكيلومتر الإضافي في العقد والفاتورة."
-                : "Define daily mileage allowance. If limited (e.g. 120 km/day), the total allowance for the booking duration and the extra kilometer surcharge will appear on the car card, inclusions, and invoice."}
-            </p>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label
                 className={`p-4 rounded-xl border flex items-center gap-3 cursor-pointer transition ${
@@ -1273,7 +1240,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-gray-900">
-                    {isAr ? "كيلومترات غير محدودة (Unlimited Mileage)" : "Unlimited Mileage"}
+                    {isAr ? "غير محدودة" : "Unlimited mileage"}
                   </h4>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {isAr ? "بدون حد أقصى يومي أو رسوم كيلومتر إضافي" : "No daily limits or extra kilometer charges"}
@@ -1305,7 +1272,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-gray-900">
-                    {isAr ? "كيلومترات محددة (Limited Allowance)" : "Limited Mileage Allowance"}
+                    {isAr ? "محدودة" : "Limited mileage"}
                   </h4>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {isAr ? "تحديد حد مجاني يومي وسعر لكل كم إضافي" : "Set free daily km limit and price per extra km"}
@@ -1358,13 +1325,8 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
               </div>
               <div>
                 <h2 className="font-bold text-gray-900 text-sm">
-                  {isAr ? "ماذا يشمل العقد والإيجار؟ (What is included?)" : "What is included?"}
+                  {isAr ? "مزايا العقد" : "Contract inclusions"}
                 </h2>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  {isAr
-                    ? "اختر المزايا والتغطيات المعتمدة التي تظهر في بطاقة السيارة وفاتورة الحجز"
-                    : "Select verified inclusions that appear on vehicle cards and rental invoices"}
-                </p>
               </div>
             </div>
 
@@ -1403,7 +1365,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
                         ? `تم تحديد ${selectedInclusions.length} مزايا من القائمة`
                         : `${selectedInclusions.length} features selected`
                       : isAr
-                      ? "اختر المزايا والتغطيات المشمولة في العقد..."
+                      ? "اختر المزايا"
                       : "Select included rental features..."}
                   </span>
                 </div>
@@ -1536,7 +1498,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
             disabled={isSubmitting}
             className="px-6 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-lg transition"
           >
-            {isAr ? "إلغاء والرجوع" : "Cancel"}
+            {isAr ? "إلغاء" : "Cancel"}
           </button>
 
           <button
@@ -1546,10 +1508,10 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
           >
             <RevixIcon name="check" className="w-4 h-4" />
             {isSubmitting
-              ? (isAr ? "جاري الحفظ والتسجيل..." : "Registering...")
+              ? (isAr ? "جارٍ الحفظ..." : "Saving...")
               : pendingReceive
               ? (isAr ? "حفظ واستلام وتحويل للأصول" : "Confirm Receiving & Register Asset")
-              : (isAr ? "حفظ وإضافة للأصول" : "Add Vehicle to Fleet Assets")}
+              : (isAr ? "حفظ السيارة" : "Save vehicle")}
           </button>
         </div>
       </form>
