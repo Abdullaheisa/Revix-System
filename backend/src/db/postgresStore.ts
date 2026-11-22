@@ -1891,7 +1891,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
     `;
     const params: unknown[] = [companyId];
 
-    if (permittedBranchIds && permittedBranchIds.length > 0) {
+    if (permittedBranchIds !== undefined) {
+      if (permittedBranchIds.length === 0) return [];
       params.push(permittedBranchIds);
       query += ` AND v.branch_id = ANY($${params.length}::uuid[])`;
     }

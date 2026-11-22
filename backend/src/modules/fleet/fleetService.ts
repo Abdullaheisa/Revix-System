@@ -641,7 +641,10 @@ export class FleetService {
           const permitted = await this.store.listNetworkPermittedBranches(
             link.id,
           );
-          const hasBranch = permitted.some((p) => p.branchId === vehicle.branchId);
+          const hasBranch =
+            permitted.length === 0 ||
+            !vehicle.branchId ||
+            permitted.some((p) => p.branchId === vehicle.branchId);
           if (hasBranch) {
             vehicle.isPartnerVehicle = true;
             return vehicle;
@@ -990,11 +993,8 @@ export class FleetService {
   }
 
   async getVehicleLifecycleProfile(actor: TenantActor, vehicleId: string) {
-    const vehicle = this.assertVehicleScope(
-      actor,
-      await this.store.findFleetVehicleById(vehicleId),
-    );
-    return this.store.getVehicleLifecycleProfile(actor.company.id, vehicle.id);
+    const vehicle = await this.getVehicle(actor, vehicleId);
+    return this.store.getVehicleLifecycleProfile(vehicle.companyId, vehicle.id);
   }
 
   async upsertVehicleInsurancePolicy(

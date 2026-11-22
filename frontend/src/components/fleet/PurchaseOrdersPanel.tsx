@@ -75,7 +75,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   const detailId = resourceRoute?.id || searchParams.get("id");
   const isCreateModalOpen = resourceRoute?.action === "create" || searchParams.get("mode") === "create";
   const isConvertingVehicle = resourceRoute?.action === "receive";
-  const { data: detailResponse, isLoading: isLoadingDetail, error: detailError, refetch: refetchDetail } = useGetPurchaseOrderQuery(detailId ?? "", { skip: !detailId });
+  const { data: detailResponse, isLoading: isLoadingDetail, isFetching: isFetchingDetail, error: detailError, refetch: refetchDetail } = useGetPurchaseOrderQuery(detailId ?? "", { skip: !detailId });
   const selectedPoForDetails = detailId ? detailResponse?.data ?? null : null;
   const setIsConvertingVehicle = (receive: boolean) => { if (detailId) router.push(purchaseOrderHref(detailId, receive ? "receive" : undefined)); };
   const { data: wsContext } = useGetWorkspaceContextQuery();
@@ -603,7 +603,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   }
 
   if (detailId && (!selectedPoForDetails || detailError)) {
-    return <ResourceFeedback isRtl={isRtl} isLoading={isLoadingDetail} onRetry={() => { void refetchDetail(); }} onBack={closePoDetails} />;
+    return <ResourceFeedback isRtl={isRtl} isLoading={isLoadingDetail || isFetchingDetail} error={detailError} onRetry={() => { void refetchDetail(); }} onBack={closePoDetails} />;
   }
   if (isConvertingVehicle) {
     const activePoForConvert =

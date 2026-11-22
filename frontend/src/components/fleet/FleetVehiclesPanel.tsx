@@ -81,7 +81,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
   const resourceRoute = parseFleetResourceRoute(pathname);
   const detailId = resourceRoute?.id || searchParams.get("id");
   const activeVehicleTab: VehicleProfileTab = resourceRoute?.tab ?? "overview";
-  const { data: detailResponse, isLoading: isLoadingDetail, error: detailError, refetch: refetchDetail } = useGetVehicleQuery(detailId ?? "", { skip: !detailId });
+  const { data: detailResponse, isLoading: isLoadingDetail, isFetching: isFetchingDetail, error: detailError, refetch: refetchDetail } = useGetVehicleQuery(detailId ?? "", { skip: !detailId });
   const selectedVehicleForDetails = detailId ? detailResponse?.data ?? null : null;
   const isNetworkMain = company?.operatingMode === "network_main";
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
@@ -332,7 +332,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
   const isSubmitting = isCreatingDirect || isReceivingPo;
 
   if (detailId && (!selectedVehicleForDetails || detailError)) {
-    return <ResourceFeedback isRtl={isRtl} isLoading={isLoadingDetail} onRetry={() => { void refetchDetail(); }} onBack={closeVehicleDetails} />;
+    return <ResourceFeedback isRtl={isRtl} isLoading={isLoadingDetail || isFetchingDetail} error={detailError} onRetry={() => { void refetchDetail(); }} onBack={closeVehicleDetails} />;
   }
   if (selectedVehicleForDetails) {
     return <VehicleProfilePage key={selectedVehicleForDetails.id} vehicle={selectedVehicleForDetails} isRtl={isRtl} company={company} activeVehicleTab={activeVehicleTab} onClose={closeVehicleDetails} onTabChange={switchVehicleTab} />;
