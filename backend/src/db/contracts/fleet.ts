@@ -121,7 +121,7 @@ export interface FleetVehicleRecord {
   id: string;
   assetCode?: string;
   companyId: string;
-  branchId: string;
+  branchId: string | null;
   variantId: string;
   purchaseOrderId: string | null;
   vin: string;
@@ -177,6 +177,9 @@ export interface FleetVehicleRecord {
   publishedToFleetAt?: Date | null;
   insuranceCompany?: string | null;
   insurancePolicyNumber?: string | null;
+  inServiceDate?: string | null;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
 }
 
 export interface VehicleInsurancePolicyRecord {
@@ -221,6 +224,8 @@ export interface VehicleMaintenanceLogRecord {
   status: string;
   notes: string | null;
   serviceDate: string;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
   createdAt: Date;
 }
 
@@ -251,12 +256,64 @@ export interface VehicleInspectionRecord {
   damagePoints: VehicleDamagePointRecord[];
 }
 
+export interface DriverRecord {
+  id: string;
+  companyId: string;
+  fullName: string;
+  phonePrimary: string;
+  phoneSecondary: string | null;
+  email: string | null;
+  licenseNumber: string;
+  licenseIssueDate: string;
+  licenseExpiryDate: string;
+  passportNumber: string | null;
+  nationalIdNumber?: string | null;
+  idCardPhotoUrl?: string | null;
+  passportPhotoUrl?: string | null;
+  licensePhotoUrl?: string | null;
+  address: string | null;
+  status: "active" | "inactive";
+  createdByUserId: string | null;
+  createdByUserName?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface VehicleMovementRecord {
+  id: string;
+  companyId: string;
+  movementNumber: string;
+  vehicleId: string;
+  fromBranchId: string | null;
+  toBranchId: string;
+  driverId: string;
+  status: "in_transit" | "received" | "cancelled";
+  dispatchOdometerKm: number;
+  arrivalOdometerKm: number | null;
+  dispatchedByUserId: string | null;
+  receivedByUserId: string | null;
+  dispatchedAt: Date;
+  receivedAt: Date | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  vehicleName?: string | null;
+  vehiclePlate?: string | null;
+  fromBranchName?: string | null;
+  toBranchName?: string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  dispatchedByUserName?: string | null;
+  receivedByUserName?: string | null;
+}
+
 export interface VehicleLifecycleProfile {
   insurancePolicies: VehicleInsurancePolicyRecord[];
   odometerLogs: VehicleOdometerLogRecord[];
   maintenanceLogs: VehicleMaintenanceLogRecord[];
   inspections: VehicleInspectionRecord[];
   damagePoints: VehicleDamagePointRecord[];
+  movements?: VehicleMovementRecord[];
 }
 
 export interface CreateFleetVehicleInput {
@@ -265,6 +322,7 @@ export interface CreateFleetVehicleInput {
   branchId: string;
   variantId: string;
   purchaseOrderId?: string | null;
+  createdByUserId?: string | null;
   vin: string;
   licensePlate: string;
   keyNumber?: string | null;

@@ -438,11 +438,20 @@ export class FleetService {
       );
     }
 
-    // Branch scoping
-    const targetBranchId = input.branchId || po.branchId;
+    // Branch scoping:
+    // - Local partner companies keep vehicles directly in their company branch (no multi-branch movement)
+    // - Branch-scoped employees automatically receive into their assigned branch
+    // - Owner / company-wide on main company receives into Company Stock (branchId = null) unless specified
+    const targetBranchId =
+      actor.company.operatingMode === "local_partner"
+        ? po.branchId
+        : actor.role.scopeType === "assigned_branches"
+          ? input.branchId || po.branchId
+          : input.branchId || null;
+
     if (
       actor.role.scopeType === "assigned_branches" &&
-      !actor.branchIds.includes(targetBranchId)
+      (!targetBranchId || !actor.branchIds.includes(targetBranchId))
     ) {
       throw new FleetServiceError(
         403,
@@ -476,21 +485,42 @@ export class FleetService {
       );
     }
 
-    const result = await this.store.receiveVehicleFromPo(input);
-
-    await this.store.recordAuditLog({
-      companyId: actor.company.id,
+    const result = await this.store.receiveVehicleFromPo({
+      ...input,
       branchId: targetBranchId,
-      actorUserId: actor.user.id,
-      action: "fleet.vehicle_received_from_po",
-      entityType: "fleet_vehicle",
-      entityId: result.vehicle.id,
-      metadata: {
-        poNumber: po.poNumber,
-        vin: input.vin,
-        licensePlate: input.licensePlate,
-      },
+      createdByUserId: actor.user.id,
     });
+
+    await Promise.all([
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: targetBranchId,
+        actorUserId: actor.user.id,
+        action: "fleet.vehicle_received_from_po",
+        entityType: "fleet_vehicle",
+        entityId: result.vehicle.id,
+        metadata: {
+          poId: po.id,
+          poNumber: po.poNumber,
+          vin: input.vin,
+          licensePlate: input.licensePlate,
+        },
+      }),
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: targetBranchId,
+        actorUserId: actor.user.id,
+        action: "fleet.po_vehicle_received",
+        entityType: "purchase_order",
+        entityId: po.id,
+        metadata: {
+          poNumber: po.poNumber,
+          vehicleId: result.vehicle.id,
+          vin: input.vin,
+          licensePlate: input.licensePlate,
+        },
+      }),
+    ]);
 
     return result;
   }
@@ -503,9 +533,14 @@ export class FleetService {
     actor: TenantActor,
     input: Omit<CreateFleetVehicleInput, "companyId">,
   ): Promise<FleetVehicleRecord> {
+    const resolvedBranchId =
+      actor.role.scopeType === "assigned_branches"
+        ? input.branchId || actor.branchIds[0] || ""
+        : input.branchId;
+
     if (
       actor.role.scopeType === "assigned_branches" &&
-      !actor.branchIds.includes(input.branchId)
+      (!resolvedBranchId || !actor.branchIds.includes(resolvedBranchId))
     ) {
       throw new FleetServiceError(
         403,
@@ -513,6 +548,7 @@ export class FleetService {
         "You do not have permission to register vehicles in this branch.",
       );
     }
+    input = { ...input, branchId: resolvedBranchId };
 
     // Verify variant
     await this.getVariant(actor, input.variantId);
@@ -545,6 +581,7 @@ export class FleetService {
     const vehicle = await this.store.createFleetVehicle({
       ...input,
       companyId: actor.company.id,
+      createdByUserId: actor.user.id,
     });
 
     await this.store.recordAuditLog({
@@ -620,6 +657,7 @@ export class FleetService {
 
     if (
       actor.role.scopeType === "assigned_branches" &&
+      vehicle.branchId &&
       !actor.branchIds.includes(vehicle.branchId)
     ) {
       throw new FleetServiceError(
@@ -931,12 +969,32 @@ export class FleetService {
     return this.store.deleteInsuranceCompany(actor.company.id, id);
   }
 
-  async getVehicleLifecycleProfile(actor: TenantActor, vehicleId: string) {
-    const vehicle = await this.store.findFleetVehicleById(vehicleId);
+  private assertVehicleScope(
+    actor: TenantActor,
+    vehicle: FleetVehicleRecord | null,
+  ): FleetVehicleRecord {
     if (!vehicle || vehicle.companyId !== actor.company.id) {
       throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
     }
-    return this.store.getVehicleLifecycleProfile(actor.company.id, vehicleId);
+    if (
+      actor.role.scopeType === "assigned_branches" &&
+      (!vehicle.branchId || !actor.branchIds.includes(vehicle.branchId))
+    ) {
+      throw new FleetServiceError(
+        403,
+        "BRANCH_SCOPE_DENIED",
+        "You do not have access to vehicles outside your assigned branch.",
+      );
+    }
+    return vehicle;
+  }
+
+  async getVehicleLifecycleProfile(actor: TenantActor, vehicleId: string) {
+    const vehicle = this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(vehicleId),
+    );
+    return this.store.getVehicleLifecycleProfile(actor.company.id, vehicle.id);
   }
 
   async upsertVehicleInsurancePolicy(
@@ -954,15 +1012,29 @@ export class FleetService {
       notes?: string | null;
     },
   ) {
-    const vehicle = await this.store.findFleetVehicleById(vehicleId);
-    if (!vehicle || vehicle.companyId !== actor.company.id) {
-      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
-    }
-    return this.store.upsertVehicleInsurancePolicy({
+    const vehicle = this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(vehicleId),
+    );
+    const policy = await this.store.upsertVehicleInsurancePolicy({
       companyId: actor.company.id,
       vehicleId,
       ...input,
     });
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: vehicle.branchId,
+      actorUserId: actor.user.id,
+      action: "fleet.vehicle_insurance_updated",
+      entityType: "fleet_vehicle",
+      entityId: vehicleId,
+      metadata: {
+        providerName: input.providerName,
+        policyNumber: input.policyNumber,
+        expiryDate: input.expiryDate,
+      },
+    });
+    return policy;
   }
 
   async updateVehiclePricingTiers(
@@ -978,11 +1050,132 @@ export class FleetService {
       extraKmRate: number;
     },
   ) {
-    const vehicle = await this.store.findFleetVehicleById(vehicleId);
-    if (!vehicle || vehicle.companyId !== actor.company.id) {
-      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
+    const vehicle = this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(vehicleId),
+    );
+    const updated = await this.store.updateVehiclePricingTiers(actor.company.id, vehicleId, input);
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: vehicle.branchId,
+      actorUserId: actor.user.id,
+      action: "fleet.vehicle_pricing_updated",
+      entityType: "fleet_vehicle",
+      entityId: vehicleId,
+      metadata: {
+        dailyRate1to2: input.dailyRate1to2,
+        dailyRate3to7: input.dailyRate3to7,
+        dailyRate8Plus: input.dailyRate8Plus,
+      },
+    });
+    return updated;
+  }
+
+  async updateVariantPricingTiers(
+    actor: TenantActor,
+    variantId: string,
+    input: {
+      dailyRate1to2: number;
+      dailyRate3to7: number;
+      dailyRate8Plus: number;
+      damageExcess: number;
+      mileagePolicy?: "unlimited" | "limited";
+      dailyKmLimit?: number;
+      extraKmRate?: number;
+      branchId?: string | null;
+    },
+  ) {
+    let branchIds: string[] | undefined;
+    let unassignedOnly = false;
+
+    if (actor.role.scopeType === "assigned_branches") {
+      if (input.branchId && !actor.branchIds.includes(input.branchId)) {
+        throw new FleetServiceError(
+          403,
+          "BRANCH_SCOPE_DENIED",
+          "You cannot modify vehicle prices outside your assigned branch.",
+        );
+      }
+      branchIds = input.branchId ? [input.branchId] : actor.branchIds;
+    } else if (input.branchId === "__unassigned__") {
+      unassignedOnly = true;
+    } else if (input.branchId) {
+      branchIds = [input.branchId];
     }
-    return this.store.updateVehiclePricingTiers(actor.company.id, vehicleId, input);
+
+    const result = await this.store.updateVariantPricingTiers(actor.company.id, variantId, {
+      ...input,
+      branchIds,
+      unassignedOnly,
+    });
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      actorUserId: actor.user.id,
+      action: "fleet.variant_pricing_updated",
+      entityType: "vehicle_variant",
+      entityId: variantId,
+      metadata: {
+        updatedCount: result.updatedCount,
+        branchId: input.branchId ?? (branchIds ? branchIds.join(",") : "all"),
+        dailyRate1to2: input.dailyRate1to2,
+        dailyRate3to7: input.dailyRate3to7,
+        dailyRate8Plus: input.dailyRate8Plus,
+      },
+    });
+    return result;
+  }
+
+  async applyVariantListingSetup(
+    actor: TenantActor,
+    variantId: string,
+    input: {
+      photoUrl?: string | null;
+      locationType?: string;
+      fuelPolicy?: string;
+      instantConfirmation?: boolean;
+      description?: string | null;
+      deliveryPolicy?: string | null;
+      dailyRate1to2?: number;
+      dailyRate3to7?: number;
+      dailyRate8Plus?: number;
+      damageExcess?: number;
+      mileagePolicy?: "unlimited" | "limited";
+      dailyKmLimit?: number | null;
+      extraKmRate?: number | null;
+      inclusions?: string[];
+      seats?: number;
+      doors?: number;
+      airConditioning?: boolean;
+      fuelType?: string;
+      luggageCapacity?: string;
+      transmission?: string;
+      publishToFleet?: boolean;
+    },
+  ) {
+    const branchIds =
+      actor.role.scopeType === "assigned_branches" ? actor.branchIds : undefined;
+    const result = await this.store.applyVariantListingSetup(
+      actor.company.id,
+      variantId,
+      {
+        ...input,
+        branchIds,
+      },
+    );
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      actorUserId: actor.user.id,
+      action: "fleet.variant_listing_setup",
+      entityType: "vehicle_variant",
+      entityId: variantId,
+      metadata: {
+        updatedCount: result.updatedCount,
+        publishToFleet: Boolean(input.publishToFleet),
+        inclusionsCount: input.inclusions?.length ?? 0,
+        hasPhoto: Boolean(input.photoUrl),
+      },
+    });
+    return result;
   }
 
   async addVehicleMaintenanceLog(
@@ -1000,15 +1193,32 @@ export class FleetService {
       serviceDate: string;
     },
   ) {
-    const vehicle = await this.store.findFleetVehicleById(vehicleId);
-    if (!vehicle || vehicle.companyId !== actor.company.id) {
-      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
-    }
-    return this.store.addVehicleMaintenanceLog({
+    const vehicle = this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(vehicleId),
+    );
+    const log = await this.store.addVehicleMaintenanceLog({
       companyId: actor.company.id,
       vehicleId,
+      createdByUserId: actor.user.id,
       ...input,
     });
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: vehicle.branchId,
+      actorUserId: actor.user.id,
+      action: "fleet.vehicle_maintenance_logged",
+      entityType: "fleet_vehicle",
+      entityId: vehicleId,
+      metadata: {
+        maintenanceLogId: log.id,
+        serviceType: input.serviceType,
+        workshopName: input.workshopName ?? null,
+        cost: input.cost,
+        status: input.status,
+      },
+    });
+    return log;
   }
 
   async addVehicleInspection(
@@ -1029,16 +1239,30 @@ export class FleetService {
       }>;
     },
   ) {
-    const vehicle = await this.store.findFleetVehicleById(vehicleId);
-    if (!vehicle || vehicle.companyId !== actor.company.id) {
-      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
-    }
-    return this.store.addVehicleInspection({
+    const vehicle = this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(vehicleId),
+    );
+    const inspection = await this.store.addVehicleInspection({
       companyId: actor.company.id,
       vehicleId,
       inspectedBy: actor.user.fullName || actor.user.email || "Staff",
       ...input,
     });
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: vehicle.branchId,
+      actorUserId: actor.user.id,
+      action: "fleet.vehicle_inspected",
+      entityType: "fleet_vehicle",
+      entityId: vehicleId,
+      metadata: {
+        inspectionType: input.inspectionType,
+        odometerKm: input.odometerKm,
+        damageCount: input.damagePoints.length,
+      },
+    });
+    return inspection;
   }
 
   // ============================================================================
@@ -1046,10 +1270,10 @@ export class FleetService {
   // ============================================================================
 
   async toggleVehicleBookable(actor: TenantActor, vehicleId: string, isBookable: boolean) {
-    const vehicle = await this.store.findFleetVehicleById(vehicleId);
-    if (!vehicle || vehicle.companyId !== actor.company.id) {
-      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
-    }
+    this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(vehicleId),
+    );
     const updated = await this.store.toggleFleetVehicleBookable(actor.company.id, vehicleId, isBookable);
     if (!updated) {
       throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
@@ -1066,12 +1290,14 @@ export class FleetService {
     input: {
       fullName: string;
       phone: string;
+      secondaryPhone?: string | null;
       email?: string | null;
       nationalId?: string | null;
       driverLicenseNo?: string | null;
       licenseExpiry?: string | null;
       nationality?: string | null;
       address?: string | null;
+      workAddress?: string | null;
       notes?: string | null;
     },
   ) {
@@ -1087,12 +1313,14 @@ export class FleetService {
     input: {
       fullName: string;
       phone: string;
+      secondaryPhone?: string | null;
       email?: string | null;
       nationalId?: string | null;
       driverLicenseNo?: string | null;
       licenseExpiry?: string | null;
       nationality?: string | null;
       address?: string | null;
+      workAddress?: string | null;
       notes?: string | null;
     },
   ) {
@@ -1108,7 +1336,11 @@ export class FleetService {
   }
 
   async listRentalContracts(actor: TenantActor) {
-    return this.store.listRentalContracts(actor.company.id);
+    const all = await this.store.listRentalContracts(actor.company.id);
+    if (actor.role.scopeType === "assigned_branches") {
+      return all.filter((c) => actor.branchIds.includes(c.branchId));
+    }
+    return all;
   }
 
   async createRentalContract(
@@ -1128,12 +1360,19 @@ export class FleetService {
       notes?: string | null;
     },
   ) {
-    const vehicle = await this.store.findFleetVehicleById(input.vehicleId);
-    if (!vehicle || vehicle.companyId !== actor.company.id) {
-      throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
-    }
+    const vehicle = this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(input.vehicleId),
+    );
     if (vehicle.status !== "available") {
       throw new FleetServiceError(409, "VEHICLE_UNAVAILABLE", "Vehicle is not available for rental.");
+    }
+    if (!vehicle.branchId) {
+      throw new FleetServiceError(
+        400,
+        "VEHICLE_NOT_IN_BRANCH",
+        "Vehicle is still in company central stock. Dispatch and receive it at a branch before creating a rental contract.",
+      );
     }
 
     const start = new Date(input.startDate);
@@ -1154,7 +1393,7 @@ export class FleetService {
     const extraCharges = Number(input.extraCharges ?? 0);
     const totalAmount = Math.max(0, subtotal - discount + insuranceFee + extraCharges);
 
-    return this.store.createRentalContract({
+    const contract = await this.store.createRentalContract({
       companyId: actor.company.id,
       branchId: vehicle.branchId,
       vehicleId: vehicle.id,
@@ -1174,6 +1413,39 @@ export class FleetService {
       notes: input.notes ?? null,
       createdByUserId: actor.user.id,
     });
+
+    await Promise.all([
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: vehicle.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.rental_contract_created",
+        entityType: "rental_contract",
+        entityId: contract.id,
+        metadata: {
+          contractNumber: contract.contractNumber,
+          vehicleId: vehicle.id,
+          licensePlate: vehicle.licensePlate,
+          totalAmount,
+        },
+      }),
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: vehicle.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.vehicle_booked",
+        entityType: "fleet_vehicle",
+        entityId: vehicle.id,
+        metadata: {
+          contractId: contract.id,
+          contractNumber: contract.contractNumber,
+          startDate: input.startDate,
+          endDate: input.endDate,
+        },
+      }),
+    ]);
+
+    return contract;
   }
 
   async completeRentalContract(
@@ -1185,6 +1457,33 @@ export class FleetService {
     if (!updated) {
       throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
     }
+    await Promise.all([
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: updated.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.rental_contract_completed",
+        entityType: "rental_contract",
+        entityId: updated.id,
+        metadata: {
+          contractNumber: updated.contractNumber,
+          returnOdometer: input.returnOdometer,
+        },
+      }),
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: updated.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.vehicle_returned",
+        entityType: "fleet_vehicle",
+        entityId: updated.vehicleId,
+        metadata: {
+          contractId: updated.id,
+          contractNumber: updated.contractNumber,
+          returnOdometer: input.returnOdometer,
+        },
+      }),
+    ]);
     return updated;
   }
 
@@ -1192,6 +1491,280 @@ export class FleetService {
     const updated = await this.store.cancelRentalContract(actor.company.id, contractId);
     if (!updated) {
       throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    await Promise.all([
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: updated.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.rental_contract_cancelled",
+        entityType: "rental_contract",
+        entityId: updated.id,
+        metadata: { contractNumber: updated.contractNumber },
+      }),
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: updated.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.vehicle_booking_cancelled",
+        entityType: "fleet_vehicle",
+        entityId: updated.vehicleId,
+        metadata: {
+          contractId: updated.id,
+          contractNumber: updated.contractNumber,
+        },
+      }),
+    ]);
+    return updated;
+  }
+
+  async listAuditLogs(
+    actor: TenantActor,
+    filter?: {
+      entityType?: string;
+      entityId?: string;
+      actorUserId?: string;
+      limit?: number;
+    },
+  ) {
+    return this.store.listAuditLogs(actor.company.id, filter);
+  }
+
+  // ============================================================================
+  // Phase 3: Drivers Directory & Vehicle Movements / Branch Transfers
+  // ============================================================================
+
+  async listDrivers(actor: TenantActor) {
+    return this.store.listDrivers(actor.company.id);
+  }
+
+  async createDriver(
+    actor: TenantActor,
+    input: {
+      fullName: string;
+      phonePrimary: string;
+      phoneSecondary?: string | null;
+      email?: string | null;
+      licenseNumber: string;
+      licenseIssueDate: string;
+      licenseExpiryDate: string;
+      passportNumber?: string | null;
+      nationalIdNumber?: string | null;
+      idCardPhotoUrl?: string | null;
+      passportPhotoUrl?: string | null;
+      licensePhotoUrl?: string | null;
+      address?: string | null;
+      status?: "active" | "inactive";
+    },
+  ) {
+    if (!input.fullName?.trim() || !input.phonePrimary?.trim() || !input.licenseNumber?.trim()) {
+      throw new FleetServiceError(
+        400,
+        "VALIDATION_ERROR",
+        "Driver name, primary phone, and license number are required.",
+      );
+    }
+    const driver = await this.store.createDriver({
+      companyId: actor.company.id,
+      ...input,
+      createdByUserId: actor.user.id,
+    });
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      actorUserId: actor.user.id,
+      action: "fleet.driver_created",
+      entityType: "driver",
+      entityId: driver.id,
+      metadata: { fullName: driver.fullName, licenseNumber: driver.licenseNumber },
+    });
+    return driver;
+  }
+
+  async updateDriver(
+    actor: TenantActor,
+    driverId: string,
+    input: {
+      fullName: string;
+      phonePrimary: string;
+      phoneSecondary?: string | null;
+      email?: string | null;
+      licenseNumber: string;
+      licenseIssueDate: string;
+      licenseExpiryDate: string;
+      passportNumber?: string | null;
+      nationalIdNumber?: string | null;
+      idCardPhotoUrl?: string | null;
+      passportPhotoUrl?: string | null;
+      licensePhotoUrl?: string | null;
+      address?: string | null;
+      status?: "active" | "inactive";
+    },
+  ) {
+    const updated = await this.store.updateDriver(actor.company.id, driverId, input);
+    if (!updated) {
+      throw new FleetServiceError(404, "DRIVER_NOT_FOUND", "Driver not found.");
+    }
+    return updated;
+  }
+
+  async deleteDriver(actor: TenantActor, driverId: string) {
+    return this.store.deleteDriver(actor.company.id, driverId);
+  }
+
+  async listVehicleMovements(
+    actor: TenantActor,
+    filter?: { vehicleId?: string; status?: string; toBranchId?: string },
+  ) {
+    const list = await this.store.listVehicleMovements(actor.company.id, filter);
+    if (actor.role.scopeType === "assigned_branches") {
+      return list.filter(
+        (m) =>
+          actor.branchIds.includes(m.toBranchId) ||
+          (m.fromBranchId != null && actor.branchIds.includes(m.fromBranchId)),
+      );
+    }
+    return list;
+  }
+
+  async dispatchVehicleMovement(
+    actor: TenantActor,
+    input: {
+      vehicleId: string;
+      toBranchId: string;
+      driverId: string;
+      dispatchOdometerKm: number;
+      notes?: string | null;
+    },
+  ) {
+    if (actor.company.operatingMode === "local_partner") {
+      throw new FleetServiceError(
+        400,
+        "LOCAL_PARTNER_NO_MOVEMENTS",
+        "Local partner companies do not use inter-branch vehicle movements.",
+      );
+    }
+    const vehicle = this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(input.vehicleId),
+    );
+    if (!input.toBranchId || !input.driverId) {
+      throw new FleetServiceError(400, "VALIDATION_ERROR", "Destination branch and driver are required.");
+    }
+    if (vehicle.branchId && vehicle.branchId === input.toBranchId) {
+      throw new FleetServiceError(400, "SAME_BRANCH", "Vehicle is already assigned to this branch.");
+    }
+    const actorName = actor.user.fullName || actor.user.email || "Staff";
+    const movement = await this.store.dispatchVehicleMovement({
+      companyId: actor.company.id,
+      vehicleId: vehicle.id,
+      fromBranchId: vehicle.branchId ?? null,
+      toBranchId: input.toBranchId,
+      driverId: input.driverId,
+      dispatchOdometerKm: Number(input.dispatchOdometerKm ?? vehicle.mileageOdometer ?? 0),
+      dispatchedByUserId: actor.user.id,
+      dispatchedByName: actorName,
+      notes: input.notes ?? null,
+    });
+
+    await Promise.all([
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: vehicle.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.movement_dispatched",
+        entityType: "fleet_vehicle",
+        entityId: vehicle.id,
+        metadata: {
+          movementNumber: movement.movementNumber,
+          fromBranch: movement.fromBranchName,
+          toBranch: movement.toBranchName,
+          driverName: movement.driverName,
+          dispatchOdometerKm: movement.dispatchOdometerKm,
+        },
+      }),
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: vehicle.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.movement_dispatched",
+        entityType: "vehicle_movement",
+        entityId: movement.id,
+        metadata: {
+          movementNumber: movement.movementNumber,
+          licensePlate: vehicle.licensePlate,
+          driverName: movement.driverName,
+        },
+      }),
+    ]);
+
+    return movement;
+  }
+
+  async receiveVehicleMovement(
+    actor: TenantActor,
+    movementId: string,
+    input: { arrivalOdometerKm: number; notes?: string | null },
+  ) {
+    if (actor.role.scopeType === "assigned_branches") {
+      const existingList = await this.store.listVehicleMovements(actor.company.id);
+      const target = existingList.find((m) => m.id === movementId);
+      if (!target) {
+        throw new FleetServiceError(404, "MOVEMENT_NOT_FOUND", "Pending movement not found.");
+      }
+      if (!actor.branchIds.includes(target.toBranchId)) {
+        throw new FleetServiceError(
+          403,
+          "BRANCH_SCOPE_DENIED",
+          "Only employees of the destination branch can receive this vehicle.",
+        );
+      }
+    }
+    const actorName = actor.user.fullName || actor.user.email || "Staff";
+    const updated = await this.store.receiveVehicleMovement(actor.company.id, movementId, {
+      arrivalOdometerKm: Number(input.arrivalOdometerKm ?? 0),
+      receivedByUserId: actor.user.id,
+      receivedByName: actorName,
+      notes: input.notes ?? null,
+    });
+    if (!updated) {
+      throw new FleetServiceError(404, "MOVEMENT_NOT_FOUND", "Pending movement not found.");
+    }
+
+    await Promise.all([
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: updated.toBranchId,
+        actorUserId: actor.user.id,
+        action: "fleet.movement_received",
+        entityType: "fleet_vehicle",
+        entityId: updated.vehicleId,
+        metadata: {
+          movementNumber: updated.movementNumber,
+          toBranch: updated.toBranchName,
+          arrivalOdometerKm: updated.arrivalOdometerKm,
+        },
+      }),
+      this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: updated.toBranchId,
+        actorUserId: actor.user.id,
+        action: "fleet.movement_received",
+        entityType: "vehicle_movement",
+        entityId: updated.id,
+        metadata: {
+          movementNumber: updated.movementNumber,
+          arrivalOdometerKm: updated.arrivalOdometerKm,
+        },
+      }),
+    ]);
+
+    return updated;
+  }
+
+  async cancelVehicleMovement(actor: TenantActor, movementId: string) {
+    const updated = await this.store.cancelVehicleMovement(actor.company.id, movementId);
+    if (!updated) {
+      throw new FleetServiceError(404, "MOVEMENT_NOT_FOUND", "Pending movement not found.");
     }
     return updated;
   }

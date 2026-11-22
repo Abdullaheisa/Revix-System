@@ -48,5 +48,7 @@ export interface AuditLogInput {
 
 export interface AuditLogRecord extends Required<AuditLogInput> {
   id: string;
+  actorName?: string | null;
+  actorEmail?: string | null;
   createdAt: Date;
 }

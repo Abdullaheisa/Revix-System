@@ -318,6 +318,20 @@ export class TeamService {
       },
     );
 
+    if (actor.role.scopeType === "assigned_branches") {
+      const allowed = new Set(actor.branchIds);
+      return {
+        roles: roles.filter((r) => r.scopeType === "assigned_branches"),
+        members: members.filter(
+          (m) => m.scopeType === "assigned_branches" && m.branchIds.some((id) => allowed.has(id)),
+        ),
+        invitations: publicInvitations.filter(
+          (i) => i.scopeType === "assigned_branches" && i.branchIds.some((id) => allowed.has(id)),
+        ),
+        branches: branches.filter((b) => allowed.has(b.id)),
+      };
+    }
+
     return { roles, members, invitations: publicInvitations, branches };
   }
 
@@ -325,6 +339,7 @@ export class TeamService {
     companyId: string,
     roleId: string,
     branchIds: string[],
+    actor?: TenantActor,
   ): Promise<{ role: CompanyRoleRecord; validBranchIds: string[] }> {
     const role = await this.store.findCompanyRoleById(roleId);
     if (!role || role.companyId !== companyId) {
@@ -335,17 +350,40 @@ export class TeamService {
       );
     }
 
+    const isBranchScopedActor = actor?.role.scopeType === "assigned_branches";
     if (role.scopeType === "company_wide") {
+      if (isBranchScopedActor) {
+        throw new TeamServiceError(
+          "INVALID_BRANCH_SCOPE",
+          "Branch-scoped managers cannot assign company-wide roles.",
+          403,
+        );
+      }
       return { role, validBranchIds: [] };
     }
 
-    const uniqueIds = Array.from(new Set(branchIds));
+    const effectiveBranchIds =
+      isBranchScopedActor && branchIds.length === 0 ? actor!.branchIds : branchIds;
+    const uniqueIds = Array.from(new Set(effectiveBranchIds));
     if (uniqueIds.length === 0) {
       throw new TeamServiceError(
         "INVALID_BRANCH_SCOPE",
         "Please assign at least one branch for this role.",
         400,
       );
+    }
+
+    if (isBranchScopedActor) {
+      const actorAllowed = new Set(actor!.branchIds);
+      for (const id of uniqueIds) {
+        if (!actorAllowed.has(id)) {
+          throw new TeamServiceError(
+            "INVALID_BRANCH_SCOPE",
+            "You can only assign employees to branches within your own access scope.",
+            403,
+          );
+        }
+      }
     }
 
     const companyBranches = await this.store.listBranchesByCompanyId(companyId);
@@ -384,6 +422,7 @@ export class TeamService {
       actor.company.id,
       input.roleId,
       input.branchIds,
+      actor,
     );
 
     if (role.code === "owner") {
@@ -735,6 +774,7 @@ export class TeamService {
       actor.company.id,
       input.roleId,
       input.branchIds,
+      actor,
     );
 
     if (role.code === "owner") {

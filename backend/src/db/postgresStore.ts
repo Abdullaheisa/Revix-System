@@ -1,7 +1,7 @@
 import { mapCompanyRoleRow, mapCompanyMembershipRow, mapEmployeeInvitationRow, mapNetworkLinkRow, mapPermittedBranchRow, mapNetworkInvitationRow, mapVehicleVariantRow, mapVendorRow, mapPurchaseOrderRow, mapPurchaseOrderItemRow, mapFleetVehicleRow, mapVehiclePhotoRow, mapRentalInclusionRow, mapUserRow, mapSessionRow, mapActionTokenRow, mapCompanyRow, mapBranchRow, type DbUserRow, type DbSessionRow, type DbActionTokenRow, type DbCompanyRow, type DbBranchRow, type DbCompanyRoleRow, type DbCompanyMembershipRow, type DbEmployeeInvitationRow, type DbNetworkLinkRow, type DbPermittedBranchRow, type DbNetworkInvitationRow, type DbVehicleVariantRow, type DbVendorRow, type DbPurchaseOrderRow, type DbPurchaseOrderItemRow, type DbFleetVehicleRow, type DbVehiclePhotoRow, type DbRentalInclusionRow } from "./postgres/rowMappers.ts";
 import crypto from "node:crypto";
 import pg from "pg";
-import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuthDataStore, BranchRecord, CompanyMembershipRecord, CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CompanyOperatingMode, CompanyRecord, CompanyRoleRecord, CreateBranchInput, CreateCompanyInput, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, CreateFleetVehicleInput, CreateNetworkInvitationInput, CreateNetworkLinkInput, CreatePurchaseOrderInput, CreateRentalInclusionInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, CreateVendorInput, CustomerRecord, EmployeeInvitationRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord, PurchaseOrderItemRecord, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, RentalContractRecord, RentalContractStatus, RentalInclusionRecord, SessionRecord, UpdateBranchInput, UpdateCompanyInput, UpdateCompanyMembershipInput, UpdateCompanyRoleInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, UpdateVendorInput, UserRecord, UserStatus, VehicleCategory, VehiclePhotoRecord, VehicleVariantRecord, VendorCategory, VendorRecord } from "./store.ts";
+import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, AuthDataStore, BranchRecord, CompanyMembershipRecord, CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CompanyOperatingMode, CompanyRecord, CompanyRoleRecord, CreateBranchInput, CreateCompanyInput, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, CreateFleetVehicleInput, CreateNetworkInvitationInput, CreateNetworkLinkInput, CreatePurchaseOrderInput, CreateRentalInclusionInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, CreateVendorInput, CustomerRecord, DriverRecord, EmployeeInvitationRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord, PurchaseOrderItemRecord, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, RentalContractRecord, RentalContractStatus, RentalInclusionRecord, SessionRecord, UpdateBranchInput, UpdateCompanyInput, UpdateCompanyMembershipInput, UpdateCompanyRoleInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, UpdateVendorInput, UserRecord, UserStatus, VehicleCategory, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord, VendorCategory, VendorRecord } from "./store.ts";
 
 
 
@@ -1098,6 +1098,56 @@ export class PostgresAuthDataStore implements AuthDataStore {
     );
   }
 
+  async listAuditLogs(
+    companyId: string,
+    filter?: {
+      entityType?: string;
+      entityId?: string;
+      actorUserId?: string;
+      limit?: number;
+    },
+  ): Promise<AuditLogRecord[]> {
+    let query = `
+      SELECT al.*, COALESCE(u.full_name, u.email) AS actor_name, u.email AS actor_email
+      FROM audit_logs al
+      LEFT JOIN users u ON u.id = al.actor_user_id
+      WHERE al.company_id = $1
+    `;
+    const params: unknown[] = [companyId];
+
+    if (filter?.entityType) {
+      params.push(filter.entityType);
+      query += ` AND al.entity_type = $${params.length}`;
+    }
+    if (filter?.entityId) {
+      params.push(filter.entityId);
+      query += ` AND al.entity_id = $${params.length}`;
+    }
+    if (filter?.actorUserId) {
+      params.push(filter.actorUserId);
+      query += ` AND al.actor_user_id = $${params.length}`;
+    }
+
+    const limit = Math.min(Math.max(Number(filter?.limit ?? 100), 1), 300);
+    params.push(limit);
+    query += ` ORDER BY al.created_at DESC LIMIT $${params.length}`;
+
+    const res = await this.pool.query(query, params);
+    return res.rows.map((r) => ({
+      id: r.id,
+      companyId: r.company_id ?? null,
+      branchId: r.branch_id ?? null,
+      actorUserId: r.actor_user_id ?? null,
+      actorName: r.actor_name ?? null,
+      actorEmail: r.actor_email ?? null,
+      action: r.action,
+      entityType: r.entity_type,
+      entityId: r.entity_id ?? null,
+      metadata: (r.metadata ?? {}) as Record<string, unknown>,
+      createdAt: new Date(r.created_at),
+    }));
+  }
+
   // --- Phase 5: Vehicle Variants ---
   async createVehicleVariant(
     input: CreateVehicleVariantInput,
@@ -1426,12 +1476,16 @@ export class PostgresAuthDataStore implements AuthDataStore {
     const poRes = await this.pool.query<DbPurchaseOrderRow>(
       `SELECT po.*, v.name as vendor_name, b.name as branch_name, c.name as company_name,
               c.logo_url as company_logo_url, c.timezone as company_timezone, c.country_code as company_country_code,
-              pc.name as parent_company_name, pc.logo_url as parent_company_logo_url
+              pc.name as parent_company_name, pc.logo_url as parent_company_logo_url,
+              COALESCE(cu.full_name, cu.email) as created_by_user_name,
+              COALESCE(au.full_name, au.email) as approved_by_user_name
        FROM purchase_orders po
        LEFT JOIN vendors v ON v.id = po.vendor_id
        LEFT JOIN branches b ON b.id = po.branch_id
        LEFT JOIN companies c ON c.id = po.company_id
        LEFT JOIN companies pc ON pc.id = c.parent_company_id
+       LEFT JOIN users cu ON cu.id = po.created_by_user_id
+       LEFT JOIN users au ON au.id = po.approved_by_user_id
        WHERE po.id = $1`,
       [poId],
     );
@@ -1459,12 +1513,16 @@ export class PostgresAuthDataStore implements AuthDataStore {
     let query = `
       SELECT po.*, v.name as vendor_name, b.name as branch_name, c.name as company_name,
              c.logo_url as company_logo_url, c.timezone as company_timezone, c.country_code as company_country_code,
-             pc.name as parent_company_name, pc.logo_url as parent_company_logo_url
+             pc.name as parent_company_name, pc.logo_url as parent_company_logo_url,
+             COALESCE(cu.full_name, cu.email) as created_by_user_name,
+             COALESCE(au.full_name, au.email) as approved_by_user_name
       FROM purchase_orders po
       LEFT JOIN vendors v ON v.id = po.vendor_id
       LEFT JOIN branches b ON b.id = po.branch_id
       LEFT JOIN companies c ON c.id = po.company_id
       LEFT JOIN companies pc ON pc.id = c.parent_company_id
+      LEFT JOIN users cu ON cu.id = po.created_by_user_id
+      LEFT JOIN users au ON au.id = po.approved_by_user_id
       WHERE po.company_id = $1
     `;
     const params: unknown[] = [companyId];
@@ -1548,6 +1606,25 @@ export class PostgresAuthDataStore implements AuthDataStore {
         throw new Error("All vehicles for this purchase line have already been received");
       }
 
+      // Inherit existing variant-level pricing if new vehicle doesn't specify rates
+      const existingVariantPriceRes = await client.query<{
+        daily_rate_1_to_2: string | number;
+        daily_rate_3_to_7: string | number;
+        daily_rate_8_plus: string | number;
+        damage_excess: string | number;
+        mileage_policy: "unlimited" | "limited";
+        daily_km_limit: number;
+        extra_km_rate: string | number;
+      }>(
+        `SELECT daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
+                mileage_policy, daily_km_limit, extra_km_rate
+         FROM fleet_vehicles
+         WHERE company_id = $1 AND variant_id = $2 AND daily_rate_1_to_2 > 0
+         ORDER BY updated_at DESC LIMIT 1`,
+        [poRow.company_id, itemRow.variant_id],
+      );
+      const inheritedPricing = existingVariantPriceRes.rows[0];
+
       // Create vehicle
       const vehicleId = crypto.randomUUID();
       const vehicleRes = await client.query<DbFleetVehicleRow>(
@@ -1558,15 +1635,15 @@ export class PostgresAuthDataStore implements AuthDataStore {
            daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
            mileage_policy, daily_km_limit, extra_km_rate, inclusions,
          seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission,
-         is_bookable, published_to_fleet_at)
+         is_bookable, published_to_fleet_at, in_service_date, created_by_user_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'available', $11, $12, $13,
                  $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33,
-                 $34, CASE WHEN $34 THEN NOW() ELSE NULL END)
+                 $34, CASE WHEN $34 THEN NOW() ELSE NULL END, COALESCE($35::date, CURRENT_DATE), $36)
          RETURNING *`,
         [
           vehicleId,
           poRow.company_id,
-          input.branchId || poRow.branch_id,
+          input.branchId ?? null,
           itemRow.variant_id,
           poRow.id,
           input.vin.trim().toUpperCase(),
@@ -1583,13 +1660,13 @@ export class PostgresAuthDataStore implements AuthDataStore {
           input.instantConfirmation ?? false,
           input.description?.trim() || null,
           input.deliveryPolicy?.trim() || null,
-          input.dailyRate1to2 ?? 0,
-          input.dailyRate3to7 ?? 0,
-          input.dailyRate8Plus ?? 0,
-          input.damageExcess ?? 0,
-          input.mileagePolicy ?? "unlimited",
-          input.dailyKmLimit ?? 0,
-          input.extraKmRate ?? 0,
+          input.dailyRate1to2 ?? (inheritedPricing ? Number(inheritedPricing.daily_rate_1_to_2) : 0),
+          input.dailyRate3to7 ?? (inheritedPricing ? Number(inheritedPricing.daily_rate_3_to_7) : 0),
+          input.dailyRate8Plus ?? (inheritedPricing ? Number(inheritedPricing.daily_rate_8_plus) : 0),
+          input.damageExcess ?? (inheritedPricing ? Number(inheritedPricing.damage_excess) : 0),
+          input.mileagePolicy ?? inheritedPricing?.mileage_policy ?? "unlimited",
+          input.dailyKmLimit ?? inheritedPricing?.daily_km_limit ?? 0,
+          input.extraKmRate ?? (inheritedPricing ? Number(inheritedPricing.extra_km_rate) : 0),
           input.inclusions ?? [],
           input.seats ?? 5,
           input.doors ?? 4,
@@ -1598,8 +1675,33 @@ export class PostgresAuthDataStore implements AuthDataStore {
           input.luggageCapacity ?? "2 Bags",
           input.transmission ?? "automatic",
           Boolean(input.isBookable),
+          input.inServiceDate ?? null,
+          input.createdByUserId ?? null,
         ],
       );
+
+      const resolvedInsProvider =
+        input.insuranceProviderName?.trim() ||
+        (input.insuranceCompanyId ? "Insurance Provider" : null);
+      if (resolvedInsProvider && input.insuranceExpiry) {
+        await client.query(
+          `INSERT INTO vehicle_insurance_policies
+            (company_id, vehicle_id, insurance_company_id, provider_name, policy_number,
+             coverage_type, premium_amount, deductible_amount, start_date, expiry_date, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 0, COALESCE($8::date, CURRENT_DATE), $9::date, 'active')`,
+          [
+            poRow.company_id,
+            vehicleId,
+            input.insuranceCompanyId ?? null,
+            resolvedInsProvider,
+            input.insurancePolicyNumber?.trim() || `POL-${input.licensePlate.trim().toUpperCase()}`,
+            input.insuranceCoverageType || "comprehensive",
+            Number(input.insurancePremiumAmount ?? 0),
+            input.insuranceStartDate ?? input.inServiceDate ?? null,
+            input.insuranceExpiry,
+          ],
+        );
+      }
 
       // Increment received_count
       await client.query(
@@ -1614,7 +1716,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         [input.purchaseOrderId],
       );
       const totalQty = totalRes.rows[0]?.total_qty ?? 0;
-      const totalRcv = (totalRes.rows[0]?.total_rcv ?? 0) + 1; // including current
+      const totalRcv = totalRes.rows[0]?.total_rcv ?? 0;
 
       const nextStatus: PurchaseOrderStatus =
         totalRcv >= totalQty ? "completed" : "partially_received";
@@ -1650,10 +1752,10 @@ export class PostgresAuthDataStore implements AuthDataStore {
          daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
          mileage_policy, daily_km_limit, extra_km_rate, inclusions,
          seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission,
-         is_bookable, published_to_fleet_at)
+         is_bookable, published_to_fleet_at, created_by_user_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
                $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34,
-               $35, CASE WHEN $35 THEN NOW() ELSE NULL END)
+               $35, CASE WHEN $35 THEN NOW() ELSE NULL END, $36)
        RETURNING *`,
       [
         id,
@@ -1691,6 +1793,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.luggageCapacity ?? "2 Bags",
         input.transmission ?? "automatic",
         Boolean(input.isBookable),
+        input.createdByUserId ?? null,
       ],
     );
     return (await this.findFleetVehicleById(res.rows[0]!.id))!;
@@ -1701,6 +1804,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
   ): Promise<FleetVehicleRecord | null> {
     const res = await this.pool.query<DbFleetVehicleRow>(
       `SELECT v.*, b.name as branch_name, c.name as company_name,
+              COALESCE(fcu.full_name, fcu.email) as created_by_user_name,
               po.po_number as po_number, po.order_date as po_order_date,
               ven.name as vendor_name,
               poi.unit_price as purchase_price,
@@ -1712,6 +1816,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
        FROM fleet_vehicles v
        LEFT JOIN branches b ON b.id = v.branch_id
        LEFT JOIN companies c ON c.id = v.company_id
+       LEFT JOIN users fcu ON fcu.id = v.created_by_user_id
        LEFT JOIN purchase_orders po ON po.id = v.purchase_order_id
        LEFT JOIN vendors ven ON ven.id = po.vendor_id
        LEFT JOIN LATERAL (
@@ -1759,6 +1864,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
   ): Promise<FleetVehicleRecord[]> {
     let query = `
       SELECT v.*, b.name as branch_name, c.name as company_name,
+             COALESCE(fcu.full_name, fcu.email) as created_by_user_name,
              po.po_number as po_number, po.order_date as po_order_date,
              ven.name as vendor_name,
              poi.unit_price as purchase_price,
@@ -1771,6 +1877,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       FROM fleet_vehicles v
       LEFT JOIN branches b ON b.id = v.branch_id
       LEFT JOIN companies c ON c.id = v.company_id
+      LEFT JOIN users fcu ON fcu.id = v.created_by_user_id
       LEFT JOIN purchase_orders po ON po.id = v.purchase_order_id
       LEFT JOIN vendors ven ON ven.id = po.vendor_id
       LEFT JOIN LATERAL (
@@ -1835,7 +1942,10 @@ export class PostgresAuthDataStore implements AuthDataStore {
         const partnerRes = await this.pool.query<
           DbFleetVehicleRow & { is_partner_vehicle?: boolean }
         >(
-          `SELECT v.*, b.name as branch_name, c.name as company_name,
+          `SELECT v.*,
+                  COALESCE(b.city, b.name, c.country_code) as branch_name,
+                  c.name as company_name,
+                  c.country_code as company_country_code,
                   var.make as variant_make, var.model as variant_model,
                   var.model_year as variant_model_year, var.trim as variant_trim,
                   var.category as variant_category, var.transmission as variant_transmission,
@@ -1843,12 +1953,16 @@ export class PostgresAuthDataStore implements AuthDataStore {
                   var.sipp_code as variant_sipp_code, var.status as variant_status,
                   TRUE as is_partner_vehicle
            FROM fleet_vehicles v
-           JOIN network_permitted_branches npb ON npb.branch_id = v.branch_id
-           JOIN company_network_links cnl ON cnl.id = npb.link_id AND cnl.status = 'active'
+           JOIN company_network_links cnl ON cnl.local_company_id = v.company_id AND cnl.status = 'active'
            LEFT JOIN branches b ON b.id = v.branch_id
            LEFT JOIN companies c ON c.id = v.company_id
            LEFT JOIN vehicle_variants var ON var.id = v.variant_id
            WHERE cnl.main_company_id = $1
+             AND (
+               NOT EXISTS (SELECT 1 FROM network_permitted_branches npb WHERE npb.link_id = cnl.id)
+               OR v.branch_id IS NULL
+               OR EXISTS (SELECT 1 FROM network_permitted_branches npb WHERE npb.link_id = cnl.id AND npb.branch_id = v.branch_id)
+             )
            ORDER BY v.created_at DESC`,
           [companyId],
         );
@@ -2318,7 +2432,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
         [companyId, vehicleId],
       ),
       this.pool.query(
-        `SELECT * FROM vehicle_maintenance_logs WHERE company_id = $1 AND vehicle_id = $2 ORDER BY service_date DESC, created_at DESC`,
+        `SELECT vml.*, COALESCE(u.full_name, u.email) AS created_by_user_name
+         FROM vehicle_maintenance_logs vml
+         LEFT JOIN users u ON u.id = vml.created_by_user_id
+         WHERE vml.company_id = $1 AND vml.vehicle_id = $2
+         ORDER BY vml.service_date DESC, vml.created_at DESC`,
         [companyId, vehicleId],
       ),
       this.pool.query(
@@ -2387,6 +2505,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
         status: m.status,
         notes: m.notes ?? null,
         serviceDate: fmtDate(m.service_date),
+        createdByUserId: m.created_by_user_id ?? null,
+        createdByUserName: m.created_by_user_name ?? null,
         createdAt: new Date(m.created_at),
       })),
       inspections: inspRes.rows.map((i) => ({
@@ -2404,6 +2524,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         damagePoints: damagePoints.filter((dp) => dp.inspectionId === i.id),
       })),
       damagePoints,
+      movements: await this.listVehicleMovements(companyId, { vehicleId }),
     };
   }
 
@@ -2514,6 +2635,147 @@ export class PostgresAuthDataStore implements AuthDataStore {
     return this.findFleetVehicleById(vehicleId);
   }
 
+  async updateVariantPricingTiers(
+    companyId: string,
+    variantId: string,
+    input: {
+      dailyRate1to2: number;
+      dailyRate3to7: number;
+      dailyRate8Plus: number;
+      damageExcess: number;
+      mileagePolicy?: "unlimited" | "limited";
+      dailyKmLimit?: number;
+      extraKmRate?: number;
+      branchIds?: string[];
+      unassignedOnly?: boolean;
+    },
+  ): Promise<{ updatedCount: number }> {
+    const params: unknown[] = [
+      input.dailyRate1to2,
+      input.dailyRate3to7,
+      input.dailyRate8Plus,
+      input.damageExcess,
+      input.mileagePolicy ?? null,
+      input.dailyKmLimit ?? null,
+      input.extraKmRate ?? null,
+      variantId,
+      companyId,
+    ];
+    let whereClause = "WHERE variant_id = $8 AND company_id = $9";
+    if (input.unassignedOnly) {
+      whereClause += " AND branch_id IS NULL";
+    } else if (Array.isArray(input.branchIds) && input.branchIds.length > 0) {
+      params.push(input.branchIds);
+      whereClause += " AND branch_id = ANY($10::uuid[])";
+    }
+    const res = await this.pool.query(
+      `UPDATE fleet_vehicles
+       SET daily_rate_1_to_2 = $1,
+           daily_rate_3_to_7 = $2,
+           daily_rate_8_plus = $3,
+           damage_excess = $4,
+           mileage_policy = COALESCE($5, mileage_policy),
+           daily_km_limit = COALESCE($6, daily_km_limit),
+           extra_km_rate = COALESCE($7, extra_km_rate),
+           updated_at = NOW()
+       ${whereClause}`,
+      params,
+    );
+    return { updatedCount: res.rowCount ?? 0 };
+  }
+
+  async applyVariantListingSetup(
+    companyId: string,
+    variantId: string,
+    input: {
+      photoUrl?: string | null;
+      locationType?: string;
+      fuelPolicy?: string;
+      instantConfirmation?: boolean;
+      description?: string | null;
+      deliveryPolicy?: string | null;
+      dailyRate1to2?: number;
+      dailyRate3to7?: number;
+      dailyRate8Plus?: number;
+      damageExcess?: number;
+      mileagePolicy?: "unlimited" | "limited";
+      dailyKmLimit?: number | null;
+      extraKmRate?: number | null;
+      inclusions?: string[];
+      seats?: number;
+      doors?: number;
+      airConditioning?: boolean;
+      fuelType?: string;
+      luggageCapacity?: string;
+      transmission?: string;
+      publishToFleet?: boolean;
+      branchIds?: string[];
+    },
+  ): Promise<{ updatedCount: number }> {
+    const hasBranchFilter = Array.isArray(input.branchIds) && input.branchIds.length > 0;
+    const params: unknown[] = [
+      input.photoUrl !== undefined ? input.photoUrl?.trim() || null : null,
+      input.photoUrl !== undefined,
+      input.locationType ?? null,
+      input.fuelPolicy ?? null,
+      input.instantConfirmation ?? null,
+      input.description !== undefined ? input.description?.trim() || null : null,
+      input.description !== undefined,
+      input.deliveryPolicy !== undefined ? input.deliveryPolicy?.trim() || null : null,
+      input.deliveryPolicy !== undefined,
+      input.dailyRate1to2 ?? null,
+      input.dailyRate3to7 ?? null,
+      input.dailyRate8Plus ?? null,
+      input.damageExcess ?? null,
+      input.mileagePolicy ?? null,
+      input.dailyKmLimit ?? null,
+      input.extraKmRate ?? null,
+      input.inclusions !== undefined ? JSON.stringify(input.inclusions) : null,
+      input.seats ?? null,
+      input.doors ?? null,
+      input.airConditioning ?? null,
+      input.fuelType ?? null,
+      input.luggageCapacity ?? null,
+      input.transmission ?? null,
+      input.publishToFleet === true,
+      variantId,
+      companyId,
+    ];
+    let whereClause = "WHERE variant_id = $25 AND company_id = $26";
+    if (hasBranchFilter) {
+      params.push(input.branchIds);
+      whereClause += ` AND branch_id = ANY($27::uuid[])`;
+    }
+    const res = await this.pool.query(
+      `UPDATE fleet_vehicles
+       SET photo_url = CASE WHEN $2 THEN $1 ELSE photo_url END,
+           location_type = COALESCE($3, location_type),
+           fuel_policy = COALESCE($4, fuel_policy),
+           instant_confirmation = COALESCE($5, instant_confirmation),
+           description = CASE WHEN $7 THEN $6 ELSE description END,
+           delivery_policy = CASE WHEN $9 THEN $8 ELSE delivery_policy END,
+           daily_rate_1_to_2 = COALESCE($10, daily_rate_1_to_2),
+           daily_rate_3_to_7 = COALESCE($11, daily_rate_3_to_7),
+           daily_rate_8_plus = COALESCE($12, daily_rate_8_plus),
+           damage_excess = COALESCE($13, damage_excess),
+           mileage_policy = COALESCE($14, mileage_policy),
+           daily_km_limit = COALESCE($15, daily_km_limit),
+           extra_km_rate = COALESCE($16, extra_km_rate),
+           inclusions = COALESCE($17::jsonb, inclusions),
+           seats = COALESCE($18, seats),
+           doors = COALESCE($19, doors),
+           air_conditioning = COALESCE($20, air_conditioning),
+           fuel_type = COALESCE($21, fuel_type),
+           luggage_capacity = COALESCE($22, luggage_capacity),
+           transmission = COALESCE($23, transmission),
+           is_bookable = CASE WHEN $24 THEN TRUE ELSE is_bookable END,
+           updated_at = NOW()
+       ${whereClause}`,
+      params,
+    );
+    return { updatedCount: res.rowCount ?? 0 };
+  }
+
   async addVehicleMaintenanceLog(input: {
     companyId: string;
     vehicleId: string;
@@ -2526,11 +2788,12 @@ export class PostgresAuthDataStore implements AuthDataStore {
     status: string;
     notes?: string | null;
     serviceDate: string;
+    createdByUserId?: string | null;
   }) {
     const res = await this.pool.query(
       `INSERT INTO vehicle_maintenance_logs
-        (company_id, vehicle_id, service_type, workshop_name, odometer_at_service, next_service_km, next_service_date, cost, status, notes, service_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        (company_id, vehicle_id, service_type, workshop_name, odometer_at_service, next_service_km, next_service_date, cost, status, notes, service_date, created_by_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         input.companyId,
@@ -2544,9 +2807,32 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.status,
         input.notes?.trim() || null,
         input.serviceDate,
+        input.createdByUserId ?? null,
       ],
     );
     const m = res.rows[0]!;
+    if (input.odometerAtService > 0) {
+      const prevRes = await this.pool.query(
+        `SELECT mileage_odometer FROM fleet_vehicles WHERE id = $1 AND company_id = $2`,
+        [input.vehicleId, input.companyId],
+      );
+      const prevOdo = Number(prevRes.rows[0]?.mileage_odometer ?? 0);
+      await this.pool.query(
+        `UPDATE fleet_vehicles SET mileage_odometer = GREATEST(mileage_odometer, $2), updated_at = NOW() WHERE id = $1 AND company_id = $3`,
+        [input.vehicleId, input.odometerAtService, input.companyId],
+      );
+      await this.pool.query(
+        `INSERT INTO vehicle_odometer_logs (company_id, vehicle_id, source, reference_label, odometer_km, delta_km)
+         VALUES ($1, $2, 'maintenance', $3, $4, $5)`,
+        [
+          input.companyId,
+          input.vehicleId,
+          input.serviceType.trim(),
+          input.odometerAtService,
+          Math.max(0, input.odometerAtService - prevOdo),
+        ],
+      );
+    }
     return {
       id: m.id,
       companyId: m.company_id,
@@ -2560,6 +2846,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       status: m.status,
       notes: m.notes ?? null,
       serviceDate: input.serviceDate,
+      createdByUserId: m.created_by_user_id ?? null,
       createdAt: new Date(m.created_at),
     };
   }
@@ -2703,12 +2990,14 @@ export class PostgresAuthDataStore implements AuthDataStore {
       companyId: String(r.company_id),
       fullName: String(r.full_name),
       phone: String(r.phone),
+      secondaryPhone: (r.secondary_phone as string | null) ?? null,
       email: (r.email as string | null) ?? null,
       nationalId: (r.national_id as string | null) ?? null,
       driverLicenseNo: (r.driver_license_no as string | null) ?? null,
       licenseExpiry: r.license_expiry ? new Date(String(r.license_expiry)).toISOString().slice(0, 10) : null,
       nationality: (r.nationality as string | null) ?? null,
       address: (r.address as string | null) ?? null,
+      workAddress: (r.work_address as string | null) ?? null,
       notes: (r.notes as string | null) ?? null,
       createdAt: new Date(String(r.created_at)),
       updatedAt: new Date(String(r.updated_at)),
@@ -2727,29 +3016,33 @@ export class PostgresAuthDataStore implements AuthDataStore {
     companyId: string;
     fullName: string;
     phone: string;
+    secondaryPhone?: string | null;
     email?: string | null;
     nationalId?: string | null;
     driverLicenseNo?: string | null;
     licenseExpiry?: string | null;
     nationality?: string | null;
     address?: string | null;
+    workAddress?: string | null;
     notes?: string | null;
   }): Promise<CustomerRecord> {
     const res = await this.pool.query(
       `INSERT INTO customers
-        (company_id, full_name, phone, email, national_id, driver_license_no, license_expiry, nationality, address, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        (company_id, full_name, phone, secondary_phone, email, national_id, driver_license_no, license_expiry, nationality, address, work_address, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        RETURNING *`,
       [
         input.companyId,
         input.fullName.trim(),
         input.phone.trim(),
+        input.secondaryPhone?.trim() || null,
         input.email?.trim() || null,
         input.nationalId?.trim() || null,
         input.driverLicenseNo?.trim() || null,
         input.licenseExpiry || null,
         input.nationality?.trim() || null,
         input.address?.trim() || null,
+        input.workAddress?.trim() || null,
         input.notes?.trim() || null,
       ],
     );
@@ -2762,31 +3055,35 @@ export class PostgresAuthDataStore implements AuthDataStore {
     input: {
       fullName: string;
       phone: string;
+      secondaryPhone?: string | null;
       email?: string | null;
       nationalId?: string | null;
       driverLicenseNo?: string | null;
       licenseExpiry?: string | null;
       nationality?: string | null;
       address?: string | null;
+      workAddress?: string | null;
       notes?: string | null;
     },
   ): Promise<CustomerRecord | null> {
     const res = await this.pool.query(
       `UPDATE customers
-       SET full_name = $1, phone = $2, email = $3, national_id = $4,
-           driver_license_no = $5, license_expiry = $6, nationality = $7,
-           address = $8, notes = $9, updated_at = NOW()
-       WHERE id = $10 AND company_id = $11
+       SET full_name = $1, phone = $2, secondary_phone = $3, email = $4, national_id = $5,
+           driver_license_no = $6, license_expiry = $7, nationality = $8,
+           address = $9, work_address = $10, notes = $11, updated_at = NOW()
+       WHERE id = $12 AND company_id = $13
        RETURNING *`,
       [
         input.fullName.trim(),
         input.phone.trim(),
+        input.secondaryPhone?.trim() || null,
         input.email?.trim() || null,
         input.nationalId?.trim() || null,
         input.driverLicenseNo?.trim() || null,
         input.licenseExpiry || null,
         input.nationality?.trim() || null,
         input.address?.trim() || null,
+        input.workAddress?.trim() || null,
         input.notes?.trim() || null,
         customerId,
         companyId,
@@ -2827,6 +3124,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       depositAmount: Number(r.deposit_amount ?? 0),
       notes: (r.notes as string | null) ?? null,
       createdByUserId: (r.created_by_user_id as string | null) ?? null,
+      createdByUserName: (r.created_by_user_name as string | null) ?? null,
       createdAt: new Date(String(r.created_at)),
       updatedAt: new Date(String(r.updated_at)),
       vehiclePlate: (r.vehicle_plate as string | undefined) ?? undefined,
@@ -2844,12 +3142,14 @@ export class PostgresAuthDataStore implements AuthDataStore {
               CONCAT_WS(' ', vv.make, vv.model, vv.model_year) AS vehicle_name,
               cu.full_name AS customer_name,
               cu.phone AS customer_phone,
-              br.name AS branch_name
+              br.name AS branch_name,
+              COALESCE(rcu.full_name, rcu.email) AS created_by_user_name
        FROM rental_contracts rc
        JOIN fleet_vehicles fv ON fv.id = rc.vehicle_id
        LEFT JOIN vehicle_variants vv ON vv.id = fv.variant_id
        JOIN customers cu ON cu.id = rc.customer_id
        LEFT JOIN branches br ON br.id = rc.branch_id
+       LEFT JOIN users rcu ON rcu.id = rc.created_by_user_id
        WHERE rc.company_id = $1
        ORDER BY rc.created_at DESC`,
       [companyId],
@@ -2916,9 +3216,25 @@ export class PostgresAuthDataStore implements AuthDataStore {
     );
 
     // Mark vehicle on_rent and log pickup odometer
-    await this.pool.query(
-      `UPDATE fleet_vehicles SET status = 'on_rent', updated_at = NOW() WHERE id = $1 AND company_id = $2`,
+    const prevVehRes = await this.pool.query(
+      `SELECT mileage_odometer FROM fleet_vehicles WHERE id = $1 AND company_id = $2`,
       [input.vehicleId, input.companyId],
+    );
+    const prevOdo = Number(prevVehRes.rows[0]?.mileage_odometer ?? 0);
+    await this.pool.query(
+      `UPDATE fleet_vehicles SET status = 'on_rent', mileage_odometer = GREATEST(mileage_odometer, $3), updated_at = NOW() WHERE id = $1 AND company_id = $2`,
+      [input.vehicleId, input.companyId, input.pickupOdometer],
+    );
+    await this.pool.query(
+      `INSERT INTO vehicle_odometer_logs (company_id, vehicle_id, source, reference_label, odometer_km, delta_km)
+       VALUES ($1, $2, 'contract_pickup', $3, $4, $5)`,
+      [
+        input.companyId,
+        input.vehicleId,
+        contractNumber,
+        input.pickupOdometer,
+        Math.max(0, input.pickupOdometer - prevOdo),
+      ],
     );
 
     const contracts = await this.listRentalContracts(input.companyId);
@@ -3017,6 +3333,410 @@ export class PostgresAuthDataStore implements AuthDataStore {
 
     const list = await this.listRentalContracts(companyId);
     return list.find((c) => c.id === contractId) ?? null;
+  }
+
+  // --- Drivers Directory ---
+  private mapDriverRow(r: Record<string, unknown>): DriverRecord {
+    const fmtDate = (d: unknown) =>
+      typeof d === "string" ? d.slice(0, 10) : new Date(String(d)).toISOString().slice(0, 10);
+    return {
+      id: String(r.id),
+      companyId: String(r.company_id),
+      fullName: String(r.full_name),
+      phonePrimary: String(r.phone_primary),
+      phoneSecondary: (r.phone_secondary as string | null) ?? null,
+      email: (r.email as string | null) ?? null,
+      licenseNumber: String(r.license_number),
+      licenseIssueDate: fmtDate(r.license_issue_date),
+      licenseExpiryDate: fmtDate(r.license_expiry_date),
+      passportNumber: (r.passport_number as string | null) ?? null,
+      nationalIdNumber: (r.national_id_number as string | null) ?? null,
+      idCardPhotoUrl: (r.id_card_photo_url as string | null) ?? null,
+      passportPhotoUrl: (r.passport_photo_url as string | null) ?? null,
+      licensePhotoUrl: (r.license_photo_url as string | null) ?? null,
+      address: (r.address as string | null) ?? null,
+      status: (r.status as "active" | "inactive") ?? "active",
+      createdByUserId: (r.created_by_user_id as string | null) ?? null,
+      createdByUserName: (r.created_by_user_name as string | null) ?? null,
+      createdAt: new Date(String(r.created_at)),
+      updatedAt: new Date(String(r.updated_at)),
+    };
+  }
+
+  async listDrivers(companyId: string): Promise<DriverRecord[]> {
+    const res = await this.pool.query(
+      `SELECT d.*, COALESCE(u.full_name, u.email) AS created_by_user_name
+       FROM drivers d
+       LEFT JOIN users u ON u.id = d.created_by_user_id
+       WHERE d.company_id = $1
+       ORDER BY d.created_at DESC`,
+      [companyId],
+    );
+    return res.rows.map((r) => this.mapDriverRow(r));
+  }
+
+  async createDriver(input: {
+    companyId: string;
+    fullName: string;
+    phonePrimary: string;
+    phoneSecondary?: string | null;
+    email?: string | null;
+    licenseNumber: string;
+    licenseIssueDate: string;
+    licenseExpiryDate: string;
+    passportNumber?: string | null;
+    nationalIdNumber?: string | null;
+    idCardPhotoUrl?: string | null;
+    passportPhotoUrl?: string | null;
+    licensePhotoUrl?: string | null;
+    address?: string | null;
+    status?: "active" | "inactive";
+    createdByUserId?: string | null;
+  }): Promise<DriverRecord> {
+    const res = await this.pool.query(
+      `INSERT INTO drivers
+        (company_id, full_name, phone_primary, phone_secondary, email,
+         license_number, license_issue_date, license_expiry_date, passport_number,
+         national_id_number, id_card_photo_url, passport_photo_url, license_photo_url,
+         address, status, created_by_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8::date, $9, $10, $11, $12, $13, $14, $15, $16)
+       RETURNING *`,
+      [
+        input.companyId,
+        input.fullName.trim(),
+        input.phonePrimary.trim(),
+        input.phoneSecondary?.trim() || null,
+        input.email?.trim() || null,
+        input.licenseNumber.trim(),
+        input.licenseIssueDate,
+        input.licenseExpiryDate,
+        input.passportNumber?.trim() || null,
+        input.nationalIdNumber?.trim() || null,
+        input.idCardPhotoUrl || null,
+        input.passportPhotoUrl || null,
+        input.licensePhotoUrl || null,
+        input.address?.trim() || null,
+        input.status ?? "active",
+        input.createdByUserId ?? null,
+      ],
+    );
+    const list = await this.listDrivers(input.companyId);
+    return list.find((d) => d.id === res.rows[0]!.id) ?? this.mapDriverRow(res.rows[0]!);
+  }
+
+  async updateDriver(
+    companyId: string,
+    driverId: string,
+    input: {
+      fullName: string;
+      phonePrimary: string;
+      phoneSecondary?: string | null;
+      email?: string | null;
+      licenseNumber: string;
+      licenseIssueDate: string;
+      licenseExpiryDate: string;
+      passportNumber?: string | null;
+      nationalIdNumber?: string | null;
+      idCardPhotoUrl?: string | null;
+      passportPhotoUrl?: string | null;
+      licensePhotoUrl?: string | null;
+      address?: string | null;
+      status?: "active" | "inactive";
+    },
+  ): Promise<DriverRecord | null> {
+    const res = await this.pool.query(
+      `UPDATE drivers
+       SET full_name = $3,
+           phone_primary = $4,
+           phone_secondary = $5,
+           email = $6,
+           license_number = $7,
+           license_issue_date = $8::date,
+           license_expiry_date = $9::date,
+           passport_number = $10,
+           national_id_number = $11,
+           id_card_photo_url = $12,
+           passport_photo_url = $13,
+           license_photo_url = $14,
+           address = $15,
+           status = COALESCE($16, status),
+           updated_at = NOW()
+       WHERE id = $1 AND company_id = $2
+       RETURNING id`,
+      [
+        driverId,
+        companyId,
+        input.fullName.trim(),
+        input.phonePrimary.trim(),
+        input.phoneSecondary?.trim() || null,
+        input.email?.trim() || null,
+        input.licenseNumber.trim(),
+        input.licenseIssueDate,
+        input.licenseExpiryDate,
+        input.passportNumber?.trim() || null,
+        input.nationalIdNumber?.trim() || null,
+        input.idCardPhotoUrl || null,
+        input.passportPhotoUrl || null,
+        input.licensePhotoUrl || null,
+        input.address?.trim() || null,
+        input.status ?? null,
+      ],
+    );
+    if (!res.rows[0]) return null;
+    const list = await this.listDrivers(companyId);
+    return list.find((d) => d.id === driverId) ?? null;
+  }
+
+  async deleteDriver(companyId: string, driverId: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `DELETE FROM drivers WHERE id = $1 AND company_id = $2`,
+      [driverId, companyId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  // --- Vehicle Movements & Branch Transfers ---
+  private mapVehicleMovementRow(r: Record<string, unknown>): VehicleMovementRecord {
+    return {
+      id: String(r.id),
+      companyId: String(r.company_id),
+      movementNumber: String(r.movement_number),
+      vehicleId: String(r.vehicle_id),
+      fromBranchId: r.from_branch_id ? String(r.from_branch_id) : null,
+      toBranchId: String(r.to_branch_id),
+      driverId: String(r.driver_id),
+      status: r.status as "in_transit" | "received" | "cancelled",
+      dispatchOdometerKm: Number(r.dispatch_odometer_km ?? 0),
+      arrivalOdometerKm: r.arrival_odometer_km != null ? Number(r.arrival_odometer_km) : null,
+      dispatchedByUserId: (r.dispatched_by_user_id as string | null) ?? null,
+      receivedByUserId: (r.received_by_user_id as string | null) ?? null,
+      dispatchedAt: new Date(String(r.dispatched_at)),
+      receivedAt: r.received_at ? new Date(String(r.received_at)) : null,
+      notes: (r.notes as string | null) ?? null,
+      createdAt: new Date(String(r.created_at)),
+      updatedAt: new Date(String(r.updated_at)),
+      vehicleName: (r.vehicle_name as string | null) ?? null,
+      vehiclePlate: (r.vehicle_plate as string | null) ?? null,
+      fromBranchName: (r.from_branch_name as string | null) ?? null,
+      toBranchName: (r.to_branch_name as string | null) ?? null,
+      driverName: (r.driver_name as string | null) ?? null,
+      driverPhone: (r.driver_phone as string | null) ?? null,
+      dispatchedByUserName: (r.dispatched_by_user_name as string | null) ?? null,
+      receivedByUserName: (r.received_by_user_name as string | null) ?? null,
+    };
+  }
+
+  async listVehicleMovements(
+    companyId: string,
+    filter?: { vehicleId?: string; status?: string; toBranchId?: string },
+  ): Promise<VehicleMovementRecord[]> {
+    let query = `
+      SELECT vm.*,
+             fv.license_plate AS vehicle_plate,
+             CONCAT_WS(' ', vv.make, vv.model, vv.trim, vv.model_year) AS vehicle_name,
+             fb.name AS from_branch_name,
+             tb.name AS to_branch_name,
+             dr.full_name AS driver_name,
+             dr.phone_primary AS driver_phone,
+             COALESCE(du.full_name, du.email) AS dispatched_by_user_name,
+             COALESCE(ru.full_name, ru.email) AS received_by_user_name
+      FROM vehicle_movements vm
+      JOIN fleet_vehicles fv ON fv.id = vm.vehicle_id
+      LEFT JOIN vehicle_variants vv ON vv.id = fv.variant_id
+      LEFT JOIN branches fb ON fb.id = vm.from_branch_id
+      LEFT JOIN branches tb ON tb.id = vm.to_branch_id
+      LEFT JOIN drivers dr ON dr.id = vm.driver_id
+      LEFT JOIN users du ON du.id = vm.dispatched_by_user_id
+      LEFT JOIN users ru ON ru.id = vm.received_by_user_id
+      WHERE vm.company_id = $1
+    `;
+    const params: unknown[] = [companyId];
+    if (filter?.vehicleId) {
+      params.push(filter.vehicleId);
+      query += ` AND vm.vehicle_id = $${params.length}`;
+    }
+    if (filter?.status) {
+      params.push(filter.status);
+      query += ` AND vm.status = $${params.length}`;
+    }
+    if (filter?.toBranchId) {
+      params.push(filter.toBranchId);
+      query += ` AND vm.to_branch_id = $${params.length}`;
+    }
+    query += ` ORDER BY vm.dispatched_at DESC`;
+    const res = await this.pool.query(query, params);
+    return res.rows.map((r) => this.mapVehicleMovementRow(r));
+  }
+
+  async dispatchVehicleMovement(input: {
+    companyId: string;
+    vehicleId: string;
+    fromBranchId?: string | null;
+    toBranchId: string;
+    driverId: string;
+    dispatchOdometerKm: number;
+    dispatchedByUserId?: string | null;
+    dispatchedByName?: string | null;
+    notes?: string | null;
+  }): Promise<VehicleMovementRecord> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const countRes = await client.query(
+        `SELECT COUNT(*)::int AS cnt FROM vehicle_movements WHERE company_id = $1`,
+        [input.companyId],
+      );
+      const nextNum = Number(countRes.rows[0]?.cnt ?? 0) + 1;
+      const movementNumber = `MV-${String(nextNum).padStart(4, "0")}`;
+
+      const prevVehRes = await client.query(
+        `SELECT mileage_odometer FROM fleet_vehicles WHERE id = $1 AND company_id = $2`,
+        [input.vehicleId, input.companyId],
+      );
+      const prevOdo = Number(prevVehRes.rows[0]?.mileage_odometer ?? 0);
+
+      const insRes = await client.query(
+        `INSERT INTO vehicle_movements
+          (company_id, movement_number, vehicle_id, from_branch_id, to_branch_id,
+           driver_id, status, dispatch_odometer_km, dispatched_by_user_id, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, 'in_transit', $7, $8, $9)
+         RETURNING id`,
+        [
+          input.companyId,
+          movementNumber,
+          input.vehicleId,
+          input.fromBranchId ?? null,
+          input.toBranchId,
+          input.driverId,
+          input.dispatchOdometerKm,
+          input.dispatchedByUserId ?? null,
+          input.notes?.trim() || null,
+        ],
+      );
+
+      await client.query(
+        `UPDATE fleet_vehicles
+         SET mileage_odometer = GREATEST(mileage_odometer, $2),
+             is_bookable = FALSE,
+             updated_at = NOW()
+         WHERE id = $1 AND company_id = $3`,
+        [input.vehicleId, input.dispatchOdometerKm, input.companyId],
+      );
+
+      await client.query(
+        `INSERT INTO vehicle_odometer_logs
+          (company_id, vehicle_id, source, reference_label, odometer_km, delta_km, recorded_by)
+         VALUES ($1, $2, 'movement_dispatch', $3, $4, $5, $6)`,
+        [
+          input.companyId,
+          input.vehicleId,
+          movementNumber,
+          input.dispatchOdometerKm,
+          Math.max(0, input.dispatchOdometerKm - prevOdo),
+          input.dispatchedByName ?? null,
+        ],
+      );
+
+      await client.query("COMMIT");
+      const list = await this.listVehicleMovements(input.companyId, { vehicleId: input.vehicleId });
+      return list.find((m) => m.id === insRes.rows[0]!.id)!;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async receiveVehicleMovement(
+    companyId: string,
+    movementId: string,
+    input: {
+      arrivalOdometerKm: number;
+      receivedByUserId?: string | null;
+      receivedByName?: string | null;
+      notes?: string | null;
+    },
+  ): Promise<VehicleMovementRecord | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const exRes = await client.query(
+        `SELECT * FROM vehicle_movements WHERE id = $1 AND company_id = $2 FOR UPDATE`,
+        [movementId, companyId],
+      );
+      const ex = exRes.rows[0];
+      if (!ex || ex.status !== "in_transit") {
+        await client.query("ROLLBACK");
+        return null;
+      }
+
+      const dispatchOdo = Number(ex.dispatch_odometer_km ?? 0);
+      const deltaKm = Math.max(0, input.arrivalOdometerKm - dispatchOdo);
+
+      await client.query(
+        `UPDATE vehicle_movements
+         SET status = 'received',
+             arrival_odometer_km = $3,
+             received_by_user_id = $4,
+             received_at = NOW(),
+             notes = COALESCE($5, notes),
+             updated_at = NOW()
+         WHERE id = $1 AND company_id = $2`,
+        [
+          movementId,
+          companyId,
+          input.arrivalOdometerKm,
+          input.receivedByUserId ?? null,
+          input.notes?.trim() || null,
+        ],
+      );
+
+      await client.query(
+        `UPDATE fleet_vehicles
+         SET branch_id = $2,
+             mileage_odometer = GREATEST(mileage_odometer, $3),
+             updated_at = NOW()
+         WHERE id = $1 AND company_id = $4`,
+        [ex.vehicle_id, ex.to_branch_id, input.arrivalOdometerKm, companyId],
+      );
+
+      await client.query(
+        `INSERT INTO vehicle_odometer_logs
+          (company_id, vehicle_id, source, reference_label, odometer_km, delta_km, recorded_by)
+         VALUES ($1, $2, 'movement_arrival', $3, $4, $5, $6)`,
+        [
+          companyId,
+          ex.vehicle_id,
+          ex.movement_number,
+          input.arrivalOdometerKm,
+          deltaKm,
+          input.receivedByName ?? null,
+        ],
+      );
+
+      await client.query("COMMIT");
+      const list = await this.listVehicleMovements(companyId, { vehicleId: ex.vehicle_id });
+      return list.find((m) => m.id === movementId) ?? null;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async cancelVehicleMovement(companyId: string, movementId: string): Promise<VehicleMovementRecord | null> {
+    const res = await this.pool.query(
+      `UPDATE vehicle_movements
+       SET status = 'cancelled', updated_at = NOW()
+       WHERE id = $1 AND company_id = $2 AND status = 'in_transit'
+       RETURNING vehicle_id`,
+      [movementId, companyId],
+    );
+    if (!res.rows[0]) return null;
+    const list = await this.listVehicleMovements(companyId, { vehicleId: res.rows[0].vehicle_id });
+    return list.find((m) => m.id === movementId) ?? null;
   }
 }
 

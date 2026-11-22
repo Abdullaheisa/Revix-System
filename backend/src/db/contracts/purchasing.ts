@@ -116,7 +116,9 @@ export interface PurchaseOrderRecord {
   installmentsCount: number;
   notes: string | null;
   createdByUserId: string | null;
+  createdByUserName?: string | null;
   approvedByUserId: string | null;
+  approvedByUserName?: string | null;
   approvedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -163,7 +165,8 @@ export interface CreatePurchaseOrderInput {
 export interface ReceiveVehicleFromPoInput {
   purchaseOrderId: string;
   itemId: string;
-  branchId: string;
+  branchId?: string | null;
+  createdByUserId?: string | null;
   vin: string;
   licensePlate: string;
   keyNumber?: string | null;
@@ -172,6 +175,13 @@ export interface ReceiveVehicleFromPoInput {
   isBookable?: boolean;
   registrationExpiry?: string | null;
   insuranceExpiry?: string | null;
+  inServiceDate?: string | null;
+  insuranceCompanyId?: string | null;
+  insuranceProviderName?: string | null;
+  insurancePolicyNumber?: string | null;
+  insuranceCoverageType?: string | null;
+  insuranceStartDate?: string | null;
+  insurancePremiumAmount?: number;
   notes?: string | null;
   photoUrl?: string | null;
   locationType?: string;

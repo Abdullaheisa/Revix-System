@@ -25,12 +25,14 @@ router.post(
         const created = await fleetService.createCustomer(req.tenantActor!, {
           fullName: String(req.body?.fullName ?? ""),
           phone: String(req.body?.phone ?? ""),
+          secondaryPhone: req.body?.secondaryPhone ?? null,
           email: req.body?.email ?? null,
           nationalId: req.body?.nationalId ?? null,
           driverLicenseNo: req.body?.driverLicenseNo ?? null,
           licenseExpiry: req.body?.licenseExpiry ?? null,
           nationality: req.body?.nationality ?? null,
           address: req.body?.address ?? null,
+          workAddress: req.body?.workAddress ?? null,
           notes: req.body?.notes ?? null,
         });
         res.status(201).json({ ok: true, data: created });
@@ -49,12 +51,14 @@ router.patch(
         const updated = await fleetService.updateCustomer(req.tenantActor!, id!, {
           fullName: String(req.body?.fullName ?? ""),
           phone: String(req.body?.phone ?? ""),
+          secondaryPhone: req.body?.secondaryPhone ?? null,
           email: req.body?.email ?? null,
           nationalId: req.body?.nationalId ?? null,
           driverLicenseNo: req.body?.driverLicenseNo ?? null,
           licenseExpiry: req.body?.licenseExpiry ?? null,
           nationality: req.body?.nationality ?? null,
           address: req.body?.address ?? null,
+          workAddress: req.body?.workAddress ?? null,
           notes: req.body?.notes ?? null,
         });
         res.status(200).json({ ok: true, data: updated });

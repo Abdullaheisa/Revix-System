@@ -23,6 +23,12 @@ export interface PendingFleetReceiveContext {
   color?: string;
 }
 
+export interface PendingVariantSetupContext {
+  variantId: string;
+  variantTitle: string;
+  totalUnits: number;
+}
+
 export interface WorkspaceUiState {
   activeSection: WorkspaceSectionId;
   activeSubPage: string;
@@ -30,6 +36,7 @@ export interface WorkspaceUiState {
   isCommandPaletteOpen: boolean;
   isIconRailPinned: boolean;
   pendingFleetReceiveContext: PendingFleetReceiveContext | null;
+  pendingVariantSetupContext: PendingVariantSetupContext | null;
   pageByRoute: Record<string, number>;
   pendingUrlPush: boolean;
 }
@@ -52,6 +59,7 @@ const initialState: WorkspaceUiState = {
   isCommandPaletteOpen: false,
   isIconRailPinned: false,
   pendingFleetReceiveContext: null,
+  pendingVariantSetupContext: null,
   pageByRoute: {},
   pendingUrlPush: false,
 };
@@ -103,6 +111,15 @@ export const workspaceSlice = createSlice({
     clearPendingFleetReceiveContext(state) {
       state.pendingFleetReceiveContext = null;
     },
+    setPendingVariantSetupContext(
+      state,
+      action: PayloadAction<PendingVariantSetupContext | null>,
+    ) {
+      state.pendingVariantSetupContext = action.payload;
+    },
+    clearPendingVariantSetupContext(state) {
+      state.pendingVariantSetupContext = null;
+    },
     setRoutePage(
       state,
       action: PayloadAction<{ routeKey: string; page: number }>,
@@ -141,6 +158,8 @@ export const {
   toggleIconRailPinned,
   setPendingFleetReceiveContext,
   clearPendingFleetReceiveContext,
+  setPendingVariantSetupContext,
+  clearPendingVariantSetupContext,
   setRoutePage,
   syncRouteFromUrl,
   clearPendingUrlPush,

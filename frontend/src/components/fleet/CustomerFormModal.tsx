@@ -32,12 +32,14 @@ function CustomerForm({
 
   const [fullName, setFullName] = useState(editingCustomer?.fullName ?? "");
   const [phone, setPhone] = useState(editingCustomer?.phone ?? "");
+  const [secondaryPhone, setSecondaryPhone] = useState(editingCustomer?.secondaryPhone ?? "");
   const [email, setEmail] = useState(editingCustomer?.email ?? "");
   const [nationalId, setNationalId] = useState(editingCustomer?.nationalId ?? "");
   const [driverLicenseNo, setDriverLicenseNo] = useState(editingCustomer?.driverLicenseNo ?? "");
   const [licenseExpiry, setLicenseExpiry] = useState(editingCustomer?.licenseExpiry ?? "");
   const [nationality, setNationality] = useState(editingCustomer?.nationality ?? "");
   const [address, setAddress] = useState(editingCustomer?.address ?? "");
+  const [workAddress, setWorkAddress] = useState(editingCustomer?.workAddress ?? "");
   const [notes, setNotes] = useState(editingCustomer?.notes ?? "");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -54,12 +56,14 @@ function CustomerForm({
       const payload = {
         fullName: fullName.trim(),
         phone: phone.trim(),
+        secondaryPhone: secondaryPhone.trim() || null,
         email: email.trim() || null,
         nationalId: nationalId.trim() || null,
         driverLicenseNo: driverLicenseNo.trim() || null,
         licenseExpiry: licenseExpiry || null,
         nationality: nationality.trim() || null,
         address: address.trim() || null,
+        workAddress: workAddress.trim() || null,
         notes: notes.trim() || null,
       };
       if (editingCustomer) {
@@ -104,20 +108,21 @@ function CustomerForm({
         <form onSubmit={handleSubmit} className="p-5 space-y-3.5 text-xs">
           {errorMsg && <Alert variant="error" message={errorMsg} />}
 
+          <div>
+            <label className="block font-semibold text-revix-dark mb-1">
+              {isRtl ? "الاسم بالكامل *" : "Full Name *"}
+            </label>
+            <input
+              type="text"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder={isRtl ? "مثال: أحمد محمد علي" : "e.g. Ahmed Mohamed Ali"}
+              className="h-9 w-full rounded-lg border border-revix-border px-3 focus:border-revix-primary focus:outline-hidden"
+            />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-revix-dark mb-1">
-                {isRtl ? "الاسم بالكامل *" : "Full Name *"}
-              </label>
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder={isRtl ? "مثال: أحمد محمد علي" : "e.g. Ahmed Mohamed Ali"}
-                className="h-9 w-full rounded-lg border border-revix-border px-3 focus:border-revix-primary focus:outline-hidden"
-              />
-            </div>
             <div>
               <label className="block font-semibold text-revix-dark mb-1">
                 {isRtl ? "رقم الهاتف *" : "Phone *"}
@@ -128,6 +133,18 @@ function CustomerForm({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder={isRtl ? "مثال: +20 100 000 0000" : "e.g. +20 100 000 0000"}
+                className="h-9 w-full rounded-lg border border-revix-border px-3 font-mono focus:border-revix-primary focus:outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-revix-dark mb-1">
+                {isRtl ? "رقم هاتف ثاني" : "Secondary Phone"}
+              </label>
+              <input
+                type="text"
+                value={secondaryPhone}
+                onChange={(e) => setSecondaryPhone(e.target.value)}
+                placeholder={isRtl ? "مثال: +20 111 000 0000" : "e.g. +20 111 000 0000"}
                 className="h-9 w-full rounded-lg border border-revix-border px-3 font-mono focus:border-revix-primary focus:outline-hidden"
               />
             </div>
@@ -198,17 +215,31 @@ function CustomerForm({
             </div>
           </div>
 
-          <div>
-            <label className="block font-semibold text-revix-dark mb-1">
-              {isRtl ? "العنوان" : "Address"}
-            </label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder={isRtl ? "مثال: القاهرة، التجمع الخامس" : "e.g. Cairo, New Cairo"}
-              className="h-9 w-full rounded-lg border border-revix-border px-3 focus:border-revix-primary focus:outline-hidden"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-revix-dark mb-1">
+                {isRtl ? "العنوان" : "Address"}
+              </label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder={isRtl ? "مثال: القاهرة، التجمع الخامس" : "e.g. Cairo, New Cairo"}
+                className="h-9 w-full rounded-lg border border-revix-border px-3 focus:border-revix-primary focus:outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-revix-dark mb-1">
+                {isRtl ? "عنوان العمل" : "Work Address"}
+              </label>
+              <input
+                type="text"
+                value={workAddress}
+                onChange={(e) => setWorkAddress(e.target.value)}
+                placeholder={isRtl ? "مثال: القرية الذكية، الجيزة" : "e.g. Smart Village, Giza"}
+                className="h-9 w-full rounded-lg border border-revix-border px-3 focus:border-revix-primary focus:outline-hidden"
+              />
+            </div>
           </div>
 
           <div>

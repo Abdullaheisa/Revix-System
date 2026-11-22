@@ -45,7 +45,7 @@ export function createApp(options: {
     }),
   );
   app.use(cookieParser());
-  app.use(express.json({ limit: "512kb" }));
+  app.use(express.json({ limit: "10mb" }));
   app.use(
     "/uploads",
     express.static(env.uploadsDir, {

@@ -174,8 +174,15 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                   const st = STATUS_BADGE[c.status] || STATUS_BADGE.active;
                   return (
                     <tr key={c.id} className="hover:bg-revix-surface/35">
-                      <td className="px-4 py-3 font-mono font-bold text-revix-primary">
-                        {c.contractNumber}
+                      <td className="px-4 py-3">
+                        <div className="font-mono font-bold text-revix-primary">
+                          {c.contractNumber}
+                        </div>
+                        {c.createdByUserName && (
+                          <div className="mt-0.5 text-[10px] text-revix-muted">
+                            {isRtl ? "بواسطة:" : "By:"} {c.createdByUserName}
+                          </div>
+                        )}
                       </td>
                       <td className="px-3 py-3">
                         <div className="font-bold text-revix-dark">{c.customerName || "—"}</div>

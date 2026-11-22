@@ -8,6 +8,7 @@ import { RevixIcon } from "@/components/ui/RevixIcons";
 import { StudioBadge, StudioModal } from "@/components/shared/workspace";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { extractApiErrorCode } from "@/store/api/baseApi";
+import { SUPPORTED_COUNTRIES } from "@/lib/workspace/countryCatalog";
 import {
   useCreateInvitationMutation,
   useGetTeamOverviewQuery,
@@ -692,10 +693,13 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
                   label: isRtl ? "كل الدول" : "All countries",
                 },
                 ...Array.from(new Set(branches.map((b) => b.countryCode))).map(
-                  (code) => ({
-                    value: code,
-                    label: code,
-                  }),
+                  (code) => {
+                    const match = SUPPORTED_COUNTRIES.find((c) => c.code === code);
+                    return {
+                      value: code,
+                      label: match ? (isRtl ? match.nameAr : match.nameEn) : code,
+                    };
+                  },
                 ),
               ]}
             />

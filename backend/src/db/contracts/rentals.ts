@@ -5,12 +5,14 @@ export interface CustomerRecord {
   companyId: string;
   fullName: string;
   phone: string;
+  secondaryPhone: string | null;
   email: string | null;
   nationalId: string | null;
   driverLicenseNo: string | null;
   licenseExpiry: string | null;
   nationality: string | null;
   address: string | null;
+  workAddress: string | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -41,6 +43,7 @@ export interface RentalContractRecord {
   depositAmount: number;
   notes: string | null;
   createdByUserId: string | null;
+  createdByUserName?: string | null;
   createdAt: Date;
   updatedAt: Date;
   // Enriched presentation fields

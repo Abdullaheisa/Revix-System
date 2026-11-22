@@ -1283,6 +1283,36 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     this.saveToDisk();
   }
 
+  async listAuditLogs(
+    companyId: string,
+    filter?: {
+      entityType?: string;
+      entityId?: string;
+      actorUserId?: string;
+      limit?: number;
+    },
+  ): Promise<AuditLogRecord[]> {
+    const limit = Math.min(Math.max(Number(filter?.limit ?? 100), 1), 300);
+    return this.auditLogs
+      .filter((a) => {
+        if (a.companyId !== companyId) return false;
+        if (filter?.entityType && a.entityType !== filter.entityType) return false;
+        if (filter?.entityId && a.entityId !== filter.entityId) return false;
+        if (filter?.actorUserId && a.actorUserId !== filter.actorUserId) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit)
+      .map((a) => {
+        const user = a.actorUserId ? this.usersById.get(a.actorUserId) : null;
+        return {
+          ...a,
+          actorName: user ? user.fullName || user.email : null,
+          actorEmail: user?.email ?? null,
+        };
+      });
+  }
+
   // --- Phase 5: Vehicle Variants ---
   async createVehicleVariant(
     input: CreateVehicleVariantInput,
@@ -1700,7 +1730,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     this.saveToDisk();
 
     const variant = this.variantsById.get(record.variantId);
-    const branch = this.branchesById.get(record.branchId);
+    const branch = record.branchId ? this.branchesById.get(record.branchId) : undefined;
     return {
       ...record,
       variant: variant ? { ...variant } : undefined,
@@ -1714,7 +1744,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     const v = this.vehiclesById.get(vehicleId);
     if (!v) return null;
     const variant = this.variantsById.get(v.variantId);
-    const branch = this.branchesById.get(v.branchId);
+    const branch = v.branchId ? this.branchesById.get(v.branchId) : undefined;
     const company = this.companiesById.get(v.companyId);
     return {
       ...v,
@@ -1761,7 +1791,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     // 1. Direct company vehicles
     for (const v of this.vehiclesById.values()) {
       if (v.companyId !== companyId) continue;
-      if (permittedBranchIds && !permittedBranchIds.includes(v.branchId)) continue;
+      if (permittedBranchIds && (!v.branchId || !permittedBranchIds.includes(v.branchId))) continue;
       if (filter?.branchId && v.branchId !== filter.branchId) continue;
       if (filter?.status && v.status !== filter.status) continue;
       if (filter?.variantId && v.variantId !== filter.variantId) continue;
@@ -1778,7 +1808,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
         if (!match) continue;
       }
 
-      const branch = this.branchesById.get(v.branchId);
+      const branch = v.branchId ? this.branchesById.get(v.branchId) : undefined;
       list.push({
         ...v,
         variant: variant ? { ...variant } : undefined,
@@ -1799,7 +1829,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
 
             for (const v of this.vehiclesById.values()) {
               if (v.companyId !== link.localCompanyId) continue;
-              if (!permittedPartnerBranchIds.has(v.branchId)) continue;
+              if (!v.branchId || !permittedPartnerBranchIds.has(v.branchId)) continue;
               if (filter?.status && v.status !== filter.status) continue;
 
               const variant = this.variantsById.get(v.variantId);
@@ -1813,7 +1843,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
                 if (!match) continue;
               }
 
-              const branch = this.branchesById.get(v.branchId);
+              const branch = v.branchId ? this.branchesById.get(v.branchId) : undefined;
               list.push({
                 ...v,
                 variant: variant ? { ...variant } : undefined,
@@ -2214,4 +2244,119 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     this.contractsById.set(contractId, updated);
     return updated;
   }
+
+  async updateVariantPricingTiers(
+    companyId: string,
+    variantId: string,
+    input: {
+      dailyRate1to2: number;
+      dailyRate3to7: number;
+      dailyRate8Plus: number;
+      damageExcess: number;
+      mileagePolicy?: "unlimited" | "limited";
+      dailyKmLimit?: number;
+      extraKmRate?: number;
+      branchIds?: string[];
+      unassignedOnly?: boolean;
+    },
+  ) {
+    let updatedCount = 0;
+    const hasBranchFilter = Array.isArray(input.branchIds) && input.branchIds.length > 0;
+    for (const [id, v] of this.vehiclesById.entries()) {
+      const branchMatch = input.unassignedOnly
+        ? !v.branchId
+        : !hasBranchFilter || (Boolean(v.branchId) && input.branchIds!.includes(v.branchId!));
+      if (v.companyId === companyId && v.variantId === variantId && branchMatch) {
+        this.vehiclesById.set(id, {
+          ...v,
+          dailyRate1to2: input.dailyRate1to2,
+          dailyRate3to7: input.dailyRate3to7,
+          dailyRate8Plus: input.dailyRate8Plus,
+          damageExcess: input.damageExcess,
+          mileagePolicy: input.mileagePolicy ?? v.mileagePolicy,
+          dailyKmLimit: input.dailyKmLimit ?? v.dailyKmLimit,
+          extraKmRate: input.extraKmRate ?? v.extraKmRate,
+          updatedAt: new Date(),
+        });
+        updatedCount += 1;
+      }
+    }
+    return { updatedCount };
+  }
+
+  async applyVariantListingSetup(
+    companyId: string,
+    variantId: string,
+    input: {
+      photoUrl?: string | null;
+      locationType?: string;
+      fuelPolicy?: string;
+      instantConfirmation?: boolean;
+      description?: string | null;
+      deliveryPolicy?: string | null;
+      dailyRate1to2?: number;
+      dailyRate3to7?: number;
+      dailyRate8Plus?: number;
+      damageExcess?: number;
+      mileagePolicy?: "unlimited" | "limited";
+      dailyKmLimit?: number | null;
+      extraKmRate?: number | null;
+      inclusions?: string[];
+      seats?: number;
+      doors?: number;
+      airConditioning?: boolean;
+      fuelType?: string;
+      luggageCapacity?: string;
+      transmission?: string;
+      publishToFleet?: boolean;
+      branchIds?: string[];
+    },
+  ) {
+    let updatedCount = 0;
+    const hasBranchFilter = Array.isArray(input.branchIds) && input.branchIds.length > 0;
+    for (const [id, v] of this.vehiclesById.entries()) {
+      if (
+        v.companyId === companyId &&
+        v.variantId === variantId &&
+        (!hasBranchFilter || (v.branchId && input.branchIds!.includes(v.branchId)))
+      ) {
+        this.vehiclesById.set(id, {
+          ...v,
+          photoUrl: input.photoUrl !== undefined ? input.photoUrl : v.photoUrl,
+          locationType: input.locationType ?? v.locationType,
+          fuelPolicy: input.fuelPolicy ?? v.fuelPolicy,
+          instantConfirmation: input.instantConfirmation ?? v.instantConfirmation,
+          description: input.description !== undefined ? input.description : v.description,
+          deliveryPolicy: input.deliveryPolicy !== undefined ? input.deliveryPolicy : v.deliveryPolicy,
+          dailyRate1to2: input.dailyRate1to2 ?? v.dailyRate1to2,
+          dailyRate3to7: input.dailyRate3to7 ?? v.dailyRate3to7,
+          dailyRate8Plus: input.dailyRate8Plus ?? v.dailyRate8Plus,
+          damageExcess: input.damageExcess ?? v.damageExcess,
+          mileagePolicy: input.mileagePolicy ?? v.mileagePolicy,
+          dailyKmLimit: input.dailyKmLimit ?? v.dailyKmLimit,
+          extraKmRate: input.extraKmRate ?? v.extraKmRate,
+          inclusions: input.inclusions ?? v.inclusions,
+          seats: input.seats ?? v.seats,
+          doors: input.doors ?? v.doors,
+          airConditioning: input.airConditioning ?? v.airConditioning,
+          fuelType: input.fuelType ?? v.fuelType,
+          luggageCapacity: input.luggageCapacity ?? v.luggageCapacity,
+          transmission: input.transmission ?? v.transmission,
+          isBookable: input.publishToFleet ? true : v.isBookable,
+          updatedAt: new Date(),
+        });
+        updatedCount += 1;
+      }
+    }
+    return { updatedCount };
+  }
+
+  async listDrivers() { return []; }
+  async createDriver(input: any) { return { ...input, id: crypto.randomUUID(), status: input.status ?? "active", createdAt: new Date(), updatedAt: new Date() }; }
+  async updateDriver() { return null; }
+  async deleteDriver() { return false; }
+  async listVehicleMovements() { return []; }
+  async dispatchVehicleMovement(input: any) { return { ...input, id: crypto.randomUUID(), movementNumber: "MV-0001", status: "in_transit", dispatchedAt: new Date(), receivedAt: null, arrivalOdometerKm: null, createdAt: new Date(), updatedAt: new Date() }; }
+  async receiveVehicleMovement() { return null; }
+  async cancelVehicleMovement() { return null; }
 }

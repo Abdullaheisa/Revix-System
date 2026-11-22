@@ -34,6 +34,7 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
       (c) =>
         c.fullName.toLowerCase().includes(q) ||
         c.phone.toLowerCase().includes(q) ||
+        (c.secondaryPhone && c.secondaryPhone.toLowerCase().includes(q)) ||
         (c.nationalId && c.nationalId.toLowerCase().includes(q)) ||
         (c.driverLicenseNo && c.driverLicenseNo.toLowerCase().includes(q)),
     );
@@ -115,7 +116,12 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
                       <div className="font-bold text-revix-dark">{c.fullName}</div>
                       {c.email && <div className="text-[11px] text-revix-secondary">{c.email}</div>}
                     </td>
-                    <td className="px-3 py-3 font-mono text-revix-dark">{c.phone}</td>
+                    <td className="px-3 py-3 font-mono text-revix-dark">
+                      <div>{c.phone}</div>
+                      {c.secondaryPhone && (
+                        <div className="text-[11px] text-revix-secondary">{c.secondaryPhone}</div>
+                      )}
+                    </td>
                     <td className="px-3 py-3 font-mono text-revix-secondary">{c.nationalId || "—"}</td>
                     <td className="px-3 py-3 font-mono text-revix-secondary">{c.driverLicenseNo || "—"}</td>
                     <td className="px-3 py-3 font-mono text-revix-secondary">{c.licenseExpiry || "—"}</td>

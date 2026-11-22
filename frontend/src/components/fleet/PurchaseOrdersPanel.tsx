@@ -10,6 +10,7 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 
 import { useEffect, useMemo, useState } from "react";
 import { ConvertPoVehiclePage } from "./ConvertPoVehiclePage";
+import { ActivityTimeline } from "./ActivityTimeline";
 import { SignaturePadModal } from "@/components/shared/SignaturePadModal";
 import { formatCompanyDate, formatCompanyDateTime } from "@/lib/date/companyDate";
 import { useAppDispatch } from "@/store/hooks";
@@ -193,7 +194,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
     formItems.forEach((item, rowIndex) => {
       const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
       const v = variants.find((vr) => vr.id === item.variantId);
-      const variantLabel = v ? `${v.make} ${v.model} (${v.trim})` : "—";
+      const variantLabel = v ? [v.make, v.model, v.trim].filter(Boolean).join(" ") : "—";
       for (let u = 0; u < qty; u++) {
         units.push({
           key: `${rowIndex}-${u}`,
@@ -931,6 +932,31 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
           </div>
         </div>
 
+        {/* Employee Accountability Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-2xl border border-revix-border bg-revix-surface/40 px-4 py-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-revix-muted">{isRtl ? "أنشأ الطلب:" : "Created By:"}</span>
+            <span className="font-bold text-revix-dark">
+              {po.createdByUserName || (isRtl ? "مسؤول النظام" : "System User")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-revix-muted">{isRtl ? "الموافقة / الاعتماد:" : "Approved By:"}</span>
+            <span className="font-bold text-revix-dark">
+              {po.approvedByUserName ||
+                (po.status === "pending_approval"
+                  ? isRtl
+                    ? "بانتظار الموافقة"
+                    : "Pending Approval"
+                  : "—")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-revix-muted">{isRtl ? "التوقيع:" : "Signed By:"}</span>
+            <span className="font-bold text-revix-dark">{po.signedByName || "—"}</span>
+          </div>
+        </div>
+
         <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xs">
           <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-3.5">
             <div className="flex items-center gap-2">
@@ -1079,6 +1105,13 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
           </table>
           </div>
         </div>
+
+        <ActivityTimeline
+          entityType="purchase_order"
+          entityId={po.id}
+          isRtl={isRtl}
+          title={isRtl ? "سجل الموظفين والعمليات على أمر الشراء" : "Purchase Order Employee Activity Log"}
+        />
 
         <RevixConfirmModal
           isOpen={Boolean(pendingDeletePo)}
@@ -1419,7 +1452,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
 
 
 
-          <RevixConfirmModal
+        <RevixConfirmModal
             isOpen={Boolean(pendingDeletePo)}
             isRtl={isRtl}
             title={isRtl ? "تأكيد حذف / إلغاء أمر الشراء" : "Confirm Delete / Cancel PO"}
@@ -1630,7 +1663,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                     buttonClassName="h-9 rounded-lg text-xs"
                                     options={variants.map((v) => ({
                                       value: v.id,
-                                      label: `${v.make} ${v.model} (${v.trim})`,
+                                      label: [v.make, v.model, v.trim].filter(Boolean).join(" "),
                                     }))}
                                   />
                                 </td>
@@ -1898,7 +1931,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                           </span>
                           <h4 className="text-sm font-bold mt-0.5">
                             {currentVariant
-                              ? `${currentVariant.make} ${currentVariant.model} ${currentVariant.modelYear} (${currentVariant.trim})`
+                              ? [currentVariant.make, currentVariant.model, currentVariant.modelYear, currentVariant.trim].filter(Boolean).join(" ")
                               : "Vehicle Variant"}
                           </h4>
                           <p className="text-revix-secondary mt-0.5">

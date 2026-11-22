@@ -4,7 +4,14 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 import React, { useState, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { navigateToWorkspacePage, clearPendingFleetReceiveContext } from "../../store/slices/workspaceSlice";
-import { useListVariantsQuery, useCreateVehicleMutation, useReceiveVehicleMutation, useListPurchaseOrdersQuery, type PurchaseOrderDto } from "../../store/api/fleetApi";
+import {
+  useListVariantsQuery,
+  useCreateVehicleMutation,
+  useReceiveVehicleMutation,
+  useListPurchaseOrdersQuery,
+  useListInsuranceCompaniesQuery,
+  type PurchaseOrderDto,
+} from "../../store/api/fleetApi";
 import { useGetWorkspaceContextQuery, type BranchDto } from "../../store/api/workspaceApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
@@ -40,6 +47,11 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({ lang
   const { data: variantsRes } = useListVariantsQuery();
   const { data: workspaceCtx } = useGetWorkspaceContextQuery();
   const { data: posRes } = useListPurchaseOrdersQuery();
+  const { data: insuranceCompaniesRes } = useListInsuranceCompaniesQuery();
+  const insuranceCompanies = useMemo(
+    () => insuranceCompaniesRes?.data ?? [],
+    [insuranceCompaniesRes?.data],
+  );
 
   const [createVehicle, { isLoading: isCreating }] = useCreateVehicleMutation();
   const [receiveVehicle, { isLoading: isReceiving }] = useReceiveVehicleMutation();
@@ -62,6 +74,13 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({ lang
   const [mileageOdometer, setMileageOdometer] = useState<number>(0);
   const [deliveryPolicy] = useState("branch_pickup");
   const [registrationExpiry, setRegistrationExpiry] = useState("");
+  const [inServiceDate, setInServiceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [insuranceCompanyId, setInsuranceCompanyId] = useState("");
+  const [insuranceProviderName, setInsuranceProviderName] = useState("");
+  const [insuranceCoverageType, setInsuranceCoverageType] = useState("comprehensive");
+  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState("");
+  const [insurancePremiumAmount, setInsurancePremiumAmount] = useState(0);
+  const [insuranceStartDate, setInsuranceStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [insuranceExpiry, setInsuranceExpiry] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -106,18 +125,26 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({ lang
 
     try {
       if (pendingReceive?.purchaseOrderId && pendingReceive?.itemId) {
+        const chosenIns = insuranceCompanies.find((c) => c.id === insuranceCompanyId);
         await receiveVehicle({
           purchaseOrderId: pendingReceive.purchaseOrderId,
           itemId: pendingReceive.itemId,
-          branchId: defaultBranchId,
+          branchId: null,
           vin: vin.trim().toUpperCase(),
           licensePlate: licensePlate.trim().toUpperCase(),
           keyNumber: keyNumber.trim().toUpperCase() || undefined,
           color: color.trim() || "White",
           mileageOdometer: Number(mileageOdometer) || 0,
           deliveryPolicy,
+          inServiceDate: inServiceDate || null,
           registrationExpiry: registrationExpiry || null,
           insuranceExpiry: insuranceExpiry || null,
+          insuranceCompanyId: chosenIns?.id || null,
+          insuranceProviderName: chosenIns?.name || insuranceProviderName.trim() || null,
+          insurancePolicyNumber: insurancePolicyNumber.trim() || null,
+          insuranceCoverageType,
+          insuranceStartDate: insuranceStartDate || null,
+          insurancePremiumAmount: Number(insurancePremiumAmount) || 0,
         }).unwrap();
       } else {
         await createVehicle({
@@ -307,8 +334,19 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({ lang
               </div>
             </div>
 
-            {/* Row 3: Registration & Insurance Expiry */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 border-t border-revix-border/60">
+            {/* Row 3: In-Service Date (Auto for Depreciation) & Registration Expiry */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-revix-border/60">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
+                  {isAr ? "تاريخ الاستلام (بداية الإهلاك)" : "RECEIVING DATE (DEPRECIATION START)"}
+                </label>
+                <RevixDatePicker
+                  value={inServiceDate}
+                  onChange={setInServiceDate}
+                  isRtl={isAr}
+                  placeholder={isAr ? "تاريخ استلام السيارة..." : "Select receiving date..."}
+                />
+              </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
                   {isAr ? "تاريخ انتهاء الترخيص" : "REGISTRATION EXPIRY DATE"}
@@ -320,16 +358,112 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({ lang
                   placeholder={isAr ? "اختر تاريخ انتهاء الترخيص..." : "Select registration expiry..."}
                 />
               </div>
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
-                  {isAr ? "تاريخ انتهاء التأمين" : "INSURANCE POLICY EXPIRY"}
-                </label>
-                <RevixDatePicker
-                  value={insuranceExpiry}
-                  onChange={setInsuranceExpiry}
-                  isRtl={isAr}
-                  placeholder={isAr ? "اختر تاريخ انتهاء التأمين..." : "Select insurance expiry..."}
-                />
+            </div>
+
+            {/* Row 4: Initial Insurance Details */}
+            <div className="space-y-4 pt-3 border-t border-revix-border/60">
+              <div className="text-xs font-bold text-revix-dark">
+                {isAr ? "بيانات التأمين الأولي" : "Initial Insurance Coverage"}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
+                    {isAr ? "شركة التأمين" : "INSURANCE COMPANY"}
+                  </label>
+                  {insuranceCompanies.length > 0 ? (
+                    <RevixSelect
+                      size="sm"
+                      isRtl={isAr}
+                      value={insuranceCompanyId}
+                      onChange={(e) => {
+                        setInsuranceCompanyId(e.target.value);
+                        const c = insuranceCompanies.find((x) => x.id === e.target.value);
+                        if (c) setInsuranceProviderName(c.name);
+                      }}
+                      placeholder={isAr ? "اختر شركة التأمين..." : "Select insurance company..."}
+                      buttonClassName="h-10 rounded-lg text-xs"
+                      options={insuranceCompanies.map((c) => ({ value: c.id, label: c.name }))}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={insuranceProviderName}
+                      onChange={(e) => setInsuranceProviderName(e.target.value)}
+                      placeholder={isAr ? "مثال: مصر للتأمين" : "e.g. Misr Insurance"}
+                      className="h-10 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs"
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
+                    {isAr ? "نوع التأمين" : "COVERAGE TYPE"}
+                  </label>
+                  <RevixSelect
+                    size="sm"
+                    isRtl={isAr}
+                    value={insuranceCoverageType}
+                    onChange={(e) => setInsuranceCoverageType(e.target.value)}
+                    buttonClassName="h-10 rounded-lg text-xs"
+                    options={[
+                      { value: "comprehensive", label: isAr ? "تأمين شامل" : "Comprehensive" },
+                      { value: "compulsory_plate", label: isAr ? "تأمين اللوحة (إجباري)" : "Compulsory Plate" },
+                      { value: "third_party", label: isAr ? "ضد الغير" : "Third-Party" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
+                    {isAr ? "رقم البوليصة" : "POLICY NUMBER"}
+                  </label>
+                  <input
+                    type="text"
+                    value={insurancePolicyNumber}
+                    onChange={(e) => setInsurancePolicyNumber(e.target.value.toUpperCase())}
+                    placeholder="POL-2026-001"
+                    className="h-10 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
+                    {isAr ? "المبلغ المدفوع" : "PREMIUM PAID"}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={insurancePremiumAmount || ""}
+                    onChange={(e) => setInsurancePremiumAmount(Number(e.target.value) || 0)}
+                    placeholder="0"
+                    className="h-10 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
+                    {isAr ? "تاريخ بداية التأمين" : "INSURANCE START DATE"}
+                  </label>
+                  <RevixDatePicker
+                    value={insuranceStartDate}
+                    onChange={setInsuranceStartDate}
+                    isRtl={isAr}
+                    placeholder={isAr ? "اختر تاريخ البداية..." : "Select insurance start..."}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
+                    {isAr ? "تاريخ انتهاء التأمين" : "INSURANCE EXPIRY DATE"}
+                  </label>
+                  <RevixDatePicker
+                    value={insuranceExpiry}
+                    onChange={setInsuranceExpiry}
+                    isRtl={isAr}
+                    placeholder={isAr ? "اختر تاريخ الانتهاء..." : "Select insurance expiry..."}
+                  />
+                </div>
               </div>
             </div>
           </div>

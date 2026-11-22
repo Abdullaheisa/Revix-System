@@ -1,8 +1,8 @@
-import type { ActionTokenRecord, ActionTokenType, AuditLogInput, SessionRecord, UserRecord, UserStatus } from "./contracts/auth.ts";
+import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, SessionRecord, UserRecord, UserStatus } from "./contracts/auth.ts";
 import type { BranchRecord, CompanyOperatingMode, CompanyRecord, CreateBranchInput, CreateCompanyInput, InsuranceCompanyRecord, UpdateBranchInput, UpdateCompanyInput } from "./contracts/workspace.ts";
 import type { CompanyMembershipRecord, CompanyRoleRecord, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, EmployeeInvitationRecord, UpdateCompanyMembershipInput, UpdateCompanyRoleInput } from "./contracts/team.ts";
 import type { CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CreateNetworkInvitationInput, CreateNetworkLinkInput, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord } from "./contracts/network.ts";
-import type { CreateFleetVehicleInput, CreateRentalInclusionInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, RentalInclusionRecord, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, VehicleCategory, VehicleInspectionRecord, VehicleInsurancePolicyRecord, VehicleLifecycleProfile, VehicleMaintenanceLogRecord, VehiclePhotoRecord, VehicleVariantRecord } from "./contracts/fleet.ts";
+import type { CreateFleetVehicleInput, CreateRentalInclusionInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, DriverRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, RentalInclusionRecord, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, VehicleCategory, VehicleInspectionRecord, VehicleInsurancePolicyRecord, VehicleLifecycleProfile, VehicleMaintenanceLogRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord } from "./contracts/fleet.ts";
 import type { CreatePurchaseOrderInput, CreateVendorInput, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, UpdateVendorInput, VendorCategory, VendorRecord } from "./contracts/purchasing.ts";
 import type { CustomerRecord, RentalContractRecord } from "./contracts/rentals.ts";
 
@@ -343,6 +343,49 @@ export interface AuthDataStore {
       extraKmRate: number;
     },
   ): Promise<FleetVehicleRecord | null>;
+  updateVariantPricingTiers(
+    companyId: string,
+    variantId: string,
+    input: {
+      dailyRate1to2: number;
+      dailyRate3to7: number;
+      dailyRate8Plus: number;
+      damageExcess: number;
+      mileagePolicy?: "unlimited" | "limited";
+      dailyKmLimit?: number;
+      extraKmRate?: number;
+      branchIds?: string[];
+      unassignedOnly?: boolean;
+    },
+  ): Promise<{ updatedCount: number }>;
+  applyVariantListingSetup(
+    companyId: string,
+    variantId: string,
+    input: {
+      photoUrl?: string | null;
+      locationType?: string;
+      fuelPolicy?: string;
+      instantConfirmation?: boolean;
+      description?: string | null;
+      deliveryPolicy?: string | null;
+      dailyRate1to2?: number;
+      dailyRate3to7?: number;
+      dailyRate8Plus?: number;
+      damageExcess?: number;
+      mileagePolicy?: "unlimited" | "limited";
+      dailyKmLimit?: number | null;
+      extraKmRate?: number | null;
+      inclusions?: string[];
+      seats?: number;
+      doors?: number;
+      airConditioning?: boolean;
+      fuelType?: string;
+      luggageCapacity?: string;
+      transmission?: string;
+      publishToFleet?: boolean;
+      branchIds?: string[];
+    },
+  ): Promise<{ updatedCount: number }>;
   addVehicleMaintenanceLog(input: {
     companyId: string;
     vehicleId: string;
@@ -355,6 +398,7 @@ export interface AuthDataStore {
     status: string;
     notes?: string | null;
     serviceDate: string;
+    createdByUserId?: string | null;
   }): Promise<VehicleMaintenanceLogRecord>;
   addVehicleInspection(input: {
     companyId: string;
@@ -385,12 +429,14 @@ export interface AuthDataStore {
     companyId: string;
     fullName: string;
     phone: string;
+    secondaryPhone?: string | null;
     email?: string | null;
     nationalId?: string | null;
     driverLicenseNo?: string | null;
     licenseExpiry?: string | null;
     nationality?: string | null;
     address?: string | null;
+    workAddress?: string | null;
     notes?: string | null;
   }): Promise<CustomerRecord>;
   updateCustomer(
@@ -399,12 +445,14 @@ export interface AuthDataStore {
     input: {
       fullName: string;
       phone: string;
+      secondaryPhone?: string | null;
       email?: string | null;
       nationalId?: string | null;
       driverLicenseNo?: string | null;
       licenseExpiry?: string | null;
       nationality?: string | null;
       address?: string | null;
+      workAddress?: string | null;
       notes?: string | null;
     },
   ): Promise<CustomerRecord | null>;
@@ -446,6 +494,80 @@ export interface AuthDataStore {
   ): Promise<RentalContractRecord | null>;
 
   recordAuditLog(input: AuditLogInput): Promise<void>;
+  listAuditLogs(
+    companyId: string,
+    filter?: {
+      entityType?: string;
+      entityId?: string;
+      actorUserId?: string;
+      limit?: number;
+    },
+  ): Promise<AuditLogRecord[]>;
+
+  // Drivers & Vehicle Movements
+  listDrivers(companyId: string): Promise<DriverRecord[]>;
+  createDriver(input: {
+    companyId: string;
+    fullName: string;
+    phonePrimary: string;
+    phoneSecondary?: string | null;
+    email?: string | null;
+    licenseNumber: string;
+    licenseIssueDate: string;
+    licenseExpiryDate: string;
+    passportNumber?: string | null;
+    nationalIdNumber?: string | null;
+    idCardPhotoUrl?: string | null;
+    passportPhotoUrl?: string | null;
+    licensePhotoUrl?: string | null;
+    address?: string | null;
+    status?: "active" | "inactive";
+    createdByUserId?: string | null;
+  }): Promise<DriverRecord>;
+  updateDriver(
+    companyId: string,
+    driverId: string,
+    input: {
+      fullName: string;
+      phonePrimary: string;
+      phoneSecondary?: string | null;
+      email?: string | null;
+      licenseNumber: string;
+      licenseIssueDate: string;
+      licenseExpiryDate: string;
+      passportNumber?: string | null;
+      address?: string | null;
+      status?: "active" | "inactive";
+    },
+  ): Promise<DriverRecord | null>;
+  deleteDriver(companyId: string, driverId: string): Promise<boolean>;
+
+  listVehicleMovements(
+    companyId: string,
+    filter?: { vehicleId?: string; status?: string; toBranchId?: string },
+  ): Promise<VehicleMovementRecord[]>;
+  dispatchVehicleMovement(input: {
+    companyId: string;
+    vehicleId: string;
+    fromBranchId?: string | null;
+    toBranchId: string;
+    driverId: string;
+    dispatchOdometerKm: number;
+    dispatchedByUserId?: string | null;
+    dispatchedByName?: string | null;
+    notes?: string | null;
+  }): Promise<VehicleMovementRecord>;
+  receiveVehicleMovement(
+    companyId: string,
+    movementId: string,
+    input: {
+      arrivalOdometerKm: number;
+      receivedByUserId?: string | null;
+      receivedByName?: string | null;
+      notes?: string | null;
+    },
+  ): Promise<VehicleMovementRecord | null>;
+  cancelVehicleMovement(companyId: string, movementId: string): Promise<VehicleMovementRecord | null>;
 }
 
 export type * from "./contracts/auth.ts";

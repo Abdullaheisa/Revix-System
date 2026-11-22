@@ -162,6 +162,8 @@ export interface PurchaseOrderDto {
   signatureDataUrl?: string | null;
   signedByName?: string | null;
   signedAt?: string | null;
+  createdByUserName?: string | null;
+  approvedByUserName?: string | null;
 }
 
 export interface CreatePurchaseOrderItemInput {
@@ -190,7 +192,7 @@ export interface CreatePurchaseOrderInput {
 export interface ReceiveVehicleInput {
   purchaseOrderId: string;
   itemId: string;
-  branchId?: string;
+  branchId?: string | null;
   vin: string;
   licensePlate: string;
   keyNumber?: string | null;
@@ -199,6 +201,13 @@ export interface ReceiveVehicleInput {
   isBookable?: boolean;
   registrationExpiry?: string | null;
   insuranceExpiry?: string | null;
+  inServiceDate?: string | null;
+  insuranceCompanyId?: string | null;
+  insuranceProviderName?: string | null;
+  insurancePolicyNumber?: string | null;
+  insuranceCoverageType?: string | null;
+  insuranceStartDate?: string | null;
+  insurancePremiumAmount?: number;
   notes?: string | null;
   photoUrl?: string | null;
   locationType?: string;
@@ -265,6 +274,8 @@ export interface FleetVehicleDto {
   fuelType?: string;
   luggageCapacity?: string;
   transmission?: string;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
   createdAt: string;
   updatedAt: string;
   variant?: VehicleVariantDto;
@@ -284,6 +295,7 @@ export interface FleetVehicleDto {
   insurancePolicyNumber?: string | null;
   isBookable?: boolean;
   publishedToFleetAt?: string | null;
+  inServiceDate?: string | null;
 }
 
 export interface CustomerDto {
@@ -291,12 +303,14 @@ export interface CustomerDto {
   companyId: string;
   fullName: string;
   phone: string;
+  secondaryPhone: string | null;
   email: string | null;
   nationalId: string | null;
   driverLicenseNo: string | null;
   licenseExpiry: string | null;
   nationality: string | null;
   address: string | null;
+  workAddress: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -333,6 +347,8 @@ export interface RentalContractDto {
   customerName?: string;
   customerPhone?: string;
   branchName?: string;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
 }
 
 export interface InsuranceCompanyDto {
@@ -388,6 +404,22 @@ export interface VehicleMaintenanceLogDto {
   status: string;
   notes: string | null;
   serviceDate: string;
+  createdByUserId?: string | null;
+  createdByUserName?: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogEntryDto {
+  id: string;
+  companyId: string | null;
+  branchId: string | null;
+  actorUserId: string | null;
+  actorName?: string | null;
+  actorEmail?: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  metadata: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -418,12 +450,64 @@ export interface VehicleInspectionDto {
   damagePoints: VehicleDamagePointDto[];
 }
 
+export interface DriverDto {
+  id: string;
+  companyId: string;
+  fullName: string;
+  phonePrimary: string;
+  phoneSecondary: string | null;
+  email: string | null;
+  licenseNumber: string;
+  licenseIssueDate: string;
+  licenseExpiryDate: string;
+  passportNumber: string | null;
+  nationalIdNumber?: string | null;
+  idCardPhotoUrl?: string | null;
+  passportPhotoUrl?: string | null;
+  licensePhotoUrl?: string | null;
+  address: string | null;
+  status: "active" | "inactive";
+  createdByUserId: string | null;
+  createdByUserName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VehicleMovementDto {
+  id: string;
+  companyId: string;
+  movementNumber: string;
+  vehicleId: string;
+  fromBranchId: string;
+  toBranchId: string;
+  driverId: string;
+  status: "in_transit" | "received" | "cancelled";
+  dispatchOdometerKm: number;
+  arrivalOdometerKm: number | null;
+  dispatchedByUserId: string | null;
+  receivedByUserId: string | null;
+  dispatchedAt: string;
+  receivedAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  vehicleName?: string | null;
+  vehiclePlate?: string | null;
+  fromBranchName?: string | null;
+  toBranchName?: string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  dispatchedByUserName?: string | null;
+  receivedByUserName?: string | null;
+}
+
 export interface VehicleLifecycleProfileDto {
   insurancePolicies: VehicleInsurancePolicyDto[];
   odometerLogs: VehicleOdometerLogDto[];
   maintenanceLogs: VehicleMaintenanceLogDto[];
   inspections: VehicleInspectionDto[];
   damagePoints: VehicleDamagePointDto[];
+  movements?: VehicleMovementDto[];
 }
 
 export interface CreateFleetVehicleInput {
@@ -439,6 +523,13 @@ export interface CreateFleetVehicleInput {
   status?: FleetVehicleStatus;
   registrationExpiry?: string | null;
   insuranceExpiry?: string | null;
+  inServiceDate?: string | null;
+  insuranceCompanyId?: string | null;
+  insuranceProviderName?: string | null;
+  insurancePolicyNumber?: string | null;
+  insuranceCoverageType?: string | null;
+  insuranceStartDate?: string | null;
+  insurancePremiumAmount?: number;
   notes?: string | null;
   photoUrl?: string | null;
   locationType?: string;
@@ -470,6 +561,13 @@ export interface UpdateFleetVehicleInput {
   status?: FleetVehicleStatus;
   registrationExpiry?: string | null;
   insuranceExpiry?: string | null;
+  inServiceDate?: string | null;
+  insuranceCompanyId?: string | null;
+  insuranceProviderName?: string | null;
+  insurancePolicyNumber?: string | null;
+  insuranceCoverageType?: string | null;
+  insuranceStartDate?: string | null;
+  insurancePremiumAmount?: number;
   notes?: string | null;
   photoUrl?: string | null;
   locationType?: string;
@@ -563,6 +661,17 @@ export const fleetApi = baseApi.injectEndpoints({
         params: params || {},
       }),
       providesTags: ["Fleet", "PurchaseOrder"],
+    }),
+
+    listAuditLogs: builder.query<
+      ApiResponse<AuditLogEntryDto[]>,
+      { entityType?: string; entityId?: string; actorUserId?: string; limit?: number } | void
+    >({
+      query: (params) => ({
+        url: "/fleet/audit-logs",
+        params: params || {},
+      }),
+      providesTags: ["Fleet", "PurchaseOrder", "RentalContract"],
     }),
 
     // --- Variants ---
@@ -662,6 +771,63 @@ export const fleetApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: ["Fleet"],
+    }),
+
+    updateVariantPricing: builder.mutation<
+      { ok: boolean; data: { updatedCount: number } },
+      {
+        variantId: string;
+        dailyRate1to2: number;
+        dailyRate3to7: number;
+        dailyRate8Plus: number;
+        damageExcess: number;
+        mileagePolicy?: "unlimited" | "limited";
+        dailyKmLimit?: number;
+        extraKmRate?: number;
+        branchId?: string;
+      }
+    >({
+      query: ({ variantId, ...body }) => ({
+        url: `/fleet/variants/${variantId}/pricing`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Fleet", "VehicleVariant"],
+    }),
+
+    applyVariantListingSetup: builder.mutation<
+      { ok: boolean; data: { updatedCount: number } },
+      {
+        variantId: string;
+        photoUrl?: string | null;
+        locationType?: string;
+        fuelPolicy?: string;
+        instantConfirmation?: boolean;
+        description?: string | null;
+        deliveryPolicy?: string | null;
+        dailyRate1to2?: number;
+        dailyRate3to7?: number;
+        dailyRate8Plus?: number;
+        damageExcess?: number;
+        mileagePolicy?: "unlimited" | "limited";
+        dailyKmLimit?: number | null;
+        extraKmRate?: number | null;
+        inclusions?: string[];
+        seats?: number;
+        doors?: number;
+        airConditioning?: boolean;
+        fuelType?: string;
+        luggageCapacity?: string;
+        transmission?: string;
+        publishToFleet?: boolean;
+      }
+    >({
+      query: ({ variantId, ...body }) => ({
+        url: `/fleet/variants/${variantId}/listing-setup`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Fleet", "VehicleVariant"],
     }),
 
     addVehicleMaintenance: builder.mutation<
@@ -1071,12 +1237,14 @@ export const fleetApi = baseApi.injectEndpoints({
       {
         fullName: string;
         phone: string;
+        secondaryPhone?: string | null;
         email?: string | null;
         nationalId?: string | null;
         driverLicenseNo?: string | null;
         licenseExpiry?: string | null;
         nationality?: string | null;
         address?: string | null;
+        workAddress?: string | null;
         notes?: string | null;
       }
     >({
@@ -1094,12 +1262,14 @@ export const fleetApi = baseApi.injectEndpoints({
         id: string;
         fullName: string;
         phone: string;
+        secondaryPhone?: string | null;
         email?: string | null;
         nationalId?: string | null;
         driverLicenseNo?: string | null;
         licenseExpiry?: string | null;
         nationality?: string | null;
         address?: string | null;
+        workAddress?: string | null;
         notes?: string | null;
       }
     >({
@@ -1174,17 +1344,139 @@ export const fleetApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["RentalContract", "Fleet"],
     }),
+
+    // --- Drivers Directory ---
+    listDrivers: builder.query<ApiResponse<DriverDto[]>, void>({
+      query: () => "/fleet/drivers",
+      providesTags: ["Fleet"],
+    }),
+
+    createDriver: builder.mutation<
+      ApiResponse<DriverDto>,
+      {
+        fullName: string;
+        phonePrimary: string;
+        phoneSecondary?: string | null;
+        email?: string | null;
+        licenseNumber: string;
+        licenseIssueDate: string;
+        licenseExpiryDate: string;
+        passportNumber?: string | null;
+        nationalIdNumber?: string | null;
+        idCardPhotoUrl?: string | null;
+        passportPhotoUrl?: string | null;
+        licensePhotoUrl?: string | null;
+        address?: string | null;
+        status?: "active" | "inactive";
+      }
+    >({
+      query: (body) => ({
+        url: "/fleet/drivers",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    updateDriver: builder.mutation<
+      ApiResponse<DriverDto>,
+      {
+        id: string;
+        fullName: string;
+        phonePrimary: string;
+        phoneSecondary?: string | null;
+        email?: string | null;
+        licenseNumber: string;
+        licenseIssueDate: string;
+        licenseExpiryDate: string;
+        passportNumber?: string | null;
+        nationalIdNumber?: string | null;
+        idCardPhotoUrl?: string | null;
+        passportPhotoUrl?: string | null;
+        licensePhotoUrl?: string | null;
+        address?: string | null;
+        status?: "active" | "inactive";
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/fleet/drivers/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    deleteDriver: builder.mutation<{ ok: boolean }, string>({
+      query: (id) => ({
+        url: `/fleet/drivers/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    // --- Vehicle Movements & Branch Transfers ---
+    listMovements: builder.query<
+      ApiResponse<VehicleMovementDto[]>,
+      { vehicleId?: string; status?: string; toBranchId?: string } | void
+    >({
+      query: (params) => ({
+        url: "/fleet/movements",
+        params: params || {},
+      }),
+      providesTags: ["Fleet"],
+    }),
+
+    dispatchMovement: builder.mutation<
+      ApiResponse<VehicleMovementDto>,
+      {
+        vehicleId: string;
+        toBranchId: string;
+        driverId: string;
+        dispatchOdometerKm: number;
+        notes?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: "/fleet/movements",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    receiveMovement: builder.mutation<
+      ApiResponse<VehicleMovementDto>,
+      { id: string; arrivalOdometerKm: number; notes?: string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/fleet/movements/${id}/receive`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    cancelMovement: builder.mutation<ApiResponse<VehicleMovementDto>, string>({
+      query: (id) => ({
+        url: `/fleet/movements/${id}/cancel`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
   }),
 });
 
 export const {
   useGetFleetMetricsQuery,
+  useListAuditLogsQuery,
   useListInsuranceCompaniesQuery,
   useCreateInsuranceCompanyMutation,
   useDeleteInsuranceCompanyMutation,
   useGetVehicleLifecycleQuery,
   useSaveVehicleInsuranceMutation,
   useUpdateVehiclePricingMutation,
+  useUpdateVariantPricingMutation,
+  useApplyVariantListingSetupMutation,
   useAddVehicleMaintenanceMutation,
   useAddVehicleInspectionMutation,
   useToggleVehicleBookableMutation,
@@ -1225,4 +1517,12 @@ export const {
   useCreateRentalInclusionMutation,
   useUpdateRentalInclusionMutation,
   useDeleteRentalInclusionMutation,
+  useListDriversQuery,
+  useCreateDriverMutation,
+  useUpdateDriverMutation,
+  useDeleteDriverMutation,
+  useListMovementsQuery,
+  useDispatchMovementMutation,
+  useReceiveMovementMutation,
+  useCancelMovementMutation,
 } = fleetApi;

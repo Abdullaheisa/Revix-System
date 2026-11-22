@@ -43,6 +43,7 @@ function CreateContractForm({
 
   const [selectedVehicleId, setVehicleId] = useState(initialVehicleId || "");
   const vehicleId = selectedVehicleId || availableVehicles[0]?.id || "";
+  const [selectedVariantId, setSelectedVariantId] = useState("");
   const [selectedCustomerId, setCustomerId] = useState("");
   const customerId = selectedCustomerId || customers[0]?.id || "";
   const [startDate, setStartDate] = useState(today);
@@ -62,6 +63,61 @@ function CreateContractForm({
     () => availableVehicles.find((v) => v.id === vehicleId) ?? null,
     [availableVehicles, vehicleId],
   );
+
+  const variantGroups = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        variantId: string;
+        label: string;
+        sippCode: string;
+        dailyRate: number;
+        vehicles: typeof availableVehicles;
+      }
+    >();
+    for (const v of availableVehicles) {
+      const key = v.variantId || "unassigned";
+      const label = v.variant
+        ? `${v.variant.make} ${v.variant.model}${v.variant.trim ? ` ${v.variant.trim}` : ""} ${v.variant.modelYear}`
+        : isRtl
+          ? "فئة غير محددة"
+          : "Unassigned Variant";
+      const existing = map.get(key);
+      if (existing) {
+        existing.vehicles.push(v);
+      } else {
+        map.set(key, {
+          variantId: key,
+          label,
+          sippCode: v.variant?.sippCode || "—",
+          dailyRate: Number(v.dailyRate1to2 || 0),
+          vehicles: [v],
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [availableVehicles, isRtl]);
+
+  const activeVariantId =
+    selectedVariantId ||
+    selectedVehicle?.variantId ||
+    variantGroups[0]?.variantId ||
+    "";
+
+  const activeVariantGroup = useMemo(
+    () => variantGroups.find((g) => g.variantId === activeVariantId) ?? null,
+    [variantGroups, activeVariantId],
+  );
+
+  const vehiclesInVariant = activeVariantGroup?.vehicles ?? availableVehicles;
+
+  const handleVariantChange = (nextVariantId: string) => {
+    setSelectedVariantId(nextVariantId);
+    const nextGroup = variantGroups.find((g) => g.variantId === nextVariantId);
+    if (nextGroup && nextGroup.vehicles[0]) {
+      setVehicleId(nextGroup.vehicles[0].id);
+    }
+  };
 
   const totalDays = useMemo(() => {
     const s = new Date(startDate);
@@ -141,18 +197,18 @@ function CreateContractForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-revix-dark mb-1">
-                {isRtl ? "السيارة المتاحة *" : "Available Vehicle *"}
+                {isRtl ? "الفئة / الموديل (Variant) *" : "Model Variant *"}
               </label>
               <RevixSelect
                 size="sm"
                 isRtl={isRtl}
-                value={vehicleId}
-                onChange={(e) => setVehicleId(e.target.value)}
-                placeholder={isRtl ? "اختر السيارة..." : "Select vehicle..."}
+                value={activeVariantId}
+                onChange={(e) => handleVariantChange(e.target.value)}
+                placeholder={isRtl ? "اختر الفئة..." : "Select variant..."}
                 buttonClassName="h-9 rounded-lg text-xs"
-                options={availableVehicles.map((v) => ({
-                  value: v.id,
-                  label: `${v.licensePlate} — ${v.variant ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}` : "Vehicle"}`,
+                options={variantGroups.map((g) => ({
+                  value: g.variantId,
+                  label: `${g.label} (${g.sippCode}) • ${isRtl ? "متاح:" : "Avail:"} ${g.vehicles.length}`,
                 }))}
               />
             </div>
@@ -174,6 +230,26 @@ function CreateContractForm({
                 }))}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-revix-dark mb-1">
+              {isRtl
+                ? "السيارة المخصصة من الفئة (يتم الاختيار تلقائياً أو يدوياً) *"
+                : "Assigned Unit from Variant (Auto-selected or manual) *"}
+            </label>
+            <RevixSelect
+              size="sm"
+              isRtl={isRtl}
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              placeholder={isRtl ? "اختر السيارة..." : "Select unit..."}
+              buttonClassName="h-9 rounded-lg text-xs"
+              options={vehiclesInVariant.map((v) => ({
+                value: v.id,
+                label: `${activeVariantGroup?.label || (v.variant ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}` : "Vehicle")} • ${isRtl ? "لوحة:" : "Plate:"} ${v.licensePlate}${v.color ? ` (${v.color})` : ""}`,
+              }))}
+            />
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

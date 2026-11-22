@@ -26,6 +26,8 @@ const InsuranceCompaniesPanel = dynamic(() => import("@/components/fleet/Insuran
 const BookableFleetPanel = dynamic(() => import("@/components/fleet/BookableFleetPanel").then((module) => module.BookableFleetPanel), { loading: PanelLoading });
 const CustomersPanel = dynamic(() => import("@/components/fleet/CustomersPanel").then((module) => module.CustomersPanel), { loading: PanelLoading });
 const RentalContractsPanel = dynamic(() => import("@/components/fleet/RentalContractsPanel").then((module) => module.RentalContractsPanel), { loading: PanelLoading });
+const DriversPanel = dynamic(() => import("@/components/fleet/DriversPanel").then((module) => module.DriversPanel), { loading: PanelLoading });
+const FleetMovementsPanel = dynamic(() => import("@/components/fleet/FleetMovementsPanel").then((module) => module.FleetMovementsPanel), { loading: PanelLoading });
 interface WorkspacePageContentProps {
  isRtl: boolean; activeSection: WorkspaceSectionId; activeSubPage: string;
  canAccessCurrentPage: boolean; canAccessTeam: boolean; company: CompanyDto;
@@ -79,6 +81,10 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
             <CustomersPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "rental-contracts" ? (
             <RentalContractsPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "movements" ? (
+            <FleetMovementsPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "drivers" ? (
+            <DriversPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "purchase-orders" ? (
             <PurchaseOrdersPanel
               isRtl={isRtl}
@@ -94,7 +100,6 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
           ) : activeSection === "fleet" && activeSubPage === "price-list" ? (
             <PriceListPanel
               isRtl={isRtl}
-              branchId={activeBranch?.id}
               baseCurrency={activeBranch?.currencyCode || company?.baseCurrency}
             />
           ) : activeSection === "fleet" && activeSubPage === "vehicles" ? (

@@ -165,7 +165,7 @@ router.post(
         const result = await fleetService.receiveVehicleFromPo(req.tenantActor!, {
           ...parsed.data,
           purchaseOrderId: poId,
-          branchId: parsed.data.branchId || "",
+          branchId: parsed.data.branchId || null,
         });
         res.status(201).json({ ok: true, data: result });
       } catch (err) {

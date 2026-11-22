@@ -4,8 +4,8 @@ import NextImage from "next/image";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { navigateToWorkspacePage, clearPendingFleetReceiveContext } from "../../store/slices/workspaceSlice";
-import { useListVariantsQuery, useCreateVariantMutation, useListVehiclePhotosQuery, useListRentalInclusionsQuery, useCreateVehicleMutation, useReceiveVehicleMutation, useListPurchaseOrdersQuery, type CreateVehicleVariantInput } from "../../store/api/fleetApi";
+import { navigateToWorkspacePage, clearPendingFleetReceiveContext, clearPendingVariantSetupContext } from "../../store/slices/workspaceSlice";
+import { useListVariantsQuery, useCreateVariantMutation, useListVehiclePhotosQuery, useListRentalInclusionsQuery, useCreateVehicleMutation, useReceiveVehicleMutation, useListPurchaseOrdersQuery, useListVehiclesQuery, useApplyVariantListingSetupMutation, type CreateVehicleVariantInput } from "../../store/api/fleetApi";
 import { useGetWorkspaceContextQuery, type BranchDto } from "../../store/api/workspaceApi";
 import { resolveAssetUrl } from "../../store/api/baseApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
@@ -23,6 +23,8 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
 
   // Redux state
   const pendingReceive = useAppSelector((state) => state.workspace.pendingFleetReceiveContext);
+  const pendingVariantSetup = useAppSelector((state) => state.workspace.pendingVariantSetupContext);
+  const isVariantSetupMode = Boolean(pendingVariantSetup);
   const selectedBranchId = useAppSelector((state) => state.workspace.selectedBranchId);
 
   // API Queries
@@ -31,10 +33,16 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const { data: photosRes } = useListVehiclePhotosQuery();
   const { data: posRes } = useListPurchaseOrdersQuery();
   const { data: inclusionsRes } = useListRentalInclusionsQuery({ activeOnly: true });
+  const { data: batchVehiclesRes } = useListVehiclesQuery(
+    { variantId: pendingVariantSetup?.variantId, pageSize: 500 },
+    { skip: !pendingVariantSetup },
+  );
 
   // Mutations
   const [createVehicle, { isLoading: isCreating }] = useCreateVehicleMutation();
   const [receiveVehicle, { isLoading: isReceiving }] = useReceiveVehicleMutation();
+  const [applyVariantListingSetup, { isLoading: isApplyingVariantSetup }] =
+    useApplyVariantListingSetupMutation();
   const [createVariant] = useCreateVariantMutation();
 
   const variants = useMemo(() => variantsRes?.data ?? [], [variantsRes?.data]);
@@ -42,13 +50,31 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const photos = useMemo(() => photosRes?.data ?? [], [photosRes?.data]);
   const purchaseOrders = useMemo(() => posRes?.data ?? [], [posRes?.data]);
   const availableInclusions = useMemo(() => inclusionsRes?.data ?? [], [inclusionsRes?.data]);
+  const batchVehicles = useMemo(() => {
+    if (!pendingVariantSetup) return [];
+    return (batchVehiclesRes?.data ?? []).filter(
+      (v) => v.variantId === pendingVariantSetup.variantId && !v.isPartnerVehicle,
+    );
+  }, [batchVehiclesRes?.data, pendingVariantSetup]);
+  const batchBranchSummary = useMemo(() => {
+    const names = Array.from(
+      new Set(
+        batchVehicles
+          .map((v) => v.branchName || (isAr ? "مخزون الشركة" : "Company Stock"))
+          .filter(Boolean),
+      ),
+    );
+    return names.length > 0 ? names.join("، ") : isAr ? "موزع على الفروع" : "Assigned Branches";
+  }, [batchVehicles, isAr]);
 
   // Active PO and Line Item if arriving from PO
 
 
   // Form States
-  const [vehicleName, setVehicleName] = useState<string>("");
-  const [selectedVariantId, setSelectedVariantId] = useState<string>(pendingReceive?.variantId || "");
+  const [vehicleName, setVehicleName] = useState<string>(pendingVariantSetup?.variantTitle || "");
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(
+    pendingVariantSetup?.variantId || pendingReceive?.variantId || "",
+  );
   const [branchOverride, setBranchId] = useState<string>(pendingReceive?.branchId || "");
   const branchId = branchOverride || selectedBranchId || branches[0]?.id || "";
 
@@ -184,6 +210,74 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
     }
 
   }
+
+  // Hydrate existing batch pricing, photo, inclusions & policies in Bulk Variant Setup mode
+  const [hydratedBatchVariantId, setHydratedBatchVariantId] = useState<string>("");
+  useEffect(() => {
+    if (!pendingVariantSetup || batchVehicles.length === 0) return;
+    if (hydratedBatchVariantId === pendingVariantSetup.variantId) return;
+
+    const sample =
+      batchVehicles.find((v) => Number(v.dailyRate1to2 ?? 0) > 0) ||
+      batchVehicles[0]!;
+    const withPhoto = batchVehicles.find((v) => Boolean(v.photoUrl));
+    const withInclusions = batchVehicles.find(
+      (v) => Array.isArray(v.inclusions) && v.inclusions.length > 0,
+    );
+
+    if (Number(sample.dailyRate1to2 ?? 0) > 0) {
+      setDailyRate1to2(Number(sample.dailyRate1to2));
+      setDailyRate3to7(Number(sample.dailyRate3to7 ?? 0));
+      setDailyRate8Plus(Number(sample.dailyRate8Plus ?? 0));
+      setDamageExcess(Number(sample.damageExcess ?? 0));
+    }
+    if (sample.mileagePolicy) setMileagePolicy(sample.mileagePolicy);
+    if (sample.dailyKmLimit != null) setDailyKmLimit(Number(sample.dailyKmLimit));
+    if (sample.extraKmRate != null) setExtraKmRate(Number(sample.extraKmRate));
+    if (sample.locationType) setLocationType(sample.locationType);
+    if (sample.fuelPolicy) setFuelPolicy(sample.fuelPolicy);
+    if (sample.deliveryPolicy) setDeliveryPolicy(sample.deliveryPolicy);
+    if (sample.description) setDescription(sample.description);
+    if (sample.instantConfirmation !== undefined) {
+      setInstantConfirmation(Boolean(sample.instantConfirmation));
+    }
+    if (sample.seats) setSeats(Number(sample.seats));
+    if (sample.doors) setDoors(Number(sample.doors));
+    if (sample.luggageCapacity) setLuggageCapacity(sample.luggageCapacity);
+    if (sample.transmission) setTransmission(sample.transmission.toLowerCase());
+    if (sample.fuelType) setFuelType(sample.fuelType.toLowerCase());
+    if (sample.airConditioning !== undefined) {
+      setAirConditioning(Boolean(sample.airConditioning));
+    }
+    if (withPhoto?.photoUrl) {
+      setPhotoUrl(withPhoto.photoUrl);
+    }
+    if (withInclusions?.inclusions) {
+      setSelectedInclusions(withInclusions.inclusions);
+    }
+    setHydratedBatchVariantId(pendingVariantSetup.variantId);
+  }, [pendingVariantSetup, batchVehicles, hydratedBatchVariantId]);
+
+  // Auto-match photo by name once photos catalog finishes loading
+  useEffect(() => {
+    if (photoUrl || photos.length === 0) return;
+    const candidateName = selectedVariant
+      ? `${selectedVariant.make} ${selectedVariant.model}`.toLowerCase()
+      : vehicleName.trim().toLowerCase();
+    if (!candidateName) return;
+
+    const matched = photos.find((p) => {
+      const pName = p.vehicleName.toLowerCase();
+      return (
+        candidateName.includes(pName) ||
+        pName.includes(candidateName) ||
+        (selectedVariant ? pName.includes(selectedVariant.model.toLowerCase()) : false)
+      );
+    });
+    if (matched) {
+      setPhotoUrl(matched.photoUrl);
+    }
+  }, [photos, photoUrl, selectedVariant, vehicleName]);
 
   // Handler: When user selects a photo from the verified library
   // (As user requested: "ولو اختارت صوره الاسم بيكون اسم الصوره")
@@ -403,14 +497,77 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   };
 
   const handleCancel = () => {
+    const wasVariantSetup = Boolean(pendingVariantSetup);
     dispatch(clearPendingFleetReceiveContext());
-    dispatch(navigateToWorkspacePage({ section: "fleet", subPage: "vehicles" }));
+    dispatch(clearPendingVariantSetupContext());
+    dispatch(
+      navigateToWorkspacePage({
+        section: "fleet",
+        subPage: wasVariantSetup ? "fleet-live" : "vehicles",
+      }),
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
+
+    // Mode 0: Bulk Variant Booking Setup (applies photo, inclusions, specs, policies & pricing to ALL cars of this variant)
+    if (pendingVariantSetup) {
+      if (Number(dailyRate1to2) <= 0) {
+        setErrorMessage(
+          isAr
+            ? "أدخل سعر التأجير اليومي (١–٢ يوم) قبل نشر السيارات للحجز."
+            : "Enter a daily rate for 1–2 days before publishing this variant for booking.",
+        );
+        return;
+      }
+      try {
+        const res = await applyVariantListingSetup({
+          variantId: pendingVariantSetup.variantId,
+          photoUrl: photoUrl.trim() || null,
+          locationType,
+          fuelPolicy,
+          instantConfirmation,
+          description: description.trim() ? description.trim().slice(0, 1000) : null,
+          deliveryPolicy,
+          dailyRate1to2: Number(dailyRate1to2) || 0,
+          dailyRate3to7: Number(dailyRate3to7) || 0,
+          dailyRate8Plus: Number(dailyRate8Plus) || 0,
+          damageExcess: Number(damageExcess) || 0,
+          mileagePolicy,
+          dailyKmLimit: mileagePolicy === "limited" ? Number(dailyKmLimit) || 0 : 0,
+          extraKmRate: mileagePolicy === "limited" ? Number(extraKmRate) || 0 : 0,
+          inclusions: selectedInclusions,
+          seats: Number(seats) || 5,
+          doors: Number(doors) || 4,
+          airConditioning,
+          fuelType,
+          luggageCapacity,
+          transmission,
+          publishToFleet: true,
+        }).unwrap();
+
+        setSuccessMessage(
+          isAr
+            ? `تم تجهيز ونشر ${res.data.updatedCount} سيارة من (${pendingVariantSetup.variantTitle}) في الأسطول الجاهز للحجز بنجاح!`
+            : `Configured and published ${res.data.updatedCount} vehicles of (${pendingVariantSetup.variantTitle}) to Bookable Fleet!`,
+        );
+        dispatch(clearPendingVariantSetupContext());
+        setTimeout(() => {
+          dispatch(navigateToWorkspacePage({ section: "fleet", subPage: "fleet-live" }));
+        }, 1200);
+      } catch (err: unknown) {
+        setErrorMessage(
+          getApiErrorMessage(err) ||
+            (isAr
+              ? "تعذر تطبيق إعدادات الحجز على دفعة السيارات."
+              : "Failed to apply booking setup to variant batch."),
+        );
+      }
+      return;
+    }
 
     // 1. Synchronous field validation BEFORE any network mutation
     if (!selectedVariantId && !vehicleName.trim()) {
@@ -546,10 +703,40 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
     }
   };
 
-  const isSubmitting = isCreating || isReceiving;
+  const isSubmitting = isCreating || isReceiving || isApplyingVariantSetup;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20" dir={isAr ? "rtl" : "ltr"}>
+      {/* Top Banner if in Bulk Variant Booking Setup Mode */}
+      {pendingVariantSetup && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+              <RevixIcon name="sparkles" className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-emerald-950">
+                {isAr
+                  ? `تجهيز دفعة للحجز: ${pendingVariantSetup.variantTitle} (${batchVehicles.length || pendingVariantSetup.totalUnits} سيارة)`
+                  : `Bulk Booking Setup: ${pendingVariantSetup.variantTitle} (${batchVehicles.length || pendingVariantSetup.totalUnits} vehicles)`}
+              </h3>
+              <p className="text-xs text-emerald-800 mt-0.5">
+                {isAr
+                  ? "الصورة والمواصفات والأسعار والفرع ممتلئة تلقائياً. أضف المزايا (What's included) وبقية تفاصيل الحجز ليتم تطبيقها على كل السيارات في الدفعة مع احتفاظ كل سيارة برقم لوحتها وشاسيهها ومفتاحها."
+                  : "Photo, specs, pricing, and branches are auto-filled. Add What's Included and booking policies — they will apply to all vehicles in this batch while keeping each car's unique plate, VIN, and key."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="shrink-0 cursor-pointer rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-900 hover:bg-emerald-100/60"
+          >
+            {isAr ? "رجوع للأسطول" : "Back to Fleet"}
+          </button>
+        </div>
+      )}
+
       {/* Top Banner if in Receiving Mode */}
       {pendingReceive && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
@@ -696,18 +883,30 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
               {/* 3. Branch / Pickup Location */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  {isAr ? "فرع الاستلام *" : "Pickup branch *"}
+                  {isVariantSetupMode
+                    ? isAr
+                      ? "فروع تواجد الدفعة (تلقائي)"
+                      : "Assigned Branches (Auto)"
+                    : isAr
+                      ? "فرع الاستلام *"
+                      : "Pickup branch *"}
                 </label>
-                <RevixSelect
-                  size="md"
-                  isRtl={isAr}
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  options={branchOptions}
-                  placeholder={isAr ? "-- اختر الفرع --" : "-- Select Branch --"}
-                  searchable
-                  buttonClassName="w-full h-[46px] rounded-lg"
-                />
+                {isVariantSetupMode ? (
+                  <div className="flex h-[46px] items-center rounded-lg border border-emerald-200 bg-emerald-50/50 px-3.5 text-xs font-semibold text-emerald-900">
+                    {batchBranchSummary}
+                  </div>
+                ) : (
+                  <RevixSelect
+                    size="md"
+                    isRtl={isAr}
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    options={branchOptions}
+                    placeholder={isAr ? "-- اختر الفرع --" : "-- Select Branch --"}
+                    searchable
+                    buttonClassName="w-full h-[46px] rounded-lg"
+                  />
+                )}
               </div>
             </div>
 
@@ -902,6 +1101,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
         {/* ====================================================================== */}
         {/* SECTION 2: ASSET IDENTIFIERS (VIN, Plate, Key, Color, Mileage, Expiries) */}
         {/* ====================================================================== */}
+        {!isVariantSetupMode && (
         <div className="bg-white rounded-xl border border-gray-200/80 shadow-xs">
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 rounded-t-xl flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -1061,6 +1261,7 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
             </div>
           </div>
         </div>
+        )}
 
         {/* ====================================================================== */}
         {/* SECTION 3: SPECIFICATIONS (Auto-populated from SIPP with override) */}
@@ -1509,6 +1710,10 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
             <RevixIcon name="check" className="w-4 h-4" />
             {isSubmitting
               ? (isAr ? "جارٍ الحفظ..." : "Saving...")
+              : pendingVariantSetup
+              ? (isAr
+                  ? `تطبيق على جميع السيارات (${batchVehicles.length || pendingVariantSetup.totalUnits}) ونشر للحجز`
+                  : `Apply to all ${batchVehicles.length || pendingVariantSetup.totalUnits} cars & Publish`)
               : pendingReceive
               ? (isAr ? "حفظ واستلام وتحويل للأصول" : "Confirm Receiving & Register Asset")
               : (isAr ? "حفظ السيارة" : "Save vehicle")}

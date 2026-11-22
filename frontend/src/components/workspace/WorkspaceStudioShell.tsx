@@ -417,36 +417,78 @@ export function WorkspaceStudioShell({
                     />
                   </button>
                   {isExpanded ? (
-                    <div className="space-y-0.5 ps-1">
-                      {mergedItems.map(({ sectionId, item }) => {
-                        const isActive =
-                          activeSection === sectionId &&
-                          activeSubPage === item.id;
-                        return (
-                          <button
-                            key={`${sectionId}-${item.id}`}
-                            type="button"
-                            onClick={() =>
-                              dispatch(
-                                navigateToWorkspacePage({
-                                  section: sectionId,
-                                  subPage: item.id,
-                                }),
-                              )
-                            }
-                            className={`flex w-full cursor-pointer items-center rounded-[6px] px-2.5 py-1.5 text-start text-[13px] transition-colors ${
-                              isActive
-                                ? "bg-revix-tint font-semibold text-revix-primary"
-                                : "font-medium text-revix-dark hover:bg-revix-surface"
-                            }`}
-                          >
-                            <span className="truncate">
-                              {isRtl ? item.titleAr : item.titleEn}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    sec.id === "fleet" && sec.groups.length > 1 ? (
+                      <div className="space-y-2.5 ps-1 pt-0.5">
+                        {sec.groups.map((grp, gIdx) => (
+                          <div key={grp.groupTitleEn} className={gIdx > 0 ? "border-t border-revix-border/60 pt-2" : ""}>
+                            <div className="px-2.5 pb-1 text-[10px] font-bold tracking-wide text-revix-muted">
+                              {isRtl ? grp.groupTitleAr : grp.groupTitleEn}
+                            </div>
+                            <div className="space-y-0.5">
+                              {grp.items.map((item) => {
+                                const isActive =
+                                  activeSection === sec.id &&
+                                  activeSubPage === item.id;
+                                return (
+                                  <button
+                                    key={`${sec.id}-${item.id}`}
+                                    type="button"
+                                    onClick={() =>
+                                      dispatch(
+                                        navigateToWorkspacePage({
+                                          section: sec.id,
+                                          subPage: item.id,
+                                        }),
+                                      )
+                                    }
+                                    className={`flex w-full cursor-pointer items-center rounded-[6px] px-2.5 py-1.5 text-start text-[13px] transition-colors ${
+                                      isActive
+                                        ? "bg-revix-tint font-semibold text-revix-primary"
+                                        : "font-medium text-revix-dark hover:bg-revix-surface"
+                                    }`}
+                                  >
+                                    <span className="truncate">
+                                      {isRtl ? item.titleAr : item.titleEn}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-0.5 ps-1">
+                        {mergedItems.map(({ sectionId, item }) => {
+                          const isActive =
+                            activeSection === sectionId &&
+                            activeSubPage === item.id;
+                          return (
+                            <button
+                              key={`${sectionId}-${item.id}`}
+                              type="button"
+                              onClick={() =>
+                                dispatch(
+                                  navigateToWorkspacePage({
+                                    section: sectionId,
+                                    subPage: item.id,
+                                  }),
+                                )
+                              }
+                              className={`flex w-full cursor-pointer items-center rounded-[6px] px-2.5 py-1.5 text-start text-[13px] transition-colors ${
+                                isActive
+                                  ? "bg-revix-tint font-semibold text-revix-primary"
+                                  : "font-medium text-revix-dark hover:bg-revix-surface"
+                              }`}
+                            >
+                              <span className="truncate">
+                                {isRtl ? item.titleAr : item.titleEn}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )
                   ) : null}
                 </div>
               );

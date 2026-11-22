@@ -404,7 +404,9 @@ export function mapPurchaseOrderRow(row: DbPurchaseOrderRow): PurchaseOrderRecor
     installmentsCount: Number(row.installments_count),
     notes: row.notes,
     createdByUserId: row.created_by_user_id,
+    createdByUserName: (row as DbPurchaseOrderRow & { created_by_user_name?: string | null }).created_by_user_name ?? null,
     approvedByUserId: row.approved_by_user_id,
+    approvedByUserName: (row as DbPurchaseOrderRow & { approved_by_user_name?: string | null }).approved_by_user_name ?? null,
     approvedAt: row.approved_at ? new Date(row.approved_at) : null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -547,6 +549,11 @@ export function mapFleetVehicleRow(row: DbFleetVehicleRow): FleetVehicleRecord {
     insurancePolicyNumber:
       (row as DbFleetVehicleRow & { insurance_policy_number?: string | null }).insurance_policy_number ?? null,
     isBookable: Boolean((row as DbFleetVehicleRow & { is_bookable?: boolean }).is_bookable),
+    inServiceDate: (row as DbFleetVehicleRow & { in_service_date?: string | Date | null }).in_service_date
+      ? new Date((row as DbFleetVehicleRow & { in_service_date?: string | Date | null }).in_service_date!).toISOString().slice(0, 10)
+      : null,
+    createdByUserId: (row as DbFleetVehicleRow & { created_by_user_id?: string | null }).created_by_user_id ?? null,
+    createdByUserName: (row as DbFleetVehicleRow & { created_by_user_name?: string | null }).created_by_user_name ?? null,
     publishedToFleetAt: (row as DbFleetVehicleRow & { published_to_fleet_at?: string | Date | null }).published_to_fleet_at
       ? new Date((row as DbFleetVehicleRow & { published_to_fleet_at?: string | Date | null }).published_to_fleet_at!)
       : null,

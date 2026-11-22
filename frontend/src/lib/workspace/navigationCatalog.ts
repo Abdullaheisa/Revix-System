@@ -136,19 +136,31 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
       altShortcut: "Alt+3",
       groups: [
         {
-          groupTitleEn: "ACQUISITION (PO)",
-          groupTitleAr: "المشتريات والموردون",
+          groupTitleEn: "1. SETUP & CATALOG",
+          groupTitleAr: "١. التأسيس والكتالوج",
           items: [
             {
-              id: "purchase-orders",
-              titleEn: "Purchase Orders (PO)",
-              titleAr: "أوامر شراء السيارات (PO)",
+              id: "variants",
+              titleEn: "Model Variant",
+              titleAr: "كتالوج فئات السيارات (الفريان)",
               descEn:
-                "Total vendor amount, upfront paid, remaining installments, and partial vehicle receiving.",
+                "Model specifications, SIPP codes, and daily rental rate bands (model templates, not physical cars).",
               descAr:
-                "إجمالي المبلغ للمورد، المدفوع مقدمًا، المتبقي بالأقساط، والاستلام الجزئي للسيارات.",
-              shortcut: "G P",
-              keyCode: "p",
+                "تعريف قوالب الموديلات، كود SIPP العالمي، وشرائح أسعار التأجير اليومي (قوالب الفئات وليس سيارات فردية).",
+              shortcut: "G T",
+              keyCode: "t",
+              isReady: true,
+            },
+            {
+              id: "vehicle-photos",
+              titleEn: "Vehicle Photos Catalog",
+              titleAr: "مكتبة وصور السيارات",
+              descEn:
+                "Upload and manage verified vehicle photography for dynamic fleet matching.",
+              descAr:
+                "رفع وإدارة مكتبة صور السيارات للربط التلقائي والديناميكي مع الأسطول.",
+              shortcut: "G H",
+              keyCode: "h",
               isReady: true,
             },
             {
@@ -173,64 +185,22 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
               keyCode: "i",
               isReady: true,
             },
-            {
-              id: "fleet-live",
-              titleEn: "Fleet",
-              titleAr: "الأسطول الجاهز للحجز (Fleet)",
-              descEn: "Bookable vehicles published to the commercial rental market.",
-              descAr: "السيارات المنشورة في الأسطول الجاهز للحجز والتأجير.",
-              shortcut: "G F",
-              keyCode: "f",
-              isReady: true,
-            },
-            {
-              id: "customers",
-              titleEn: "Customers",
-              titleAr: "العملاء",
-              descEn: "Renter directory, national IDs, and driver licenses.",
-              descAr: "دليل العملاء وبيانات الهوية ورخص القيادة.",
-              shortcut: "G C",
-              keyCode: "c",
-              isReady: true,
-            },
-            {
-              id: "rental-contracts",
-              titleEn: "Rental Contracts",
-              titleAr: "عقود التأجير",
-              descEn: "Create, track, and close vehicle rental contracts.",
-              descAr: "إنشاء وإدارة عقود التأجير واستلام السيارات.",
-              shortcut: "G R",
-              keyCode: "r",
-              isReady: true,
-            },
-            {
-              id: "variants",
-              titleEn: "Model Variant",
-              titleAr: "كتالوج فئات السيارات (الفريان)",
-              descEn:
-                "Model specifications, SIPP codes, and daily rental rate bands (model templates, not physical cars).",
-              descAr:
-                "تعريف قوالب الموديلات، كود SIPP العالمي، وشرائح أسعار التأجير اليومي (قوالب الفئات وليس سيارات فردية).",
-              shortcut: "G T",
-              keyCode: "t",
-              isReady: true,
-            },
           ],
         },
         {
-          groupTitleEn: "FLEET ASSETS",
-          groupTitleAr: "الأسطول والتسعير",
+          groupTitleEn: "2. PURCHASING & ASSETS",
+          groupTitleAr: "٢. الشراء والأصول",
           items: [
             {
-              id: "vehicles",
-              titleEn: "Vehicle Assets",
-              titleAr: "سجل سيارات الأسطول",
+              id: "purchase-orders",
+              titleEn: "Purchase Orders (PO)",
+              titleAr: "أوامر شراء السيارات (PO)",
               descEn:
-                "Browse fleet assets, availability status, daily rates, and quick operations.",
+                "Total vendor amount, upfront paid, remaining installments, and partial vehicle receiving.",
               descAr:
-                "استعراض سيارات الأسطول وحالتها التشغيلية والأسعار اليومية والعمليات السريعة.",
-              shortcut: "G F",
-              keyCode: "f",
+                "إجمالي المبلغ للمورد، المدفوع مقدمًا، المتبقي بالأقساط، والاستلام الجزئي للسيارات.",
+              shortcut: "G P",
+              keyCode: "p",
               isReady: true,
             },
             {
@@ -246,17 +216,49 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
               isReady: true,
             },
             {
-              id: "vehicle-photos",
-              titleEn: "Vehicle Photos Catalog",
-              titleAr: "مكتبة وصور السيارات",
+              id: "vehicles",
+              titleEn: "Vehicle Assets",
+              titleAr: "سجل سيارات الأسطول",
               descEn:
-                "Upload and manage verified vehicle photography for dynamic fleet matching.",
+                "Browse fleet assets, availability status, daily rates, and quick operations.",
               descAr:
-                "رفع وإدارة مكتبة صور السيارات للربط التلقائي والديناميكي مع الأسطول.",
-              shortcut: "G H",
-              keyCode: "h",
+                "استعراض سيارات الأسطول وحالتها التشغيلية والأسعار اليومية والعمليات السريعة.",
+              shortcut: "G F",
+              keyCode: "f",
               isReady: true,
             },
+          ],
+        },
+        {
+          groupTitleEn: "3. DISPATCH & DRIVERS",
+          groupTitleAr: "٣. النقل والسواقين",
+          items: [
+            {
+              id: "drivers",
+              titleEn: "Drivers",
+              titleAr: "السواقين",
+              descEn: "Driver directory, phones, license validity, passport, and status.",
+              descAr: "دليل السواقين وأرقام الهاتف والرخصة وجواز السفر.",
+              shortcut: "G V",
+              keyCode: "v",
+              isReady: true,
+            },
+            {
+              id: "movements",
+              titleEn: "Vehicle Movements",
+              titleAr: "حركة ونقل السيارات",
+              descEn: "Dispatch vehicles to branches with driver & odometer, and confirm branch receipt.",
+              descAr: "إرسال ونقل السيارات للفروع بالسواق والعداد وتأكيد استلام الفرع.",
+              shortcut: "G M",
+              keyCode: "m",
+              isReady: true,
+            },
+          ],
+        },
+        {
+          groupTitleEn: "4. PRICING & READINESS",
+          groupTitleAr: "٤. التسعير والجاهزية",
+          items: [
             {
               id: "rental-inclusions",
               titleEn: "Rental Inclusions (What is included)",
@@ -277,6 +279,42 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
               descAr: "إدارة أسعار التأجير اليومي وتحمل الأضرار لكل سيارة.",
               shortcut: "G Y",
               keyCode: "y",
+              isReady: true,
+            },
+            {
+              id: "fleet-live",
+              titleEn: "Fleet",
+              titleAr: "الأسطول الجاهز للحجز (Fleet)",
+              descEn: "Bookable vehicles published to the commercial rental market.",
+              descAr: "السيارات المنشورة في الأسطول الجاهز للحجز والتأجير.",
+              shortcut: "G F",
+              keyCode: "f",
+              isReady: true,
+            },
+          ],
+        },
+        {
+          groupTitleEn: "5. CUSTOMERS & RENTALS",
+          groupTitleAr: "٥. العملاء والتأجير",
+          items: [
+            {
+              id: "customers",
+              titleEn: "Customers",
+              titleAr: "العملاء",
+              descEn: "Renter directory, national IDs, and driver licenses.",
+              descAr: "دليل العملاء وبيانات الهوية ورخص القيادة.",
+              shortcut: "G C",
+              keyCode: "c",
+              isReady: true,
+            },
+            {
+              id: "rental-contracts",
+              titleEn: "Rental Contracts",
+              titleAr: "عقود التأجير",
+              descEn: "Create, track, and close vehicle rental contracts.",
+              descAr: "إنشاء وإدارة عقود التأجير واستلام السيارات.",
+              shortcut: "G R",
+              keyCode: "r",
               isReady: true,
             },
           ],
@@ -541,11 +579,14 @@ export function canAccessWorkspacePage(
   membership?: WorkspaceMembershipDto | null,
 ): boolean {
   if (sectionId === "network") {
-    if (operatingMode === "independent") return false;
+    if (operatingMode !== "network_main") return false;
     return (
       isOwnerOrCeo(membership) ||
       Boolean(membership?.permissions.network?.includes("read"))
     );
+  }
+  if (sectionId === "fleet" && subPageId === "movements" && operatingMode === "local_partner") {
+    return false;
   }
 
   if (sectionId === "team") {
