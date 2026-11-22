@@ -369,7 +369,6 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                               }}
                               className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-revix-border bg-white px-2.5 py-1 text-[11px] font-semibold text-revix-dark hover:bg-revix-surface"
                             >
-                              <RevixIcon name="sparkles" size={12} />
                               <span>{isRtl ? "تجهيز للحجز" : "Prepare for Booking"}</span>
                             </button>
                           )}

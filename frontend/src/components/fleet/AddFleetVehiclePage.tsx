@@ -710,22 +710,17 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
       {/* Top Banner if in Bulk Variant Booking Setup Mode */}
       {pendingVariantSetup && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-              <RevixIcon name="sparkles" className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-emerald-950">
-                {isAr
-                  ? `تجهيز دفعة للحجز: ${pendingVariantSetup.variantTitle} (${batchVehicles.length || pendingVariantSetup.totalUnits} سيارة)`
-                  : `Bulk Booking Setup: ${pendingVariantSetup.variantTitle} (${batchVehicles.length || pendingVariantSetup.totalUnits} vehicles)`}
-              </h3>
-              <p className="text-xs text-emerald-800 mt-0.5">
-                {isAr
-                  ? "الصورة والمواصفات والأسعار والفرع ممتلئة تلقائياً. أضف المزايا (What's included) وبقية تفاصيل الحجز ليتم تطبيقها على كل السيارات في الدفعة مع احتفاظ كل سيارة برقم لوحتها وشاسيهها ومفتاحها."
-                  : "Photo, specs, pricing, and branches are auto-filled. Add What's Included and booking policies — they will apply to all vehicles in this batch while keeping each car's unique plate, VIN, and key."}
-              </p>
-            </div>
+          <div>
+            <h3 className="text-sm font-bold text-emerald-950">
+              {isAr
+                ? `تجهيز دفعة للحجز: ${pendingVariantSetup.variantTitle} (${batchVehicles.length || pendingVariantSetup.totalUnits} سيارة)`
+                : `Bulk Booking Setup: ${pendingVariantSetup.variantTitle} (${batchVehicles.length || pendingVariantSetup.totalUnits} vehicles)`}
+            </h3>
+            <p className="text-xs text-emerald-800 mt-0.5">
+              {isAr
+                ? "الصورة والمواصفات والأسعار والفرع ممتلئة تلقائياً. أضف المزايا (What's included) وبقية تفاصيل الحجز ليتم تطبيقها على كل السيارات في الدفعة مع احتفاظ كل سيارة برقم لوحتها وشاسيهها ومفتاحها."
+                : "Photo, specs, pricing, and branches are auto-filled. Add What's Included and booking policies — they will apply to all vehicles in this batch while keeping each car's unique plate, VIN, and key."}
+            </p>
           </div>
           <button
             type="button"
