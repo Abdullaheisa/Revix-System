@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 import React, { useState, useMemo } from "react";
@@ -260,7 +261,7 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-start border-collapse">
+          <DataTable className="w-full text-start border-collapse">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                 <th className="py-3.5 px-6 text-start">
@@ -360,7 +361,7 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
                 ))
               )}
             </tbody>
-          </table>
+          </DataTable>
         </div>
 
         {/* Unified Pagination */}

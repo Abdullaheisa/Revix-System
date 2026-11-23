@@ -1,4 +1,5 @@
 "use client";
+import { DataTable } from "@/components/ui/DataTable";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { useEffect, useMemo, useState } from "react";
 import { useAppDispatch } from "@/store/hooks";
@@ -603,7 +604,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-start text-xs">
+                    <DataTable className="w-full text-start text-xs">
                       <thead>
                         <tr className="border-b border-revix-border bg-revix-surface/40 text-[10px] font-bold uppercase text-revix-muted">
                           <th className="px-4 py-2.5 text-start">{isRtl ? "النوع" : "Type"}</th>
@@ -642,7 +643,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </DataTable>
                   </div>
                 )}
               </div>
@@ -903,7 +904,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-start text-xs">
+                  <DataTable className="w-full text-start text-xs">
                     <thead>
                       <tr className="border-b border-revix-border bg-revix-surface/40 text-[10px] font-bold uppercase text-revix-muted">
                         <th className="px-4 py-2.5 text-start">{isRtl ? "التاريخ" : "Date"}</th>
@@ -937,7 +938,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </DataTable>
                 </div>
               )}
             </div>
@@ -1146,7 +1147,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-start text-xs">
+                  <DataTable className="w-full text-start text-xs">
                     <thead>
                       <tr className="border-b border-revix-border bg-revix-surface/40 text-[11px] font-bold text-revix-muted">
                         <th className="px-3 py-2.5 text-start">{isRtl ? "رقم الحركة" : "Ref"}</th>
@@ -1205,7 +1206,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </DataTable>
                 </div>
               )
             )}
@@ -1226,7 +1227,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-start text-xs">
+                  <DataTable className="w-full text-start text-xs">
                     <thead>
                       <tr className="border-b border-revix-border bg-revix-surface/40 text-[11px] font-bold text-revix-muted">
                         <th className="px-3 py-2.5 text-start">{isRtl ? "المصدر" : "Source"}</th>
@@ -1266,7 +1267,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                         );
                       })}
                     </tbody>
-                  </table>
+                  </DataTable>
                 </div>
               )
             )}

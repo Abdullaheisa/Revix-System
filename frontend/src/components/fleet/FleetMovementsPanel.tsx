@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { useMemo, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -300,7 +301,7 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
 
       <div className="overflow-hidden rounded-xl border border-revix-border bg-white shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-start text-xs">
+          <DataTable className="w-full text-start text-xs">
             <thead>
               <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
                 <th className="px-4 py-3 text-start">{isRtl ? "رقم الحركة" : "Movement #"}</th>
@@ -441,7 +442,7 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
                 ))
               )}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       </div>
 

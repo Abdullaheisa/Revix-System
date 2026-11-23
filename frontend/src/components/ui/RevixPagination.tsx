@@ -11,6 +11,7 @@ export interface RevixPaginationProps {
   lang?: "ar" | "en";
   itemLabel?: string;
   className?: string;
+  compact?: boolean;
 }
 
 export const RevixPagination: React.FC<RevixPaginationProps> = ({
@@ -21,6 +22,7 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
   lang = "en",
   itemLabel,
   className = "",
+  compact = false,
 }) => {
   const isAr = lang === "ar";
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -50,6 +52,7 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
   }, [totalPages, safePage]);
 
   if (totalItems === 0) {
+    if (compact) return null;
     return (
       <div
         className={`flex items-center justify-between px-6 py-4 border-t border-gray-100 text-xs sm:text-sm text-gray-500 bg-white ${className}`}
@@ -61,10 +64,10 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-gray-100 bg-white text-xs sm:text-sm select-none ${className}`}
+      className={`flex items-center ${compact ? "justify-center" : "flex-col sm:flex-row justify-between"} gap-3 px-4 ${compact ? "py-1.5" : "py-4"} border-t border-gray-100 bg-white text-xs sm:text-sm select-none ${className}`}
     >
       {/* Left text: Showing 1-8 of 12 items */}
-      <div className="text-gray-500">
+      {!compact && <div className="text-gray-500">
         {isAr ? (
           <span>
             عرض <b className="font-semibold text-gray-900">{startItem}–{endItem}</b> من أصل{" "}
@@ -76,11 +79,11 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
             <b className="font-semibold text-gray-900">{totalItems}</b> {label}
           </span>
         )}
-      </div>
+      </div>}
 
       {/* Right controls: < Previous  1  2  Next > */}
       <div className="flex items-center gap-1.5">
-        <button
+        {!compact && <button
           type="button"
           onClick={() => safePage > 1 && onPageChange(safePage - 1)}
           disabled={safePage <= 1}
@@ -89,7 +92,7 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
         >
           <RevixIcon name={isAr ? "chevron-right" : "chevron-left"} className="w-3.5 h-3.5" />
           <span>{isAr ? "السابق" : "Previous"}</span>
-        </button>
+        </button>}
 
         <div className="flex items-center gap-1 mx-1">
           {pageNumbers.map((p, idx) => {
@@ -111,7 +114,7 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
                 type="button"
                 onClick={() => onPageChange(p)}
                 aria-current={isActive ? "page" : undefined}
-                className={`min-w-[34px] h-[34px] flex items-center justify-center text-xs sm:text-sm font-semibold rounded-lg transition ${
+                className={`${compact ? "min-w-7 h-7 text-xs rounded-md" : "min-w-[34px] h-[34px] text-xs sm:text-sm rounded-lg"} flex items-center justify-center font-semibold transition ${
                   isActive
                     ? "bg-[#0b4d3b] text-white shadow-sm"
                     : "border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
@@ -123,7 +126,7 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
           })}
         </div>
 
-        <button
+        {!compact && <button
           type="button"
           onClick={() => safePage < totalPages && onPageChange(safePage + 1)}
           disabled={safePage >= totalPages}
@@ -132,7 +135,7 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
         >
           <span>{isAr ? "التالي" : "Next"}</span>
           <RevixIcon name={isAr ? "chevron-left" : "chevron-right"} className="w-3.5 h-3.5" />
-        </button>
+        </button>}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { useState } from "react";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -265,7 +266,7 @@ export function VehicleInspectionsTab({
           <EmptyState message={t.tableEmpty} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <DataTable className="w-full text-xs">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
                   <th className="px-4 py-2.5 text-start">{t.colDate}</th>
@@ -328,7 +329,7 @@ export function VehicleInspectionsTab({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           </div>
         )}
       </SectionCard>

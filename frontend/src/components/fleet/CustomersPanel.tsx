@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { useMemo, useState } from "react";
 import {
   useDeleteCustomerMutation,
@@ -93,7 +94,7 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
 
       <SectionCard noPadding>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-xs">
+          <DataTable className="w-full min-w-[760px] text-xs">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
                   <th className="px-4 py-3 text-start">{isRtl ? "العميل" : "Customer"}</th>
@@ -151,7 +152,7 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
 ))
 )}
               </tbody>
-            </table>
+            </DataTable>
         </div>
       </SectionCard>
 

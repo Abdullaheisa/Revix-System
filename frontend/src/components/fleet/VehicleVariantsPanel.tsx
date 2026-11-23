@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -562,7 +563,7 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
         <>
           <div className="overflow-hidden rounded-[8px] border border-revix-border bg-revix-white">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-start text-[13px]">
+              <DataTable className="w-full border-collapse text-start text-[13px]">
                 <thead>
                   <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
                     <th className="px-4 py-2.5 text-start">Variant ID</th>
@@ -645,7 +646,7 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
           </div>
 

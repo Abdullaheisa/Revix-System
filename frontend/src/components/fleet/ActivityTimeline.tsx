@@ -4,7 +4,7 @@ import React from "react";
 import { RevixIcon, type RevixIconName } from "@/components/ui/RevixIcons";
 import { useListAuditLogsQuery, type AuditLogEntryDto } from "@/store/api/fleetApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
-import { formatCompanyDateTime } from "@/lib/date/companyDate";
+import { formatCompanyDate, formatCompanyDateTime } from "@/lib/date/companyDate";
 
 interface ActivityTimelineProps {
   entityType?: string;
@@ -166,8 +166,61 @@ export function ActivityTimeline({
 }: ActivityTimelineProps) {
   const { data: ctx } = useGetWorkspaceContextQuery();
   const company = ctx?.data?.company;
-  const { data, isLoading } = useListAuditLogsQuery({ entityType, entityId, limit });
+  const { currentData: data, isLoading, isFetching, isError, refetch } = useListAuditLogsQuery({ entityType, entityId, limit });
   const logs = data?.data ?? [];
+
+  if (entityType === "purchase_order") {
+    const options = { timezone: company?.timezone, locale: isRtl ? "ar-EG" : "en-GB" };
+    const days = new Map<string, AuditLogEntryDto[]>();
+    for (const entry of [...logs].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))) {
+      const day = formatCompanyDate(entry.createdAt, options);
+      const entries = days.get(day);
+      if (entries) entries.push(entry);
+      else days.set(day, [entry]);
+    }
+    return (
+      <div dir={isRtl ? "rtl" : "ltr"} className="@container w-full space-y-1 py-1 text-sm">
+        {isError ? (
+          <p role="alert">{isRtl ? "تعذّر تحميل السجل." : "Could not load activity."}{" "}
+            <button type="button" className="underline" onClick={() => refetch()}>{isRtl ? "إعادة المحاولة" : "Retry"}</button>
+          </p>
+        ) : !data && isFetching ? (
+          <p role="status">{isRtl ? "جارٍ تحميل النشاط…" : "Loading activity…"}</p>
+        ) : !logs.length ? (
+          <p>{isRtl ? "لا توجد حركات مسجلة." : "No activity recorded."}</p>
+        ) : Array.from(days, ([day, entries], index) => (
+          <details key={day} open={index === 0}>
+            <summary className="cursor-pointer py-1.5 text-xs font-semibold text-revix-secondary">
+              {day} <span className="ms-1 font-normal">({entries.length})</span>
+            </summary>
+            <ol className="grid grid-cols-1 gap-x-5 gap-y-1 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4 max-h-[min(36dvh,18rem)] overflow-y-auto overscroll-contain pe-2">
+              {entries.map(entry => {
+                const meta = getActionMeta(entry.action, isRtl);
+                const details = formatMetaSummary(entry, isRtl).filter(value => !value.startsWith("PO:"));
+                return (
+                  <li key={entry.id} className="flex min-w-0 items-start gap-2 border-s-2 border-revix-border ps-2 py-1">
+                    <span className={`relative grid size-5 shrink-0 place-items-center rounded-full border ${meta.tone}`}>
+                      <RevixIcon name={meta.icon} size={12} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-baseline gap-x-2 text-xs leading-5 text-revix-secondary">
+                        <strong className="font-semibold text-revix-dark">{meta.label}</strong>
+                        <time dateTime={entry.createdAt} className="tabular-nums">{formatCompanyDateTime(entry.createdAt, options)}</time>
+                      </p>
+                      <p className="text-xs leading-5 text-revix-secondary">
+                        <bdi>{entry.actorName || entry.actorEmail || (isRtl ? "النظام" : "System")}</bdi>
+                      </p>
+                      {details.length > 0 && <p className="mt-1 text-xs text-revix-secondary">{details.join(" · ")}</p>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </details>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-revix-border bg-white shadow-sm overflow-hidden">

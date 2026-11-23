@@ -1,7 +1,8 @@
 "use client";
+import { DataTable } from "@/components/ui/DataTable";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
-import { parseFleetResourceRoute, purchaseOrderHref } from "@/lib/workspace/resourceRoutes";
+import { parseFleetResourceRoute, purchaseOrderHref, vehicleHref } from "@/lib/workspace/resourceRoutes";
 import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
 import { useGetPurchaseOrderQuery } from "@/store/api/fleetApi";
 import NextImage from "next/image";
@@ -14,7 +15,7 @@ import { ActivityTimeline } from "./ActivityTimeline";
 import { SignaturePadModal } from "@/components/shared/SignaturePadModal";
 import { formatCompanyDate, formatCompanyDateTime } from "@/lib/date/companyDate";
 import { useAppDispatch } from "@/store/hooks";
-import { navigateToWorkspacePage, setPendingFleetReceiveContext } from "@/store/slices/workspaceSlice";
+import { setPendingFleetReceiveContext } from "@/store/slices/workspaceSlice";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
@@ -89,7 +90,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
     Boolean(membership.permissions.finance?.includes("approve"));
 
   const selectedBranchId = activeBranch?.id || "all";
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [page, setPage] = usePersistedPage("fleet/purchase-orders");
   const pageSize = 15;
 
@@ -97,7 +97,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
 
   const { data, isLoading, refetch, isFetching } = useListPurchaseOrdersQuery({
     branchId: selectedBranchId !== "all" ? selectedBranchId : undefined,
-    status: selectedStatus !== "all" ? (selectedStatus as PurchaseOrderStatus) : undefined,
     page,
     pageSize,
   });
@@ -112,9 +111,13 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   const [updateStatus, { isLoading: isUpdatingStatus }] = useUpdatePurchaseOrderStatusMutation();
   const [receiveVehicle, { isLoading: isReceiving }] = useReceiveVehicleMutation();
   const [signPurchaseOrder, { isLoading: isSigning }] = useSignPurchaseOrderMutation();
+  const [unitPaging, setUnitPaging] = useState({ id: "", page: 1 });
+  const [detailSection, setDetailSection] = useState<"vehicles" | "terms" | "activity">("vehicles");
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
 
-  const [] = useState<1 | 2 | 3>(1);
+  const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
+  const fieldError = (invalid: boolean, step: number) => checkedSteps.includes(step) && invalid ? <p role="alert" className="mt-1 border-t border-red-500 pt-1 text-xs text-red-600">{isRtl ? "أكمل هذا الحقل" : "Complete this field"}</p> : null;
+  const [createStep, setCreateStep] = useState(1);
 
 
   const [receivingPo, setReceivingPo] = useState<PurchaseOrderDto | null>(null);
@@ -122,8 +125,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   // Form State for Create PO
   const [formBranchId, setFormBranchId] = useState(activeBranch?.id || branches[0]?.id || "");
   const [formVendorId, setFormVendorId] = useState("");
-  const [formOrderDate, setFormOrderDate] = useState(new Date().toISOString().slice(0, 10));
-  const [formDeliveryDate, setFormDeliveryDate] = useState("");
   const [formUpfrontPaid, setFormUpfrontPaid] = useState<number>(0);
   const [formInstallmentsCount, setFormInstallmentsCount] = useState<number>(1);
   const [formPaymentTermsType, setFormPaymentTermsType] = useState<PaymentTermsType>("net_terms");
@@ -213,21 +214,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   const vendors = useMemo(() => vendorsData?.data ?? [], [vendorsData?.data]);
 
 
-  const paginatedPurchaseOrders = purchaseOrders;
-
-  const stats = useMemo(() => {
-    const total = purchaseOrders.length;
-    const pending = purchaseOrders.filter((p) => p.status === "pending_approval").length;
-    const active = purchaseOrders.filter(
-      (p) => p.status === "approved" || p.status === "partially_received",
-    ).length;
-    const totalObligations = purchaseOrders.reduce(
-      (sum, p) => sum + Number(p.totalAmount || 0),
-      0,
-    );
-    return { total, pending, active, totalObligations };
-  }, [purchaseOrders]);
-
   const formCalculatedTotal = useMemo(() => {
     return formItems.reduce(
       (sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0),
@@ -236,11 +222,11 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   }, [formItems]);
 
   function handleOpenCreateModal() {
+    setCreateStep(1);
+    setCheckedSteps([]);
     const defaultVendor = vendors[0];
     setFormBranchId(activeBranch?.id || branches[0]?.id || "");
     setFormVendorId(defaultVendor?.id || "");
-    setFormOrderDate(new Date().toISOString().slice(0, 10));
-    setFormDeliveryDate("");
     setFormUpfrontPaid(0);
     setFormInstallmentsCount(1);
     if (defaultVendor) {
@@ -304,7 +290,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
 
     const tz = po.companyTimezone || activeBranch?.timezone || undefined;
     const orderDateStr = formatCompanyDate(po.orderDate, { timezone: tz, locale: "en-GB" });
-    const companyTitle = po.companyName || po.branchName || "Company";
+    const companyTitle = po.companyName || "Company";
     const matchedVendor = vendors.find((v) => v.id === po.vendorId);
     const attentionPerson = matchedVendor?.contactPerson?.trim() || "";
     const companyHeaderHtml = `
@@ -510,8 +496,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
       const created = await createPurchaseOrder({
         branchId: formBranchId,
         vendorId: formVendorId,
-        orderDate: formOrderDate,
-        expectedDeliveryDate: formDeliveryDate || null,
         totalAmount: formCalculatedTotal,
         upfrontPaid: Number(formUpfrontPaid) || 0,
         installmentsCount: Number(formInstallmentsCount) || 1,
@@ -525,18 +509,14 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
 
       if (nextPo?.id) syncPoUrl({ id: nextPo.id }, true);
       window.scrollTo({ top: 0, behavior: "smooth" });
-      if (created?.data) {
-        setTimeout(() => {
-          handlePrintLpo(created.data);
-        }, 300);
-      }
     } catch (err: unknown) {
-      setCreateError(
-        getApiErrorMessage(err) ||
-          (isRtl
-            ? "تعذر إنشاء أمر الشراء."
-            : "Failed to create purchase order."),
-      );
+      const status = err && typeof err === "object" && "status" in err ? err.status : undefined;
+      const message = getApiErrorMessage(err);
+      setCreateError(message || (
+        typeof status === "string"
+          ? (isRtl ? "تعذّر الاتصال بالخادم. تحقق من الاتصال وحاول مجددًا." : "Could not reach the server. Check your connection and try again.")
+          : (isRtl ? "تعذّر حفظ الطلب. حاول مجددًا." : "Could not save the order. Please try again.")
+      ));
     }
   }
 
@@ -621,12 +601,12 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   }
 
   if (selectedPoForDetails) {
-    const po =
-      purchaseOrders.find((p) => p.id === selectedPoForDetails.id) ??
-      selectedPoForDetails;
-    const totalQty = po.items?.reduce((acc, it) => acc + it.quantity, 0) || 0;
-    const totalRcv = po.items?.reduce((acc, it) => acc + it.receivedCount, 0) || 0;
-    const progressPct = totalQty > 0 ? Math.round((totalRcv / totalQty) * 100) : 0;
+    const po = selectedPoForDetails;
+    const unitCount = (po.items ?? []).reduce((sum, item) => sum + item.quantity, 0);
+    const unitPage = Math.min(unitPaging.id === po.id ? unitPaging.page : 1, Math.max(1, Math.ceil(unitCount / pageSize)));
+    const firstUnit = (unitPage - 1) * pageSize;
+    let offset = 0;
+
 
 
     return (
@@ -657,7 +637,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
           <div className="flex items-center justify-between border-b border-gray-300 pb-4 mb-5">
             <div>
               <div className="text-base font-bold text-gray-900">
-                {po.companyName || po.branchName || "Company"}
+                {po.companyName || "Company"}
               </div>
               <div className="text-xs text-gray-600 mt-1">
                 Attention By : <span className="font-semibold text-gray-900">{po.vendorName || "—"}</span>
@@ -674,7 +654,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
 
           {/* Intro */}
           <p className="text-xs text-gray-800 leading-relaxed mb-4">
-            We at <span className="font-semibold">{po.companyName || po.branchName || "our company"}</span> would like to thank you for your support.
+            We at <span className="font-semibold">{po.companyName || "our company"}</span> would like to thank you for your support.
             <br />
             Kindly find below our LPO.
           </p>
@@ -790,19 +770,21 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
           </div>
         </div>
 
-        <div className="mx-auto max-w-6xl space-y-5 print:hidden">
+        <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-3 overflow-hidden print:hidden">
         {/* Clean Top Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-revix-border pb-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-1 shrink-0">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={closePoDetails}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-2 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+              title={isRtl ? "العودة لأوامر الشراء" : "Back to purchase orders"}
+              aria-label={isRtl ? "العودة لأوامر الشراء" : "Back to purchase orders"}
+              className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface focus-visible:outline-revix-primary"
             >
               <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
-              <span>{isRtl ? "رجوع" : "Back"}</span>
+
             </button>
-            <div className="h-8 w-px bg-revix-border" />
+
             <div>
               <h1 className="font-mono text-lg font-bold tracking-tight text-revix-dark">
                 {po.poNumber}
@@ -819,31 +801,30 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="ms-auto flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => handlePrintLpo(po)}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-2 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+              title={isRtl ? "تحميل PDF أو طباعة" : "Download PDF or print"}
+              aria-label={isRtl ? "تحميل PDF أو طباعة" : "Download PDF or print"}
+              className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface focus-visible:outline-revix-primary"
             >
               <RevixIcon name="file-text" size={14} />
-              <span>{isRtl ? "تحميل PDF / طباعة" : "Download PDF"}</span>
+
             </button>
-            {canApprovePo && (
+            {po.signedAt || po.signatureDataUrl ? (
+              <span className="inline-flex h-9 items-center gap-1.5 px-2 text-xs text-revix-primary">
+                <RevixIcon name="check-circle-2" size={14} />
+                {isRtl ? "تم التوقيع" : "Signed"}
+              </span>
+            ) : canApprovePo && (
               <button
                 type="button"
                 onClick={() => setIsSignModalOpen(true)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-2 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-revix-primary/30 bg-revix-primary/10 px-3 py-2 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
               >
                 <RevixIcon name="check-circle-2" size={14} />
-                <span>
-                  {po.signatureDataUrl
-                    ? isRtl
-                      ? "تحديث التوقيع"
-                      : "Update Signature"
-                    : isRtl
-                      ? "توقيع الطلب"
-                      : "Sign PO"}
-                </span>
+                <span>{isRtl ? "توقيع الطلب" : "Sign PO"}</span>
               </button>
             )}
             {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
@@ -851,7 +832,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                 type="button"
                 disabled={isUpdatingStatus}
                 onClick={() => updateStatus({ id: po.id, status: "approved" })}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50"
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50"
               >
                 <RevixIcon name="shield-check" size={14} />
                 <span>{isRtl ? "اعتماد" : "Approve"}</span>
@@ -861,122 +842,33 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
               <button
                 type="button"
                 onClick={() => setPendingDeletePo(po)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
               >
-                <RevixIcon name="trash-2" size={14} />
-                <span>{isRtl ? "إلغاء" : "Cancel"}</span>
+                <RevixIcon name="x" size={14} />
+                <span>{isRtl ? "إلغاء الطلب" : "Cancel order"}</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Premium 4-Card KPI Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="flex items-start justify-between rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-            <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-revix-muted">
-                {isRtl ? "المورد" : "Vendor"}
-              </div>
-              <div className="mt-1.5 text-base font-bold text-revix-dark truncate">
-                {po.vendorName || "—"}
-              </div>
-            </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-revix-surface text-revix-secondary">
-              <RevixIcon name="users-round" size={16} />
-            </div>
-          </div>
-
-          <div className="flex items-start justify-between rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-            <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-revix-muted">
-                {isRtl ? "الشركة" : "Company"}
-              </div>
-              <div className="mt-1.5 text-base font-bold text-revix-dark truncate">
-                {po.companyName || po.branchName || "—"}
-              </div>
-            </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-revix-surface text-revix-secondary">
-              <RevixIcon name="globe-2" size={16} />
-            </div>
-          </div>
-
-          <div className="flex items-start justify-between rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-            <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-revix-muted">
-                {isRtl ? "الإجمالي" : "Total Amount"}
-              </div>
-              <div className="mt-1.5 font-mono text-base font-bold text-revix-primary tabular-nums">
-                {Number(po.totalAmount).toLocaleString()} {po.currency}
-              </div>
-            </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-revix-primary/10 text-revix-primary">
-              <RevixIcon name="file-text" size={16} />
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-revix-muted">
-                {isRtl ? "حالة الأسطول" : "Fleet Progress"}
-              </span>
-              <span className="font-mono text-xs font-bold text-revix-primary">
-                {totalRcv} / {totalQty}
-              </span>
-            </div>
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-revix-surface">
-              <div
-                className="h-full rounded-full bg-revix-primary transition-all duration-300"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Employee Accountability Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-2xl border border-revix-border bg-revix-surface/40 px-4 py-3 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-revix-muted">{isRtl ? "أنشأ الطلب:" : "Created By:"}</span>
-            <span className="font-bold text-revix-dark">
-              {po.createdByUserName || (isRtl ? "مسؤول النظام" : "System User")}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-revix-muted">{isRtl ? "الموافقة / الاعتماد:" : "Approved By:"}</span>
-            <span className="font-bold text-revix-dark">
-              {po.approvedByUserName ||
-                (po.status === "pending_approval"
-                  ? isRtl
-                    ? "بانتظار الموافقة"
-                    : "Pending Approval"
-                  : "—")}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-revix-muted">{isRtl ? "التوقيع:" : "Signed By:"}</span>
-            <span className="font-bold text-revix-dark">{po.signedByName || "—"}</span>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xs">
-          <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-revix-dark">
-                {isRtl ? "السيارات" : "Vehicles"}
-              </h3>
-              <span className="rounded-full bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-bold text-revix-secondary">
-                {totalQty}
-              </span>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-          <table className="w-full text-start text-xs">
+        <nav aria-label={isRtl ? "أقسام الطلب" : "Order sections"} className="flex shrink-0 gap-1 overflow-x-auto border-b border-revix-border">
+          {(["vehicles", "terms", "activity"] as const).map((section, index) => (
+            <button type="button" key={section} aria-current={detailSection === section ? "page" : undefined}
+              onClick={() => setDetailSection(section)}
+              className={`cursor-pointer shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors focus-visible:outline-revix-primary ${detailSection === section ? "border-revix-primary font-semibold text-revix-primary" : "border-transparent text-revix-secondary"}`}>
+              {(isRtl ? ["السيارات", "الدفع وشروط المورد", "سجل الطلب"] : ["Vehicles", "Payment & vendor terms", "Activity"])[index]}
+            </button>
+          ))}
+        </nav>
+        {detailSection === "vehicles" && (
+        <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border">
+          <DataTable fitAvailableHeight className="w-full text-start text-xs">
             <thead>
               <tr className="border-b border-revix-border bg-revix-surface/50 text-[11px] font-semibold uppercase tracking-wide text-revix-secondary">
                 <th className="px-4 py-3 text-start">#</th>
                 <th className="px-4 py-3 text-start">
-                  {isRtl ? "الفريان / الموديل" : "Variant"}
+                  {isRtl ? "الفئة والموديل" : "Variant"}
                 </th>
-                <th className="px-4 py-3 text-start">SIPP</th>
                 <th className="px-4 py-3 text-start">
                   {isRtl ? "اللون" : "Color"}
                 </th>
@@ -987,10 +879,10 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                   {isRtl ? "السعر" : "Unit Price"}
                 </th>
                 <th className="px-4 py-3 text-start">
-                  {isRtl ? "الحالة" : "Status"}
+                  {isRtl ? "الاستلام" : "Receipt status"}
                 </th>
-                <th className="px-4 py-3 text-end">
-                  {isRtl ? "الإجراء" : "Action"}
+                <th className="w-32 px-3 py-3 text-center">
+                  {isRtl ? "إجراء" : "Action"}
                 </th>
               </tr>
             </thead>
@@ -1004,10 +896,11 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                   (matchedVariant
                     ? `${matchedVariant.make} ${matchedVariant.model} ${matchedVariant.modelYear}`
                     : item.variantId);
-                const sippCode =
-                  item.sippCode || matchedVariant?.sippCode || "CAR";
                 const linkedVehicles = item.receivedVehicles || [];
-                const slots = Array.from({ length: item.quantity }, (_, idx) => idx);
+                const start = Math.max(0, firstUnit - offset);
+                const end = Math.min(item.quantity, firstUnit + pageSize - offset);
+                offset += item.quantity;
+                const slots = Array.from({ length: Math.max(0, end - start) }, (_, idx) => start + idx);
 
                 return slots.map((slotIdx) => {
                   const receivedCar = linkedVehicles[slotIdx];
@@ -1022,15 +915,10 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                     >
                       <td className="px-4 py-3 font-mono font-semibold text-revix-secondary">
                         {itemIdx + 1}
-                        {slots.length > 1 ? `.${slotIdx + 1}` : ""}
+                        {item.quantity > 1 ? `.${slotIdx + 1}` : ""}
                       </td>
                       <td className="px-4 py-3 font-semibold text-revix-dark">
                         {displayVariantName}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="rounded bg-revix-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary">
-                          {sippCode}
-                        </span>
                       </td>
                       <td className="px-4 py-3 text-revix-dark">{displayColor}</td>
                       <td className="px-4 py-3 font-mono text-revix-dark">
@@ -1039,79 +927,85 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                       <td className="px-4 py-3 font-mono font-semibold text-revix-dark">
                         {Number(item.unitPrice).toLocaleString()} {po.currency}
                       </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
-                            isConverted
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-amber-200 bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              isConverted ? "bg-emerald-500" : "bg-amber-500"
-                            }`}
-                          />
-                          {isConverted
-                            ? receivedCar?.plateNumber
-                              ? isRtl
-                                ? `بالأسطول (${receivedCar.plateNumber})`
-                                : `In Fleet (${receivedCar.plateNumber})`
-                              : isRtl
-                                ? "بالأسطول"
-                                : "In Fleet"
-                            : isRtl
-                              ? "بانتظار الوصول"
-                              : "Pending"}
-                        </span>
+                      <td className="px-4 py-3 text-revix-secondary">
+                        {isConverted
+                          ? (isRtl ? "مستلمة" : "Received")
+                          : (isRtl ? "لم تُستلم" : "Not received")}
                       </td>
-                      <td className="px-4 py-3 text-end">
-                        {!isConverted && po.status !== "cancelled" && po.status !== "draft" ? (
-                          <button
-                            type="button"
+                      <td className="px-2 py-2 text-center">
+                        {receivedCar?.id ? (
+                          <button type="button"
+                            onClick={() => router.push(vehicleHref(receivedCar.id))}
+                            title={isRtl ? "فتح ملف السيارة" : "Open vehicle"}
+                            aria-label={(isRtl ? "فتح ملف السيارة " : "Open vehicle ") + displayVin}
+                            className="inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 font-medium text-revix-primary hover:bg-revix-surface hover:text-revix-primary">
+                            <RevixIcon name="eye" size={14} />
+                            {isRtl ? "ملف السيارة" : "Vehicle file"}
+                          </button>
+                        ) : !isConverted && po.status !== "cancelled" && po.status !== "draft" ? (
+                          <button type="button"
                             onClick={() => handleOpenReceiveModal(po, item.id)}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-revix-primary-hover transition-colors"
-                          >
-                            <RevixIcon name="car-front" size={13} />
-                            <span>
-                              {isRtl ? "تحويل للأسطول" : "Convert to Fleet Asset"}
-                            </span>
+                            aria-label={(isRtl ? "استلام السيارة " : "Receive vehicle ") + displayVin}
+                            className="inline-flex h-8 items-center rounded-md border border-revix-primary/30 px-2 font-semibold text-revix-primary hover:bg-revix-primary/10">
+                            {isRtl ? "استلام" : "Receive"}
                           </button>
-                        ) : isConverted ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              dispatch(
-                                navigateToWorkspacePage({
-                                  section: "fleet",
-                                  subPage: "vehicles",
-                                }),
-                              )
-                            }
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-[11px] font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
-                          >
-                            <RevixIcon name="arrow-right" size={12} />
-                            <span>{isRtl ? "عرض بالأسطول" : "View in Fleet"}</span>
-                          </button>
-                        ) : (
-                          <span className="text-[11px] text-revix-muted">—</span>
-                        )}
+                        ) : "—"}
                       </td>
                     </tr>
                   );
                 });
               })}
             </tbody>
-          </table>
-          </div>
+          </DataTable>
+          <RevixPagination compact currentPage={unitPage} totalItems={unitCount} pageSize={pageSize}
+            onPageChange={page => setUnitPaging({ id: po.id, page })} lang={isRtl ? "ar" : "en"}
+            itemLabel={isRtl ? "سيارة" : "vehicles"} className="shrink-0" />
         </div>
 
-        <ActivityTimeline
-          entityType="purchase_order"
-          entityId={po.id}
-          isRtl={isRtl}
-          title={isRtl ? "سجل الموظفين والعمليات على أمر الشراء" : "Purchase Order Employee Activity Log"}
-        />
+        )}
+        {detailSection === "terms" && (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="grid items-start gap-5 md:grid-cols-2">
+              <section className="overflow-hidden rounded-lg border border-revix-border">
+                <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold">{isRtl ? "حساب الطلب" : "Payment summary"}</h3>
+                <dl className="divide-y divide-revix-border px-4">
+                  {[
+                    [isRtl ? "قيمة الطلب" : "Order value", `${Number(po.totalAmount).toLocaleString()} ${po.currency}`],
+                    [isRtl ? "المدفوع" : "Paid", `${Number(po.upfrontPaid).toLocaleString()} ${po.currency}`],
+                    [isRtl ? "المتبقي" : "Balance due", `${Number(po.remainingAmount).toLocaleString()} ${po.currency}`],
+                    ...(po.installmentsCount > 1 ? [[isRtl ? "عدد الأقساط" : "Installments", po.installmentsCount]] : []),
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-sm">
+                      <dt className="text-revix-secondary">{label}</dt>
+                      <dd className="text-end font-medium tabular-nums">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+              <section className="overflow-hidden rounded-lg border border-revix-border">
+                <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold">{isRtl ? "شروط المورد" : "Vendor terms"}</h3>
+                <ol className="list-decimal space-y-2 py-3 ps-9 pe-4 text-sm">
+                  {(po.notes || "").split(/\r?\n/).map(line => line.trim()).filter(line => line && !/^\[(Payment Terms & Schedule|شروط الدفع والجدولة):/.test(line)).map((line, index) => (
+                    <li key={index} className="whitespace-pre-wrap break-words ps-1">{line}</li>
+                  ))}
+                </ol>
+              </section>
+            </div>
+          </div>
+        )}
+        {detailSection === "activity" && <section className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+          <ActivityTimeline entityType="purchase_order" entityId={po.id} isRtl={isRtl} />
+          <details className="w-full border-t border-revix-border py-3 text-xs">
+            <summary className="cursor-pointer font-medium text-revix-secondary">{isRtl ? "مسؤولو الطلب" : "Order participants"}</summary>
+            <dl className="mt-3 grid gap-2 sm:grid-cols-3">
+              {[
+                [isRtl ? "أنشأ الطلب" : "Created by", po.createdByUserName],
+                [isRtl ? "اعتمد الطلب" : "Approved by", po.approvedByUserName],
+                [isRtl ? "وقّع الطلب" : "Signed by", po.signedByName?.split("|")[0]],
+              ].map(([label, value]) => <div key={label} className="flex gap-3"><dt className="text-revix-secondary">{label}</dt><dd>{value || "—"}</dd></div>)}
+            </dl>
+          </details>
+        </section>}
 
         <RevixConfirmModal
           isOpen={Boolean(pendingDeletePo)}
@@ -1137,24 +1031,27 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
 
         {/* Electronic Signature Modal */}
         <SignaturePadModal
-          isOpen={isSignModalOpen}
+          isOpen={isSignModalOpen && !po.signedAt && !po.signatureDataUrl}
           isRtl={isRtl}
           title={isRtl ? "التوقيع الإلكتروني لأمر الشراء" : "Electronic Signature"}
           description={
             isRtl
-              ? "وقّع داخل المربع أدناه ليتم حفظ التوقيع في قاعدة البيانات وإظهاره في مستند أمر الشراء:"
-              : "Draw your signature below. It will be stored in the database and printed on the LPO:"
+              ? "بعد الحفظ يصبح التوقيع نهائيًا."
+              : "Your signature is final once saved."
           }
-          initialSignatureUrl={po.signatureDataUrl}
           isSaving={isSigning}
           onClose={() => setIsSignModalOpen(false)}
           onSave={async (dataUrl) => {
-            const res = await signPurchaseOrder({
+            const result = await signPurchaseOrder({
               id: po.id,
               signatureDataUrl: dataUrl,
-            }).unwrap();
-
+            });
+            if (result.error && !("status" in result.error && result.error.status === 409)) {
+              window.alert(getApiErrorMessage(result.error) || (isRtl ? "تعذّر حفظ التوقيع" : "Could not save signature"));
+              return;
+            }
             setIsSignModalOpen(false);
+            void refetchDetail();
           }}
         />
       </div>
@@ -1163,7 +1060,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   }
 
   return (
-    <div className="space-y-6" dir={isRtl ? "rtl" : "ltr"}>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
       {!isCreateModalOpen && (
         <>
       {/* Header */}
@@ -1171,7 +1068,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
-              {isRtl ? "أوامر شراء السيارات (PO)" : "Vehicle Purchase Orders (PO)"}
+              {isRtl ? "أوامر الشراء" : "Purchase orders"}
             </h1>
           </div>
         </div>
@@ -1181,13 +1078,14 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 text-xs font-medium text-revix-dark shadow-xs transition hover:bg-revix-surface active:scale-95 disabled:opacity-50"
+            aria-label={isRtl ? "تحديث الأوامر" : "Refresh orders"}
+            title={isRtl ? "تحديث" : "Refresh"}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-revix-border bg-revix-white text-xs font-medium text-revix-dark shadow-xs transition hover:bg-revix-surface active:scale-95 disabled:opacity-50"
           >
             <RevixIcon
               name="refresh-cw"
               className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-revix-primary" : "text-revix-secondary"}`}
             />
-            <span>{isRtl ? "تحديث" : "Refresh"}</span>
           </button>
 
           <button
@@ -1196,166 +1094,51 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-revix-white shadow-xs transition hover:bg-revix-primary-hover active:scale-95"
           >
             <RevixIcon name="plus" className="h-4 w-4" />
-            <span>{isRtl ? "إنشاء أمر شراء PO" : "New Purchase Order"}</span>
+            <span>{isRtl ? "إنشاء أمر شراء" : "New purchase order"}</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border border-revix-border bg-revix-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-revix-secondary">
-              {isRtl ? "إجمالي أوامر الشراء" : "Total Orders"}
-            </span>
-            <div className="rounded-md bg-revix-surface p-1.5 text-revix-primary">
-              <RevixIcon name="file-text" className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-revix-dark">
-            {stats.total}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-revix-border bg-revix-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-revix-secondary">
-              {isRtl ? "بانتظار الاعتماد" : "Pending Approval"}
-            </span>
-            <div className="rounded-md bg-revix-warning-soft p-1.5 text-revix-warning">
-              <RevixIcon name="clock" className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-revix-dark">
-            {stats.pending}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-revix-border bg-revix-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-revix-secondary">
-              {isRtl ? "قيد التوريد والاستلام" : "Active In-Flight"}
-            </span>
-            <div className="rounded-md bg-revix-info-soft p-1.5 text-revix-info">
-              <RevixIcon name="car-front" className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-revix-dark">
-            {stats.active}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-revix-border bg-revix-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-revix-secondary">
-              {isRtl ? "إجمالي الالتزامات المالية" : "Total Obligations"}
-            </span>
-            <div className="rounded-md bg-revix-accent-soft p-1.5 text-revix-accent">
-              <RevixIcon name="wallet" className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-2 text-xl font-bold tracking-tight text-revix-dark">
-            {stats.totalObligations.toLocaleString()}{" "}
-            <span className="text-xs font-normal text-revix-secondary">
-              {purchaseOrders[0]?.currency || "EGP"}
-            </span>
-          </p>
-        </div>
-      </div>
-
-      {/* Filter Toolbar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-revix-border bg-revix-surface/60 p-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Status Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedStatus("all");
-              setPage(1);
-            }}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-              selectedStatus === "all"
-                ? "bg-revix-primary text-revix-white"
-                : "border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-            }`}
-          >
-            {isRtl ? "الكل" : "All"} ({purchaseOrders.length})
-          </button>
-          {(
-            [
-              "draft",
-              "pending_approval",
-              "approved",
-              "partially_received",
-              "completed",
-            ] as PurchaseOrderStatus[]
-          ).map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => {
-                setSelectedStatus(st);
-                setPage(1);
-              }}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                selectedStatus === st
-                  ? "bg-revix-primary text-revix-white"
-                  : "border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-              }`}
-            >
-              {isRtl ? PO_STATUS_LABELS[st].ar : PO_STATUS_LABELS[st].en}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* PO List */}
+      {/* Purchase orders table */}
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center rounded-xl border border-revix-border bg-revix-white text-xs text-revix-secondary">
+        <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-revix-border bg-revix-white text-xs text-revix-secondary">
           <RevixIcon name="refresh-cw" className="mr-2 h-4 w-4 animate-spin text-revix-primary" />
-          {isRtl ? "جاري تحميل أوامر الشراء..." : "Loading purchase orders..."}
-        </div>
-      ) : purchaseOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-revix-border bg-revix-white p-10 text-center">
-          <div className="rounded-full bg-revix-surface p-3 text-revix-secondary">
-            <RevixIcon name="file-text" className="h-8 w-8" />
-          </div>
-          <h3 className="mt-3 text-sm font-semibold text-revix-dark">
-            {isRtl ? "لا توجد أوامر شراء مطابقة" : "No purchase orders found"}
-          </h3>
-          <p className="mt-1 max-w-sm text-xs text-revix-secondary">
-            {isRtl
-              ? "أنشئ أمر شراء جديد للسيارات مع المورد لتسجيل الدفعات واستلام السيارات في الأسطول."
-              : "Create vehicle POs with suppliers to track payments and receive cars into your fleet register."}
-          </p>
-          <button
-            type="button"
-            onClick={handleOpenCreateModal}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-1.5 text-xs font-semibold text-revix-white shadow-xs hover:bg-revix-primary-hover"
-          >
-            <RevixIcon name="plus" className="h-3.5 w-3.5" />
-            <span>{isRtl ? "إنشاء أمر شراء الآن" : "Create PO Now"}</span>
-          </button>
+          {isRtl ? "جاري التحميل..." : "Loading..."}
         </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
+          <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+              <DataTable fitAvailableHeight initialWidths={[150, 190, 140, 120, 160, 170, 180]} className="text-xs">
                 <thead>
                   <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
-                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "رقم الطلب" : "PO Number"}</th>
-                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "المورد" : "Vendor"}</th>
-                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "الشركة" : "Company"}</th>
-                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "التاريخ" : "Order Date"}</th>
-                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "السيارات" : "Cars"}</th>
-                    <th className={`py-2.5 px-3 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "الإجمالي" : "Total"}</th>
-                    <th className="py-2.5 px-3 text-center">{isRtl ? "الحالة" : "Status"}</th>
-                    <th className="py-2.5 px-3 text-center">{isRtl ? "إجراءات" : "Actions"}</th>
+                    {[
+                      isRtl ? "رقم الطلب" : "PO Number",
+                      isRtl ? "المورد" : "Vendor",
+                      isRtl ? "التاريخ" : "Order Date",
+                      isRtl ? "السيارات" : "Cars",
+                      isRtl ? "الإجمالي" : "Total",
+                      isRtl ? "الحالة" : "Status",
+                      isRtl ? "إجراءات" : "Actions",
+                    ].map((label, index) => (
+                      <th
+                        key={label}
+                        scope="col"
+                        className={`sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 font-semibold ${index >= 5 ? "text-center" : isRtl ? "text-right" : "text-left"}`}
+                      >
+                        {label}
+                      </th>
+                    ))}
+
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-revix-border/60">
-                  {paginatedPurchaseOrders.map((po) => {
+                  {purchaseOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="h-48 text-center text-sm text-revix-secondary">
+                        {isRtl ? "لا توجد أوامر شراء" : "No purchase orders"}
+                      </td>
+                    </tr>
+                  ) : purchaseOrders.map((po) => {
                     const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
                     const totalQty = po.items?.reduce((acc, it) => acc + it.quantity, 0) || 0;
                     const totalRcv = po.items?.reduce((acc, it) => acc + it.receivedCount, 0) || 0;
@@ -1365,11 +1148,12 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                       <tr
                         key={po.id}
                         onClick={() => openPoDetails(po)}
-                        className="cursor-pointer transition-colors hover:bg-revix-surface/60"
+                        tabIndex={0}
+                        onKeyDown={(event) => { if (event.key === "Enter") openPoDetails(po); }}
+                        className="cursor-pointer transition-colors hover:bg-revix-surface/60 focus:bg-revix-surface/60 focus:outline-none"
                       >
                         <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap">{po.poNumber}</td>
                         <td className="py-2.5 px-3 font-semibold text-revix-dark">{po.vendorName || "Vendor"}</td>
-                        <td className="py-2.5 px-3 text-revix-secondary">{po.companyName || po.branchName || "—"}</td>
                         <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">{po.orderDate}</td>
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <span className="font-semibold text-revix-dark">{totalRcv}/{totalQty}</span>
@@ -1386,68 +1170,45 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                         <td className="py-2.5 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <div className="inline-flex items-center justify-center gap-1.5">
                             <button
-              type="button"
-              onClick={() => handlePrintLpo(po)}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
-            >
-              <RevixIcon name="file-text" size={14} />
-              <span>{isRtl ? "تحميل PDF / طباعة" : "Download PDF / Print"}</span>
-            </button>
-            {canApprovePo && (
-              <button
-                type="button"
-                onClick={() => setIsSignModalOpen(true)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-primary/30 bg-revix-primary/10 px-3 py-1.5 text-xs font-semibold text-revix-primary hover:bg-revix-primary/20 transition-colors"
-              >
-                <RevixIcon name="check-circle-2" size={14} />
-                <span>
-                  {po.signatureDataUrl
-                    ? isRtl
-                      ? "تحديث التوقيع الإلكتروني"
-                      : "Update E-Signature"
-                    : isRtl
-                      ? "توقيع أمر الشراء إلكترونياً"
-                      : "Sign PO (E-Signature)"}
-                </span>
-              </button>
-            )}
-            {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
+                              type="button"
+                              aria-label={isRtl ? "تحميل أمر الشراء PDF" : "Download purchase order PDF"}
+                              title={isRtl ? "تحميل PDF" : "Download PDF"}
+                              onClick={() => handlePrintLpo(po)}
+                              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:border-revix-primary/40 hover:text-revix-primary"
+                            >
+                              <RevixIcon name="file-text" size={14} />
+                            </button>
+                            {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
                               <button
                                 type="button"
+                                aria-label={isRtl ? "اعتماد أمر الشراء" : "Approve purchase order"}
+                                title={isRtl ? "اعتماد" : "Approve"}
                                 disabled={isUpdatingStatus}
                                 onClick={() => updateStatus({ id: po.id, status: "approved" })}
-                                className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md bg-revix-primary px-2.5 text-[11px] font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50"
+                                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-revix-primary text-white hover:bg-revix-primary-hover disabled:opacity-50"
                               >
-                                <RevixIcon name="check" size={12} />
-                                <span>{isRtl ? "موافقة" : "Approve"}</span>
+                                <RevixIcon name="check" size={14} />
                               </button>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => openPoDetails(po)}
-                              title={isRtl ? "عرض التفاصيل" : "View Details"}
-                              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:border-revix-primary/40 hover:text-revix-primary"
-                            >
-                              <RevixIcon name="eye" size={13} />
-                            </button>
                             {po.status !== "cancelled" && po.status !== "completed" && (
                               <button
                                 type="button"
+                                aria-label={isRtl ? "إلغاء أمر الشراء" : "Cancel purchase order"}
                                 onClick={() => setPendingDeletePo(po)}
-                                title={isRtl ? "حذف / إلغاء الطلب" : "Delete / Cancel PO"}
-                                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                                title={isRtl ? "إلغاء الطلب" : "Cancel order"}
+                                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50"
                               >
-                                <RevixIcon name="trash-2" size={13} />
+                                <RevixIcon name="x" size={14} />
                               </button>
                             )}
                           </div>
                         </td>
+
                       </tr>
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+              </DataTable>
           </div>
 
 
@@ -1474,9 +1235,9 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
           />
 
 
-        {/* Unified Pagination */}
-        <div className="overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-2xs">
-          <RevixPagination
+        {/* Pagination */}
+        <div className="shrink-0 overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+          <RevixPagination compact
             currentPage={page}
             totalItems={totalPurchaseOrders}
             pageSize={pageSize}
@@ -1503,9 +1264,13 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
 
 
         return (
-          <form onSubmit={handleCreateSubmit} className="mx-auto max-w-5xl space-y-4">
+          <form noValidate onSubmit={event => { if (createStep === 3) {
+            setCheckedSteps([1, 2, 3]);
+            if (!formVendorId || formNotes.split("\n").some(term => !term.trim())) { event.preventDefault(); return; }
+            void handleCreateSubmit(event);
+          } else event.preventDefault(); }} className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-3 overflow-hidden">
             {/* Top Bar: Back + Title + Primary Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-revix-border pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border pb-2">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -1528,103 +1293,38 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                 >
                   {isRtl ? "إلغاء" : "Cancel"}
                 </button>
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50 transition-colors"
-                >
-                  {isCreating && (
-                    <RevixIcon name="refresh-cw" className="h-3.5 w-3.5 animate-spin" />
-                  )}
-                  <span>{isRtl ? "إصدار أمر الشراء" : "Issue Purchase Order"}</span>
-                </button>
+
               </div>
             </div>
 
             {createError && (
-              <div className="rounded-xl border border-revix-alert/30 bg-revix-alert-soft px-4 py-3 text-xs font-medium text-revix-alert">
-                {createError}
+              <div role="alert" className="flex shrink-0 items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-800">
+                <RevixIcon name="info" size={16} className="mt-0.5 shrink-0 text-red-600" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{isRtl ? "تعذّر إصدار أمر الشراء" : "Purchase order could not be issued"}</p>
+                  <p className="mt-0.5 break-words text-xs leading-5">{createError}</p>
+                </div>
+                <button type="button" aria-label={isRtl ? "إغلاق التنبيه" : "Dismiss error"} onClick={() => setCreateError(null)}
+                  className="cursor-pointer rounded p-1 hover:bg-red-100">
+                  <RevixIcon name="x" size={14} />
+                </button>
               </div>
             )}
 
+            <nav aria-label={isRtl ? "خطوات إنشاء الطلب" : "Create order steps"} className="flex gap-2 border-b border-revix-border">
+              {(isRtl ? ["السيارات", "أرقام الشاصي", "المورد والدفع"] : ["Vehicles", "Chassis numbers", "Vendor & payment"]).map((label, index) => (
+                <button key={label} type="button" disabled={index + 1 > createStep} onClick={() => setCreateStep(index + 1)}
+                  className={`cursor-pointer border-b-2 px-3 py-2 text-sm disabled:cursor-default ${createStep === index + 1 ? "border-revix-primary font-semibold text-revix-primary" : "border-transparent text-revix-secondary"}`}>
+                  {label}
+                </button>
+              ))}
+            </nav>
             {/* Main Full-Width Step Content */}
-            <div className="w-full space-y-5">
+            <div className="flex min-h-0 flex-initial flex-col">
                 {/* SECTION 1: Order Details & Vehicles */}
-                <>
-                    <div className="rounded-2xl border border-revix-border bg-revix-white p-5 shadow-xs space-y-4">
-                      <h3 className="text-sm font-bold text-revix-dark">
-                        {isRtl ? "بيانات المورد والتواريخ" : "Supplier & Dates"}
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
-                            {isRtl ? "الشركة" : "Company"}
-                          </label>
-                          <input
-                            type="text"
-                            readOnly
-                            value={wsContext?.data.company?.name || "—"}
-                            className="h-9 w-full rounded-lg border border-revix-border/80 bg-revix-surface/50 px-3 text-xs font-semibold text-revix-dark focus:outline-hidden"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
-                            {isRtl ? "المورد *" : "Vendor *"}
-                          </label>
-                          <RevixSelect
-                            size="sm"
-                            isRtl={isRtl}
-                            value={formVendorId}
-                            onChange={(e) => {
-                              const vId = e.target.value;
-                              setFormVendorId(vId);
-                              const selectedV = vendors.find((v) => v.id === vId);
-                              if (selectedV) {
-                                const terms = formatVendorPaymentTerms(selectedV, isRtl);
-                                setFormPaymentTermsType(terms.type);
-                                setFormPaymentTermsDays(selectedV.paymentTermsDays ?? 30);
-                                setFormPaymentTermsConfig(selectedV.paymentTermsConfig || null);
-                              }
-                            }}
-                            placeholder={isRtl ? "اختر المورد..." : "Select vendor..."}
-                            buttonClassName="h-9 rounded-lg text-xs"
-                            options={vendors.map((v) => ({
-                              value: v.id,
-                              label: `${v.name} (${v.city})`,
-                            }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
-                            {isRtl ? "تاريخ الطلب *" : "Order Date *"}
-                          </label>
-                          <RevixDatePicker
-                            size="sm"
-                            isRtl={isRtl}
-                            value={formOrderDate}
-                            onChange={(val) => setFormOrderDate(val)}
-                            buttonClassName="h-9 rounded-lg text-xs"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
-                            {isRtl ? "تاريخ التسليم" : "Expected Delivery"}
-                          </label>
-                          <RevixDatePicker
-                            size="sm"
-                            isRtl={isRtl}
-                            value={formDeliveryDate}
-                            onChange={(val) => setFormDeliveryDate(val)}
-                            placeholder={isRtl ? "اختياري..." : "Optional..."}
-                            buttonClassName="h-9 rounded-lg text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-xs">
-                      <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-3.5">
+                <div className={createStep === 1 ? "flex min-h-0 flex-col gap-3" : "hidden"}>
+                    <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-xs">
+                      <div className="flex items-center justify-between border-b border-revix-border/70 px-4 py-2">
                         <h3 className="text-sm font-bold text-revix-dark">
                           {isRtl ? "السيارات المطلوبة" : "Vehicles"}
                         </h3>
@@ -1638,15 +1338,14 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                         </button>
                       </div>
 
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-start text-xs">
+                      <div className="flex min-h-0 flex-col">
+                        <DataTable fitAvailableHeight className="w-full text-start text-xs">
                           <thead>
                             <tr className="border-b border-revix-border/70 bg-revix-surface/40 text-[10px] font-bold uppercase tracking-wide text-revix-muted">
                               <th className="px-4 py-2.5 text-start w-[34%]">{isRtl ? "الفريان" : "Variant"}</th>
                               <th className="px-3 py-2.5 text-start w-[12%]">{isRtl ? "الكمية" : "Qty"}</th>
                               <th className="px-3 py-2.5 text-start w-[20%]">{isRtl ? "السعر" : "Unit Price"}</th>
                               <th className="px-3 py-2.5 text-start w-[20%]">{isRtl ? "اللون" : "Color"}</th>
-                              <th className="px-3 py-2.5 text-end w-[11%]">{isRtl ? "الإجمالي" : "Subtotal"}</th>
                               <th className="px-3 py-2.5 w-10" />
                             </tr>
                           </thead>
@@ -1666,6 +1365,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                       label: [v.make, v.model, v.trim].filter(Boolean).join(" "),
                                     }))}
                                   />
+                                  {fieldError(!item.variantId, 1)}
                                 </td>
                                 <td className="px-3 py-2.5">
                                   <input
@@ -1676,6 +1376,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                     onChange={(e) => handleItemChange(idx, "quantity", Number(e.target.value))}
                                     className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-2.5 text-xs font-mono font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
                                   />
+                                  {fieldError(!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 500, 1)}
                                 </td>
                                 <td className="px-3 py-2.5">
                                   <input
@@ -1685,6 +1386,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                     onChange={(e) => handleItemChange(idx, "unitPrice", Number(e.target.value))}
                                     className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-2.5 text-xs font-mono font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
                                   />
+                                  {fieldError(!Number.isFinite(item.unitPrice) || item.unitPrice <= 0, 1)}
                                 </td>
                                 <td className="px-3 py-2.5">
                                   <RevixSelect
@@ -1708,9 +1410,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                     ]}
                                   />
                                 </td>
-                                <td className="px-3 py-2.5 text-end font-mono font-semibold text-revix-dark tabular-nums">
-                                  {(Number(item.quantity) * Number(item.unitPrice)).toLocaleString()}
-                                </td>
                                 <td className="px-3 py-2.5 text-end">
                                   <button
                                     type="button"
@@ -1724,26 +1423,27 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                               </tr>
                             ))}
                           </tbody>
-                        </table>
+                        </DataTable>
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-revix-border/70 bg-revix-surface/30 px-5 py-3 text-xs font-bold text-revix-dark">
+                      <div className="flex shrink-0 items-center justify-between border-t border-revix-border/70 bg-revix-surface/30 px-5 py-3 text-xs font-bold text-revix-dark">
                         <span>
                           {isRtl
                             ? `إجمالي السيارات: ${totalUnitsCount}`
-                            : `Total Vehicles: ${totalUnitsCount}`}
+                            : `Vehicles: ${totalUnitsCount}`}
                         </span>
                         <span className="font-mono text-sm text-revix-primary tabular-nums">
                           {formCalculatedTotal.toLocaleString()} {currencyCode}
                         </span>
                       </div>
                     </div>
-                  </>
+                  </div>
 
                 {/* SECTION 2: Chassis Numbers */}
                 {expandedVehicleUnits.length > 0 && (
-                  <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-xs">
-                    <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-4">
+                  <div className={createStep === 2 ? "flex min-h-0 flex-col" : "hidden"}>
+                  <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-xs">
+                    <div className="flex items-center justify-between border-b border-revix-border/70 px-4 py-2">
                       <div>
                         <h3 className="text-sm font-bold text-revix-dark">
                           {isRtl ? "أرقام الشاصي للسيارات *" : "Assign Chassis Numbers *"}
@@ -1754,8 +1454,8 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                       </span>
                     </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-start text-xs">
+                    <div className="flex min-h-0 flex-col">
+                      <DataTable fitAvailableHeight className="w-full text-start text-xs">
                         <thead>
                           <tr className="border-b border-revix-border/70 bg-revix-surface/40 text-[10px] font-bold uppercase tracking-wide text-revix-muted">
                             <th className="px-4 py-2.5 text-start w-12">#</th>
@@ -1795,30 +1495,53 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                   placeholder="e.g. 1HGCR2F83HA001234"
                                   className="h-10 w-full rounded-lg border border-revix-border bg-revix-white px-3.5 text-sm font-mono uppercase text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
                                 />
+                                {fieldError(!chassisByUnitKey[unit.key]?.trim(), 2)}
                               </td>
                             </tr>
                           ))}
                         </tbody>
-                      </table>
+                      </DataTable>
                     </div>
+                  </div>
                   </div>
                 )}
 
                 {/* SECTION 3: Payment & Terms */}
-                <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-xs">
-                    <div className="flex items-center justify-between border-b border-revix-border/70 px-5 py-4">
-                      <h3 className="text-sm font-bold text-revix-dark">
-                        {isRtl ? "الدفع والشروط والأحكام" : "Payment & Terms"}
-                      </h3>
-                      {selectedVendorObj && (
-                        <span className="text-[11px] font-semibold text-revix-secondary">
-                          {formatVendorPaymentTerms(selectedVendorObj, isRtl).label}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="p-5 space-y-5">
+                <div className={createStep === 3 ? "min-h-0 overflow-y-auto" : "hidden"}>
+                <div className="min-h-0">
+                    <div className="grid items-start gap-5 lg:grid-cols-2">
+                        <div className="space-y-4 rounded-lg border border-revix-border p-4">
+                        <div>
+                          <label className="block text-[11px] font-semibold uppercase tracking-wide text-revix-secondary mb-1.5">
+                            {isRtl ? "المورد *" : "Vendor *"}
+                          </label>
+                          <RevixSelect
+                            size="sm"
+                            isRtl={isRtl}
+                            value={formVendorId}
+                            onChange={(e) => {
+                              const vId = e.target.value;
+                              setFormVendorId(vId);
+                              const selectedV = vendors.find((v) => v.id === vId);
+                              if (selectedV) {
+                                const terms = formatVendorPaymentTerms(selectedV, isRtl);
+                                setFormPaymentTermsType(terms.type);
+                                setFormPaymentTermsDays(selectedV.paymentTermsDays ?? 30);
+                                setFormPaymentTermsConfig(selectedV.paymentTermsConfig || null);
+                              }
+                            }}
+                            placeholder={isRtl ? "اختر المورد..." : "Select vendor..."}
+                            buttonClassName="h-9 rounded-lg text-xs"
+                            options={vendors.map((v) => ({
+                              value: v.id,
+                              label: `${v.name} (${v.city})`,
+                            }))}
+                          />
+                          {fieldError(!formVendorId, 3)}
+                        </div>
                       <PaymentTermsSelector
+                        compact
+                        key={formVendorId}
                         valueType={formPaymentTermsType}
                         valueDays={formPaymentTermsDays}
                         valueConfig={formPaymentTermsConfig}
@@ -1843,44 +1566,71 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                         }}
                       />
 
-                      <div className="border-t border-revix-border/60 pt-4">
+                      </div>
+                      <div className="rounded-lg border border-revix-border p-4">
                         <label className="block text-[11px] font-bold uppercase tracking-wide text-revix-secondary mb-1.5">
-                          {isRtl ? "الشروط والأحكام *" : "Terms & Conditions *"}
+                          {isRtl ? "شروط المورد *" : "Vendor terms *"}
                         </label>
-                        <textarea
-                          rows={4}
-                          value={formNotes}
-                          onChange={(e) => setFormNotes(e.target.value)}
-                          placeholder={
-                            isRtl
-                              ? "اكتب كل شرط في سطر جديد..."
-                              : "Write each term on a new line..."
-                          }
-                          className="w-full rounded-lg border border-revix-border bg-revix-white p-3 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
-                        />
+                        <div className="max-h-64 space-y-2 overflow-y-auto overscroll-contain">
+                          {formNotes.split("\n").map((term, index, terms) => (
+                            <div key={index} className="flex items-start gap-2">
+                              <span className="mt-1 grid size-7 shrink-0 place-items-center rounded-md bg-revix-surface text-xs font-medium tabular-nums text-revix-secondary">{index + 1}.</span>
+                              <div className="min-w-0 flex-1">
+                                <textarea rows={1} value={term}
+                                  aria-label={isRtl ? `الشرط ${index + 1}` : `Term ${index + 1}`}
+                                  placeholder={isRtl ? "اكتب الشرط" : "Enter term"}
+                                  onChange={event => {
+                                    const next = [...terms];
+                                    next[index] = event.target.value.replace(/\r?\n/g, " ");
+                                    setFormNotes(next.join("\n"));
+                                  }}
+                                  className={`min-h-9 w-full resize-none overflow-hidden rounded-md border px-3 py-2 text-sm leading-5 focus:outline-none focus:ring-1 ${checkedSteps.includes(3) && !term.trim() ? "border-red-400 focus:ring-red-400" : "border-revix-border focus:border-revix-primary focus:ring-revix-primary"}`}
+                                  onInput={event => { event.currentTarget.style.height = "auto"; event.currentTarget.style.height = event.currentTarget.scrollHeight + "px"; }} />
+                                {fieldError(!term.trim(), 3)}
+                              </div>
+                              <button type="button" disabled={terms.length === 1}
+                                aria-label={isRtl ? `حذف الشرط ${index + 1}` : `Remove term ${index + 1}`}
+                                onClick={() => setFormNotes(terms.filter((_, row) => row !== index).join("\n"))}
+                                className="mt-0.5 inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-revix-secondary hover:bg-red-50 hover:text-red-600 disabled:cursor-default disabled:opacity-25">
+                                <RevixIcon name="trash-2" size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button type="button" onClick={() => setFormNotes(value => value + "\n")}
+                          className="mt-3 inline-flex cursor-pointer items-center gap-1 rounded-md px-1 py-1 text-xs font-semibold text-revix-primary hover:bg-revix-surface">
+                          <RevixIcon name="plus" size={14} />{isRtl ? "إضافة شرط" : "Add term"}
+                        </button>
+
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2.5 border-t border-revix-border/70 bg-revix-surface/30 px-5 py-3.5">
-                      <button
-                        type="button"
-                        onClick={closeCreatePo}
-                        className="rounded-lg border border-revix-border bg-revix-white px-4 py-2 text-xs font-semibold text-revix-secondary hover:bg-revix-surface transition-colors"
-                      >
-                        {isRtl ? "إلغاء" : "Cancel"}
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isCreating}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50 transition-colors"
-                      >
-                        {isCreating && (
-                          <RevixIcon name="refresh-cw" className="h-3.5 w-3.5 animate-spin" />
-                        )}
-                        <span>{isRtl ? "إصدار أمر الشراء" : "Issue Purchase Order"}</span>
-                      </button>
-                    </div>
                   </div>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center justify-between border-t border-revix-border pt-3">
+                <button type="button" disabled={createStep === 1} onClick={() => { setCreateError(null); setCreateStep(step => step - 1); }}
+                  className="cursor-pointer rounded-md border border-revix-border px-4 py-2 text-sm disabled:opacity-30">
+                  {isRtl ? "السابق" : "Previous"}
+                </button>
+                {createStep < 3 ? (
+                  <button type="button" onClick={() => {
+                    setCheckedSteps(steps => [...new Set([...steps, createStep])]);
+                    if (createStep === 1 && formItems.some(item => !item.variantId || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 500 || !Number.isFinite(item.unitPrice) || item.unitPrice <= 0)) return;
+                    if (createStep === 2 && assignedChassisCount !== totalUnitsCount) {
+
+                      return;
+                    }
+                    setCreateError(null);
+                    setCreateStep(step => step + 1);
+                  }} className="cursor-pointer rounded-md bg-revix-primary px-5 py-2 text-sm font-semibold text-white">
+                    {isRtl ? "التالي" : "Continue"}
+                  </button>
+                ) : (
+                  <button type="submit" disabled={isCreating} className="cursor-pointer rounded-md bg-revix-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                    {isCreating ? (isRtl ? "جارٍ الحفظ…" : "Saving…") : (isRtl ? "إصدار أمر الشراء" : "Issue purchase order")}
+                  </button>
+                )}
               </div>
           </form>
         );

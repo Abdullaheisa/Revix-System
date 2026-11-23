@@ -24,7 +24,7 @@ interface PaymentTermsSelectorProps {
   compact?: boolean;
 }
 
-export function PaymentTermsSelector({ valueType, valueDays, valueConfig, onChange, totalAmount, currency = "JOD", upfrontPaid = 0, installmentsCount = 1, isRtl = true }: PaymentTermsSelectorProps) {
+export function PaymentTermsSelector({ valueType, valueDays, valueConfig, onChange, totalAmount, currency = "JOD", upfrontPaid = 0, installmentsCount = 1, isRtl = true, compact = false }: PaymentTermsSelectorProps) {
   // Local states for sub-controls
   const selectedType = valueType || "net_terms";
   const [days, setDays] = useState<number>(valueDays ?? 30);
@@ -256,6 +256,18 @@ export function PaymentTermsSelector({ valueType, valueDays, valueConfig, onChan
 
   return (
     <div className="space-y-3.5">
+      {compact ? (
+        <div className="flex flex-wrap gap-1 rounded-md bg-revix-surface p-1" role="group" aria-label={isRtl ? "طريقة الدفع" : "Payment method"}>
+          {(["cash", "net_terms", "installments", "milestones"] as PaymentTermsType[]).map(type => (
+            <button type="button" key={type} aria-pressed={selectedType === type}
+              onClick={() => handleSelectType(type)}
+              className={`min-h-8 flex-1 cursor-pointer whitespace-nowrap rounded px-2 text-xs font-semibold transition-colors ${selectedType === type ? "bg-white text-revix-primary shadow-sm" : "text-revix-secondary hover:bg-white/60"}`}>
+              {isRtl ? PAYMENT_TERMS_INFO[type].shortLabelAr : PAYMENT_TERMS_INFO[type].shortLabelEn}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <>
       {/* 1. Standard Payment Term Mode Selector (4 Global ERP Types) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {(["cash", "net_terms", "installments", "milestones"] as PaymentTermsType[]).map((t) => {
@@ -296,6 +308,9 @@ export function PaymentTermsSelector({ valueType, valueDays, valueConfig, onChan
           );
         })}
       </div>
+
+        </>
+      )}
 
       {/* 2. Sub-configurations based on chosen mode */}
       <div className="rounded-xl border border-revix-border/80 bg-revix-surface/40 p-3 text-xs">

@@ -280,10 +280,20 @@ export class FleetService {
     }
 
     const branch = await this.store.findBranchById(input.branchId);
+    if (!branch || branch.companyId !== actor.company.id) {
+      throw new FleetServiceError(400, "INVALID_BRANCH", "The branch must belong to the issuing company.");
+    }
+
     const poCurrency = input.currency || branch?.currencyCode || "EGP";
+
+    const orderDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: actor.company.timezone || "UTC",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
 
     const po = await this.store.createPurchaseOrder({
       ...input,
+      orderDate,
       currency: poCurrency,
       companyId: actor.company.id,
       createdByUserId: actor.user.id,
@@ -925,6 +935,9 @@ export class FleetService {
       roleObj?.nameEn || roleObj?.name || roleObj?.key || "Authorized Signature";
     const signerName = `${baseName}|${roleTitle}`;
     const updated = await this.store.signPurchaseOrder(poId, signatureDataUrl, signerName);
+    if (!updated) {
+      throw new FleetServiceError(409, "PO_ALREADY_SIGNED", "This purchase order has already been signed.");
+    }
     await this.store.recordAuditLog({
       companyId: actor.company.id,
       actorUserId: actor.user.id,

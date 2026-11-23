@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { useMemo, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -327,7 +328,7 @@ export function LocationsManager({
       {/* Studio Data Table */}
       <div className="overflow-hidden rounded-[8px] border border-revix-border bg-revix-white">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-start text-[13px]">
+          <DataTable className="w-full border-collapse text-start text-[13px]">
             <thead>
               <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
                 <th className="px-4 py-2.5 text-start">
@@ -435,7 +436,7 @@ export function LocationsManager({
                 })
               )}
             </tbody>
-          </table>
+          </DataTable>
         </div>
 
         {/* Unified Pagination */}

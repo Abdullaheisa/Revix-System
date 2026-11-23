@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { useMemo, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -382,7 +383,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-start text-[13px]">
+            <DataTable className="w-full text-start text-[13px]">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
                   <th className="px-4 py-2.5 text-start">
@@ -486,7 +487,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           </div>
         )}
 
@@ -517,7 +518,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-start text-[13px]">
+            <DataTable className="w-full text-start text-[13px]">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
                   <th className="px-4 py-2.5 text-start">
@@ -602,7 +603,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           </div>
         )}
       </section>

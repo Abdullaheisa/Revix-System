@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 import { useState } from "react";
@@ -96,7 +97,7 @@ export function InsuranceCompaniesPanel({ isRtl }: InsuranceCompaniesPanelProps)
       ) : (
         <SectionCard noPadding>
           <div className="overflow-x-auto">
-            <table className="w-full text-start text-xs">
+            <DataTable className="w-full text-start text-xs">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wide text-revix-muted">
                   <th className="px-4 py-3 text-start">{t.colCompany}</th>
@@ -127,7 +128,7 @@ export function InsuranceCompaniesPanel({ isRtl }: InsuranceCompaniesPanelProps)
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           </div>
         </SectionCard>
       )}

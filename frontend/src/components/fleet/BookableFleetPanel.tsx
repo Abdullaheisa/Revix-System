@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { useMemo, useState } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import {
@@ -292,7 +293,7 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
             <EmptyState message={isRtl ? "لا توجد فئات سيارات مسجلة بعد." : "No vehicle variants found."} />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              <DataTable className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
                     <th className="px-4 py-3 text-start">{isRtl ? "الفريانت / النوع" : "Model Variant"}</th>
@@ -397,7 +398,7 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
           )}
         </SectionCard>
@@ -420,7 +421,7 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
               />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <DataTable className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
                       <th className="px-4 py-3 text-start">{isRtl ? "الفريانت" : "Variant"}</th>
@@ -528,7 +529,7 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </div>
             )}
           </SectionCard>

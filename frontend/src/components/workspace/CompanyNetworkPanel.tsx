@@ -1,4 +1,5 @@
 "use client";
+import { DataTable } from "@/components/ui/DataTable";
 import NextImage from "next/image";
 
 import { CountrySelectField } from "@/components/shared/workspace";
@@ -706,7 +707,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-[12px] text-left border-collapse">
+                <DataTable className="w-full text-[12px] text-left border-collapse">
                   <thead>
                     <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
                       <th className={`py-2 px-3 ${isRtl ? "text-right" : "text-left"}`}>
@@ -765,7 +766,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               </div>
             </div>
           )}

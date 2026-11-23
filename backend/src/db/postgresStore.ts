@@ -1389,27 +1389,16 @@ export class PostgresAuthDataStore implements AuthDataStore {
       const upfrontPaid = input.upfrontPaid ?? 0;
       const remainingAmount = Math.max(0, totalAmount - upfrontPaid);
 
-      let poNumber = input.poNumber?.trim();
-      if (!poNumber) {
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        for (let attempt = 0; attempt < 20; attempt++) {
-          let candidate = "";
-          for (let i = 0; i < 4; i++) {
-            candidate += chars[Math.floor(Math.random() * chars.length)];
-          }
-          const existsRes = await client.query(
-            `SELECT 1 FROM purchase_orders WHERE company_id = $1 AND po_number = $2 LIMIT 1`,
-            [input.companyId, candidate],
-          );
-          if (existsRes.rowCount === 0) {
-            poNumber = candidate;
-            break;
-          }
-        }
-        if (!poNumber) {
-          poNumber = crypto.randomUUID().replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase();
-        }
-      }
+      // Serialize numbering within a company, including concurrent requests.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [input.companyId]);
+      const year = (input.orderDate || new Date().toISOString()).slice(0, 4);
+      const prefix = `PO-${year}-`;
+      const sequence = await client.query<{ next: string }>(
+        `SELECT COALESCE(MAX(substring(po_number from 9)::bigint), 0) + 1 AS next
+         FROM purchase_orders WHERE company_id = $1 AND po_number ~ $2`,
+        [input.companyId, `^PO-${year}-[0-9]+$`],
+      );
+      const poNumber = prefix + String(sequence.rows[0].next).padStart(4, "0");
 
       const id = input.id ?? crypto.randomUUID();
       const poRes = await client.query<DbPurchaseOrderRow>(
@@ -2187,15 +2176,16 @@ export class PostgresAuthDataStore implements AuthDataStore {
     signatureDataUrl: string,
     signedByName: string,
   ): Promise<PurchaseOrderRecord | null> {
-    await this.pool.query(
+    const result = await this.pool.query(
       `UPDATE purchase_orders
        SET signature_data_url = $1,
            signed_by_name = $2,
            signed_at = NOW(),
            updated_at = NOW()
-       WHERE id = $3`,
+       WHERE id = $3 AND signed_at IS NULL AND NULLIF(signature_data_url, '') IS NULL`,
       [signatureDataUrl, signedByName, poId],
     );
+    if (!result.rowCount) return null;
     return this.findPurchaseOrderById(poId);
   }
 

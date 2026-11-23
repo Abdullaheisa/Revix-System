@@ -1492,9 +1492,12 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     const upfrontPaid = input.upfrontPaid ?? 0;
     const remainingAmount = Math.max(0, totalAmount - upfrontPaid);
 
-    const poNumber =
-      input.poNumber?.trim() ||
-      `PO-${new Date().getFullYear()}-${String(this.purchaseOrdersById.size + 1).padStart(4, "0")}`;
+    const year = (input.orderDate || new Date().toISOString()).slice(0, 4);
+    const prefix = `PO-${year}-`;
+    const highest = Array.from(this.purchaseOrdersById.values())
+      .filter(po => po.companyId === input.companyId && new RegExp(`^PO-${year}-[0-9]+$`).test(po.poNumber))
+      .reduce((max, po) => Math.max(max, Number(po.poNumber.slice(prefix.length))), 0);
+    const poNumber = prefix + String(highest + 1).padStart(4, "0");
 
     const poRecord: PurchaseOrderRecord = {
       id: input.id ?? crypto.randomUUID(),
@@ -2031,7 +2034,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     signedByName: string,
   ): Promise<PurchaseOrderRecord | null> {
     const existing = this.purchaseOrdersById.get(poId);
-    if (!existing) return null;
+    if (!existing || existing.signedAt || existing.signatureDataUrl) return null;
     const updated: PurchaseOrderRecord = {
       ...existing,
       signatureDataUrl,

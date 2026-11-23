@@ -1,4 +1,5 @@
 "use client";
+import { DataTable } from "@/components/ui/DataTable";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { parseFleetResourceRoute, vehicleHref, type VehicleProfileTab } from "@/lib/workspace/resourceRoutes";
@@ -455,7 +456,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
         <>
           <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-start text-xs">
+              <DataTable className="w-full text-start text-xs">
                 <thead>
                   <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wide text-revix-muted">
                     <th className="px-4 py-3 text-start">{isRtl ? "الفئة / الموديل" : "Model Variant"}</th>
@@ -579,7 +580,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                     );
                   })}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
           </div>
 

@@ -319,7 +319,7 @@ export function WorkspaceStudioShell({
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-revix-white text-revix-dark">
+    <div className="flex h-dvh flex-col overflow-hidden bg-revix-white text-revix-dark">
       <StudioTopBar
         isRtl={isRtl}
         company={company}

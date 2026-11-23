@@ -1,5 +1,6 @@
 "use client";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 import { useMemo, useState } from "react";
@@ -388,7 +389,7 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
       ) : (
         <>
           <div className="overflow-x-auto rounded-xl border border-revix-border bg-revix-white">
-            <table className="w-full min-w-[1050px] text-xs">
+            <DataTable className="w-full min-w-[1050px] text-xs">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold text-revix-muted">
                   <th className="px-4 py-3 text-start">{isRtl ? "المورد" : "Vendor"}</th>
@@ -425,7 +426,7 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
                   );
                 })}
               </tbody>
-            </table>
+            </DataTable>
           </div>
 
           {/* Unified Pagination */}
