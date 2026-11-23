@@ -103,7 +103,7 @@ export interface PurchaseOrderItemRecord {
 export interface PurchaseOrderRecord {
   id: string;
   companyId: string;
-  branchId: string;
+  branchId: string | null;
   vendorId: string;
   poNumber: string;
   status: PurchaseOrderStatus;
@@ -148,7 +148,7 @@ export interface CreatePurchaseOrderItemInput {
 export interface CreatePurchaseOrderInput {
   id?: string;
   companyId: string;
-  branchId: string;
+  branchId?: string | null;
   vendorId: string;
   poNumber?: string;
   orderDate?: string;
@@ -173,7 +173,6 @@ export interface ReceiveVehicleFromPoInput {
   color: string;
   mileageOdometer?: number;
   isBookable?: boolean;
-  registrationExpiry?: string | null;
   insuranceExpiry?: string | null;
   inServiceDate?: string | null;
   insuranceCompanyId?: string | null;

@@ -130,8 +130,6 @@ export interface FleetVehicleRecord {
   color: string;
   mileageOdometer: number;
   status: FleetVehicleStatus;
-  registrationExpiry: string | null;
-  insuranceExpiry: string | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -330,8 +328,6 @@ export interface CreateFleetVehicleInput {
   mileageOdometer?: number;
   isBookable?: boolean;
   status?: FleetVehicleStatus;
-  registrationExpiry?: string | null;
-  insuranceExpiry?: string | null;
   notes?: string | null;
   photoUrl?: string | null;
   locationType?: string;
@@ -361,8 +357,6 @@ export interface UpdateFleetVehicleInput {
   color?: string;
   mileageOdometer?: number;
   status?: FleetVehicleStatus;
-  registrationExpiry?: string | null;
-  insuranceExpiry?: string | null;
   notes?: string | null;
   photoUrl?: string | null;
   locationType?: string;

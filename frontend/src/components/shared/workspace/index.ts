@@ -32,6 +32,7 @@ export {
 export { StudioTopBar, type StudioTopBarProps } from "./StudioTopBar";
 export { StudioIconRail, type StudioIconRailProps } from "./StudioIconRail";
 export { StudioSubSidebar, type StudioSubSidebarProps } from "./StudioSubSidebar";
+export { StudioSmartSidebar, type StudioSmartSidebarProps } from "./StudioSmartSidebar";
 export {
   StudioMobileDrawer,
   type StudioMobileDrawerProps,

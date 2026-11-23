@@ -143,33 +143,6 @@ export function StudioMobileDrawer({
 
         {/* Scrollable Main Body */}
         <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3">
-          {/* Active Branch Switcher (Mobile) */}
-          {activeBranch && branches.length > 0 ? (
-            <div className="rounded-[8px] border border-revix-border/80 bg-revix-surface/50 p-2.5">
-              <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-revix-secondary">
-                <span className="flex items-center gap-1.5">
-                  <RevixIcon
-                    name="map-pin"
-                    size={12}
-                    className="text-revix-primary"
-                  />
-                  {isRtl ? "الفرع الحالي النشط" : "Active Location"}
-                </span>
-              </div>
-              <RevixSelect
-                size="sm"
-                isRtl={isRtl}
-                value={activeBranch.id}
-                onChange={(e) => onSelectBranch(e.target.value)}
-                options={branches.map((b) => ({
-                  value: b.id,
-                  label: `${b.name} (${b.code})`,
-                  description: `${b.city} · ${b.currencyCode}`,
-                }))}
-              />
-            </div>
-          ) : null}
-
           {/* Clean Accordion-Based Navigation Modules */}
           <div>
             <p className="mb-1.5 px-1.5 text-[10.5px] font-bold uppercase tracking-[0.05em] text-revix-disabled">

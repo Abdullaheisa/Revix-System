@@ -480,7 +480,7 @@ export const VehiclePhotosPage: React.FC<VehiclePhotosPageProps> = ({ lang = "ar
             </div>
 
             {/* Pagination Controls */}
-            <div className="bg-white rounded-xl border border-gray-200/90 shadow-2xs overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-200/90 shadow-2xs overflow-hidden empty:hidden">
               <RevixPagination
                 currentPage={page}
                 totalItems={totalPhotos}

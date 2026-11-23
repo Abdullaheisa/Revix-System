@@ -8,6 +8,8 @@ import { FormInput, FormSelect } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { StudioBadge, StudioModal } from "@/components/shared/workspace";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { DriversPanel } from "@/components/fleet/DriversPanel";
+import { useListDriversQuery } from "@/store/api/fleetApi";
 import { extractApiErrorCode } from "@/store/api/baseApi";
 import { SUPPORTED_COUNTRIES } from "@/lib/workspace/countryCatalog";
 import {
@@ -62,6 +64,10 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
   const canManageMembers =
     !membership ||
     Boolean(membership.permissions.team?.includes("manage_members"));
+
+  const [activeTab, setActiveTab] = useState<"employees" | "drivers">("employees");
+  const { data: driversRes } = useListDriversQuery();
+  const driversCount = driversRes?.data?.length ?? 0;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [memberPage, setMemberPage] = useState(1);
@@ -266,39 +272,83 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Page Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.015em] text-revix-dark">
-            {isRtl ? "الموظفون والدعوات" : "Employees & Invitations"}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
+            {isRtl ? "فريق العمل" : "Team & Drivers"}
           </h1>
+          <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+            {activeTab === "employees" ? members.length : driversCount}
+          </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="inline-flex h-[34px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-border bg-revix-white px-3 text-[12.5px] font-medium text-revix-secondary transition-colors hover:bg-revix-surface hover:text-revix-dark disabled:opacity-60"
-          >
-            <RevixIcon name="refresh-cw" size={14} />
-            <span>{isRtl ? "تحديث" : "Refresh"}</span>
-          </button>
-
-          {canInvite ? (
-            <Button
+        {activeTab === "employees" && (
+          <div className="flex items-center gap-2">
+            <button
               type="button"
-              className="!min-h-[34px] !px-3 !py-1.5 text-[12.5px]"
-              onClick={openInviteModal}
+              onClick={() => refetch()}
+              disabled={isFetching}
+              aria-label={isRtl ? "تحديث" : "Refresh"}
+              title={isRtl ? "تحديث" : "Refresh"}
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-revix-border bg-revix-white text-revix-secondary shadow-xs transition-colors hover:bg-revix-surface hover:text-revix-dark disabled:opacity-50"
             >
-              <RevixIcon name="plus" size={14} />
-              <span>{isRtl ? "دعوة موظف" : "Invite employee"}</span>
-            </Button>
-          ) : null}
-        </div>
+              <RevixIcon
+                name="refresh-cw"
+                size={14}
+                className={isFetching ? "animate-spin text-revix-primary" : ""}
+              />
+            </button>
+
+            {canInvite ? (
+              <button
+                type="button"
+                onClick={openInviteModal}
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-revix-primary-hover"
+              >
+                <RevixIcon name="plus" size={14} />
+                <span>{isRtl ? "دعوة موظف" : "Invite employee"}</span>
+              </button>
+            ) : null}
+          </div>
+        )}
       </div>
 
+      {/* Team Tabs: Employees (with invites) vs Drivers (direct record, no invite) */}
+      <nav
+        aria-label={isRtl ? "أقسام فريق العمل" : "Team sections"}
+        className="flex gap-1 border-b border-revix-border"
+      >
+        {(
+          [
+            { id: "employees", label: isRtl ? "الموظفون" : "Employees", count: members.length },
+            { id: "drivers", label: isRtl ? "السواقون" : "Drivers", count: driversCount },
+          ] as const
+        ).map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors ${
+                active
+                  ? "border-revix-primary font-semibold text-revix-primary"
+                  : "border-transparent text-revix-secondary hover:text-revix-dark"
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className="font-mono text-xs opacity-75">({tab.count})</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {activeTab === "drivers" ? (
+        <DriversPanel isRtl={isRtl} embedded />
+      ) : (
+      <>
       {/* Latest Sent Invitation Banner */}
       {latestSentInviteEmail ? (
         <div className="rounded-[8px] border border-emerald-200 bg-revix-tint p-4">
@@ -607,6 +657,9 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
           </div>
         )}
       </section>
+
+      </>
+      )}
 
       {/* Invite Employee Modal */}
       <StudioModal

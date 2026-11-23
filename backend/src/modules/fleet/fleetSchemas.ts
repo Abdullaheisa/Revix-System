@@ -66,7 +66,7 @@ export const createPoItemSchema = z.object({
 });
 
 export const createPurchaseOrderSchema = z.object({
-  branchId: z.string().uuid(),
+  branchId: z.string().uuid().nullable().optional(),
   vendorId: z.string().uuid(),
   poNumber: z.string().trim().max(40).optional(),
   orderDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -99,7 +99,6 @@ export const receiveVehicleSchema = z.object({
   color: z.string().trim().min(1).max(40),
   mileageOdometer: z.number().int().min(0).optional(),
   isBookable: z.boolean().optional(),
-  registrationExpiry: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   insuranceExpiry: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   inServiceDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   insuranceCompanyId: z.string().uuid().nullable().optional(),
@@ -142,8 +141,6 @@ export const createVehicleSchema = z.object({
   mileageOdometer: z.number().int().min(0).optional(),
   isBookable: z.boolean().optional(),
   status: z.enum(["available", "on_rent", "maintenance", "reserved", "out_of_service"]).optional(),
-  registrationExpiry: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-  insuranceExpiry: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   inServiceDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   insuranceCompanyId: z.string().uuid().nullable().optional(),
   insuranceProviderName: z.string().trim().max(150).nullable().optional(),
@@ -180,8 +177,6 @@ export const updateVehicleSchema = z.object({
   color: z.string().trim().min(1).max(40).optional(),
   mileageOdometer: z.number().int().min(0).optional(),
   status: z.enum(["available", "on_rent", "maintenance", "reserved", "out_of_service"]).optional(),
-  registrationExpiry: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-  insuranceExpiry: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   inServiceDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   insuranceCompanyId: z.string().uuid().nullable().optional(),
   insuranceProviderName: z.string().trim().max(150).nullable().optional(),

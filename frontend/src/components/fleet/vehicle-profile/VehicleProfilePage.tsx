@@ -79,8 +79,8 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
     const vh = vehicle;
     const variant = vh.variant;
 
-    const regMeta = getExpiryMeta(vh.registrationExpiry, isRtl);
-    const insMeta = getExpiryMeta(vh.insuranceExpiry || lifecycle?.insurancePolicies?.[0]?.expiryDate, isRtl);
+    const insExpiry = lifecycle?.insurancePolicies?.[0]?.expiryDate ?? null;
+    const insMeta = getExpiryMeta(insExpiry, isRtl);
     const readinessSteps: Array<{
       label: string;
       sub: string;
@@ -89,13 +89,8 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
       onAction?: () => void;
     }> = [
       {
-        label: isRtl ? "ترخيص السير" : "Vehicle Registration",
-        sub: vh.registrationExpiry || (isRtl ? "يرجى تسجيل تاريخ الانتهاء" : "Expiry date not set"),
-        done: regMeta.valid,
-      },
-      {
         label: isRtl ? "وثيقة التأمين" : "Insurance Policy",
-        sub: vh.insuranceCompany || vh.insuranceExpiry || (isRtl ? "لم يتم ربط وثيقة تأمين" : "No active policy linked"),
+        sub: vh.insuranceCompany || insExpiry || (isRtl ? "لم يتم ربط وثيقة تأمين" : "No active policy linked"),
         done: insMeta.valid || (lifecycle?.insurancePolicies?.length ?? 0) > 0,
         actionLabel: (insMeta.valid || (lifecycle?.insurancePolicies?.length ?? 0) > 0) ? undefined : (isRtl ? "تسجيل التأمين" : "Add Insurance"),
         onAction: (insMeta.valid || (lifecycle?.insurancePolicies?.length ?? 0) > 0) ? undefined : () => setActiveVehicleTab("insurance"),
@@ -138,324 +133,228 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
     const locationLabel =
       vh.branchName || vh.companyName || (isRtl ? "مخزون الشركة" : "Company Stock");
 
+    const colorLabel = vh.color
+      ? isRtl
+        ? (
+            {
+              white: "أبيض",
+              black: "أسود",
+              silver: "فضي",
+              gray: "رمادي",
+              grey: "رمادي",
+              blue: "أزرق",
+              red: "أحمر",
+              brown: "بني",
+              gold: "ذهبي",
+              green: "أخضر",
+              beige: "بيج",
+            }[vh.color.trim().toLowerCase()] || vh.color
+          )
+        : vh.color
+      : "—";
+
     return (
-      <div className="w-full" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
         {lifecycleToast && (
-          <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800">
+          <div className="shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800">
             {lifecycleToast}
           </div>
         )}
 
-        {/* Unified Box-Free ERP Vehicle Sheet */}
-        <div className="overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-2xs">
-          {/* Top Command Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border bg-revix-surface/35 px-5 py-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={closeVehicleDetails}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-white px-2.5 py-1.5 text-xs font-semibold text-revix-secondary hover:text-revix-dark transition-colors"
-              >
-                <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
-                <span>{isRtl ? "أصول السيارات" : "Assets"}</span>
-              </button>
+        {/* Clean Top Header — matches single Purchase Order page */}
+        <div className="flex flex-wrap items-center justify-between gap-3 py-1 shrink-0">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={closeVehicleDetails}
+              title={isRtl ? "العودة لأصول السيارات" : "Back to vehicle assets"}
+              aria-label={isRtl ? "العودة لأصول السيارات" : "Back to vehicle assets"}
+              className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface focus-visible:outline-revix-primary"
+            >
+              <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
+            </button>
 
-              <div className="h-4 w-px bg-revix-border" />
-
-              <h1 className="text-base sm:text-lg font-bold tracking-tight text-revix-dark">
-                {variant
-                  ? `${variant.make} ${variant.model}${variant.trim ? ` ${variant.trim}` : ""} ${variant.modelYear}`
-                  : "Vehicle Asset"}
-              </h1>
-
-              <span
-                className="rounded border border-revix-border bg-white px-2 py-0.5 font-mono text-xs font-bold text-revix-dark"
-                dir="ltr"
-              >
-                {vh.licensePlate}
-              </span>
-
-              <span className="rounded bg-revix-primary/10 px-2 py-0.5 text-xs font-semibold text-revix-primary">
-                {locationLabel}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsRailOpen((prev) => !prev)}
-                className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-white px-3 text-xs font-semibold text-revix-dark hover:bg-revix-surface"
-              >
-                <RevixIcon name={isRailOpen ? "chevron-right" : "chevron-left"} size={13} />
-                <span>
-                  {isRailOpen
-                    ? isRtl
-                      ? "إخفاء البيانات"
-                      : "Hide Details"
-                    : isRtl
-                      ? "عرض البيانات"
-                      : "Show Details"}
-                </span>
-              </button>
-              {!vh.isPartnerVehicle && (
-                <div className="w-32">
-                  <RevixSelect
-                    size="sm"
-                    isRtl={isRtl}
-                    value={vh.status}
-                    onChange={(e) =>
-                      updateStatus({ id: vh.id, status: e.target.value as FleetVehicleStatus })
-                    }
-                    buttonClassName="h-8 rounded-lg text-xs font-semibold"
-                    options={[
-                      { value: "available", label: isRtl ? "جاهزة" : "Available" },
-                      { value: "on_rent", label: isRtl ? "مؤجرة" : "On Rent" },
-                      { value: "maintenance", label: isRtl ? "صيانة" : "Maintenance" },
-                      { value: "reserved", label: isRtl ? "محجوزة" : "Reserved" },
-                      { value: "out_of_service", label: isRtl ? "خارج الخدمة" : "Out of Service" },
-                    ]}
-                  />
-                </div>
-              )}
-              {!vh.isPartnerVehicle &&
-                company?.operatingMode !== "local_partner" &&
-                vh.status !== "on_rent" && (
-                <button
-                  type="button"
-                  onClick={() => setIsMoveModalOpen(true)}
-                  className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-white px-3 text-xs font-semibold text-revix-dark hover:bg-revix-surface"
-                >
-                  <RevixIcon name="car-front" size={14} />
-                  <span>{isRtl ? "نقل لفرع" : "Move"}</span>
-                </button>
-              )}
-              {!vh.isPartnerVehicle && (
-                <button
-                  type="button"
-                  disabled={isTogglingBookable}
-                  onClick={async () => {
-                    await toggleBookable({ id: vh.id, isBookable: !vh.isBookable }).unwrap();
-                    setLifecycleToast(
-                      !vh.isBookable
-                        ? isRtl
-                          ? "تم تحويل السيارة للأسطول الجاهز للحجز (Fleet)"
-                          : "Vehicle published to Bookable Fleet"
-                        : isRtl
-                          ? "تم إخفاء السيارة من الأسطول الجاهز للحجز"
-                          : "Vehicle removed from Bookable Fleet",
-                    );
-                  }}
-                  className={`inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${
-                    vh.isBookable
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                      : "border-revix-primary bg-revix-primary text-white hover:bg-revix-primary-hover"
-                  }`}
-                >
-                  <RevixIcon name={vh.isBookable ? "check" : "plus"} size={14} />
-                  <span>
-                    {vh.isBookable
-                      ? isRtl
-                        ? "منشورة في الأسطول"
-                        : "In Live Fleet"
-                      : isRtl
-                        ? "تحويل للأسطول"
-                        : "Publish to Fleet"}
-                  </span>
-                </button>
-              )}
-            </div>
+            <h1 className="truncate text-lg font-bold text-revix-dark">
+              {variant
+                ? `${variant.make} ${variant.model}${variant.trim ? ` ${variant.trim}` : ""} ${variant.modelYear}`
+                : "Vehicle Asset"}
+            </h1>
           </div>
 
-          {/* Full-Width Sheet with Optional Top Info Drawer */}
-          <div>
-            {isRailOpen && (
-              <div className="border-b border-revix-border bg-revix-surface/25 px-5 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 text-xs">
-                {/* Section 1: Asset Profile */}
-                <div className="lg:col-span-5 lg:border-e lg:border-revix-border/70 lg:pe-5 space-y-2.5">
-                  <div className="text-[11px] font-bold text-revix-muted">
-                    {isRtl ? "بيانات الأصل" : "Asset Profile"}
-                  </div>
-                  <div className="grid grid-cols-3 gap-x-4 gap-y-2.5">
-                    {[
-                      { k: isRtl ? "الشاسيه" : "VIN", v: vh.vin || "—", mono: true },
-                      { k: isRtl ? "المفتاح" : "Key #", v: vh.keyNumber || "—", mono: true },
-                      { k: isRtl ? "اللون" : "Color", v: vh.color || "—" },
-                      {
-                        k: isRtl ? "العداد" : "Odometer",
-                        v: `${vh.mileageOdometer.toLocaleString()} ${isRtl ? "كم" : "km"}`,
-                        mono: true,
-                      },
-                      { k: isRtl ? "المورد" : "Vendor", v: vh.vendorName || "—" },
-                      { k: isRtl ? "أمر الشراء" : "PO", v: vh.poNumber || "—", mono: true },
-                    ].map((row, idx) => (
-                      <div key={idx} className="min-w-0">
-                        <div className="text-[10px] font-medium text-revix-muted">{row.k}</div>
-                        <div className={`mt-0.5 text-xs font-bold text-revix-dark truncate ${row.mono ? "font-mono" : ""}`}>
-                          {row.v}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Section 2: Financial Summary */}
-                <div className="lg:col-span-4 lg:border-e lg:border-revix-border/70 lg:pe-5 space-y-2.5">
-                  <div className="text-[11px] font-bold text-revix-muted">
-                    {isRtl ? "الملخص المالي" : "Financial Summary"}
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                    <div>
-                      <div className="text-[10px] font-medium text-revix-muted">{isRtl ? "سعر الشراء" : "Purchase"}</div>
-                      <div className="mt-0.5 font-mono text-xs font-bold text-revix-dark" dir="ltr">
-                        <span className="inline-block">
-                          {vh.purchasePrice != null ? `${Number(vh.purchasePrice).toLocaleString()} ${currency}` : "—"}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-medium text-revix-muted">{isRtl ? "التأمين" : "Insurance"}</div>
-                      <div className="mt-0.5 font-mono text-xs font-bold text-revix-dark" dir="ltr">
-                        <span className="inline-block">
-                          {totalInsurancePaid.toLocaleString()} {currency}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-medium text-revix-muted">{isRtl ? "الصيانة" : "Maintenance"}</div>
-                      <div className="mt-0.5 font-mono text-xs font-bold text-revix-dark" dir="ltr">
-                        <span className="inline-block">
-                          {totalMaintCost.toLocaleString()} {currency}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-medium text-revix-muted">{isRtl ? "السعر اليومي" : "Daily Rate"}</div>
-                      <div className="mt-0.5 font-mono text-xs font-bold text-revix-primary" dir="ltr">
-                        <span className="inline-block">
-                          {vh.dailyRate1to2 ? `${Number(vh.dailyRate1to2).toLocaleString()} ${currency}` : "—"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Readiness */}
-                <div className="lg:col-span-3 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-revix-muted">
-                      {isRtl ? "جاهزية الحجز" : "Readiness"}
-                    </span>
-                    <span className="rounded-full bg-revix-primary/10 px-2 py-0.5 font-mono text-[10px] font-bold text-revix-primary">
-                      {completedCount}/{readinessSteps.length}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {readinessSteps.map((step, idx) => (
-                      <div key={idx} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                              step.done ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                            }`}
-                          >
-                            {step.done ? "✓" : "!"}
-                          </span>
-                          <span className="text-xs font-semibold text-revix-dark truncate">{step.label}</span>
-                        </div>
-                        {step.actionLabel && step.onAction && (
-                          <button
-                            type="button"
-                            onClick={step.onAction}
-                            className="shrink-0 cursor-pointer text-[11px] font-semibold text-revix-primary hover:underline"
-                          >
-                            {step.actionLabel}
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            {!vh.isPartnerVehicle && (
+              <div className="w-24">
+                <RevixSelect
+                  size="sm"
+                  isRtl={isRtl}
+                  value={vh.status}
+                  onChange={(e) =>
+                    updateStatus({ id: vh.id, status: e.target.value as FleetVehicleStatus })
+                  }
+                  buttonClassName="h-9 rounded-md text-xs font-semibold"
+                  options={[
+                    { value: "available", label: isRtl ? "جاهزة" : "Available" },
+                    { value: "on_rent", label: isRtl ? "مؤجرة" : "On Rent" },
+                    { value: "maintenance", label: isRtl ? "صيانة" : "Maintenance" },
+                    { value: "reserved", label: isRtl ? "محجوزة" : "Reserved" },
+                    { value: "out_of_service", label: isRtl ? "خارج الخدمة" : "Out of Service" },
+                  ]}
+                />
               </div>
             )}
-
-            {/* Main Content Sheet (100% Full Width) */}
-            <div className="w-full min-w-0">
-              <div className="flex items-center gap-1 overflow-x-auto border-b border-revix-border bg-revix-surface/20 px-5 pt-1.5">
-                {tabs.map((tab) => {
-                  const isActive = activeVehicleTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => {
-                        switchVehicleTab(tab.id, vh.id);
-                        if (tab.id === "maintenance") {
-                          setMaintOdo(vh.mileageOdometer || 0);
-                        }
-                      }}
-                      className={`cursor-pointer whitespace-nowrap border-b-2 px-4 py-2.5 text-xs font-semibold transition-colors ${
-                        isActive
-                          ? "border-revix-primary text-revix-primary"
-                          : "border-transparent text-revix-secondary hover:text-revix-dark"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
+            {!vh.isPartnerVehicle &&
+              company?.operatingMode !== "local_partner" &&
+              vh.status !== "on_rent" && (
+              <button
+                type="button"
+                onClick={() => setIsMoveModalOpen(true)}
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-revix-border bg-white px-3 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+              >
+                <span>{isRtl ? "نقل لفرع" : "Move branch"}</span>
+              </button>
+            )}
+            {!vh.isPartnerVehicle && (
+              <button
+                type="button"
+                disabled={isTogglingBookable}
+                onClick={async () => {
+                  await toggleBookable({ id: vh.id, isBookable: !vh.isBookable }).unwrap();
+                  setLifecycleToast(
+                    !vh.isBookable
+                      ? isRtl
+                        ? "تم تحويل السيارة للأسطول الجاهز للحجز"
+                        : "Vehicle published to Bookable Fleet"
+                      : isRtl
+                        ? "تم إخفاء السيارة من الأسطول الجاهز للحجز"
+                        : "Vehicle removed from Bookable Fleet",
                   );
-                })}
-              </div>
+                }}
+                className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border px-3.5 text-xs font-semibold transition-colors ${
+                  vh.isBookable
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    : "border-revix-primary bg-revix-primary text-white shadow-xs hover:bg-revix-primary-hover"
+                }`}
+              >
+                <RevixIcon name={vh.isBookable ? "check" : "plus"} size={14} />
+                <span>
+                  {vh.isBookable
+                    ? isRtl
+                      ? "منشورة في الأسطول"
+                      : "In Live Fleet"
+                    : isRtl
+                      ? "تحويل للأسطول"
+                      : "Publish to Fleet"}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
 
-              <div className="p-5 space-y-5">
-                {/* TAB 1: OVERVIEW */}
-                {activeVehicleTab === "overview" && (
-                  <div className="divide-y divide-revix-border/70">
-                    <div className="pb-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-revix-dark">
-                            {isRtl ? "ترخيص السير" : "Vehicle Registration"}
-                          </span>
-                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${regMeta.badgeClass}`}>
-                            {regMeta.label}
-                          </span>
-                        </div>
-                        <div className="font-mono text-sm font-bold text-revix-dark">
-                          {vh.registrationExpiry || "—"}
-                        </div>
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-revix-surface">
-                          <div className={`h-full rounded-full ${regMeta.barClass}`} style={{ width: `${regMeta.pct}%` }} />
-                        </div>
-                      </div>
+        {/* Clean Underline Tabs — matches single Purchase Order page */}
+        <nav
+          aria-label={isRtl ? "أقسام السيارة" : "Vehicle sections"}
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-revix-border"
+        >
+          {tabs.map((tab) => {
+            const isActive = activeVehicleTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-current={isActive ? "page" : undefined}
+                onClick={() => {
+                  switchVehicleTab(tab.id, vh.id);
+                  if (tab.id === "maintenance") {
+                    setMaintOdo(vh.mileageOdometer || 0);
+                  }
+                }}
+                className={`cursor-pointer shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors focus-visible:outline-revix-primary ${
+                  isActive
+                    ? "border-revix-primary font-semibold text-revix-primary"
+                    : "border-transparent text-revix-secondary hover:text-revix-dark"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-revix-dark">
-                            {isRtl ? "بوليصة التأمين" : "Insurance Policy"}
-                          </span>
-                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${insMeta.badgeClass}`}>
-                            {insMeta.label}
-                          </span>
-                        </div>
-                        <div className="font-mono text-sm font-bold text-revix-dark">
-                          {vh.insuranceExpiry || "—"}
-                        </div>
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-revix-surface">
-                          <div className={`h-full rounded-full ${insMeta.barClass}`} style={{ width: `${insMeta.pct}%` }} />
-                        </div>
-                      </div>
+        {/* Scrollable Tab Content */}
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-4 pb-4">
+          {/* TAB 1: OVERVIEW — exact 1:1 layout of single Purchase Order summary */}
+          {activeVehicleTab === "overview" && (
+            <div className="grid items-start gap-5 md:grid-cols-2">
+              <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+                <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold text-revix-dark">
+                  {isRtl ? "بيانات السيارة" : "Vehicle Details"}
+                </h3>
+                <dl className="divide-y divide-revix-border px-4">
+                  {[
+                    [isRtl ? "رقم الشاسيه" : "Chassis #", vh.vin || "—"],
+                    [isRtl ? "رقم اللوحة" : "License plate", vh.licensePlate || "—"],
+                    [isRtl ? "رقم المفتاح" : "Key #", vh.keyNumber || "—"],
+                    [isRtl ? "اللون" : "Color", colorLabel],
+                    [isRtl ? "قراءة العداد" : "Odometer", `${vh.mileageOdometer.toLocaleString()} ${isRtl ? "كم" : "km"}`],
+                    [isRtl ? "الفرع" : "Branch", locationLabel],
+                    ...(vh.vendorName ? [[isRtl ? "المورد" : "Vendor", vh.vendorName]] : []),
+                    ...(vh.poNumber ? [[isRtl ? "أمر الشراء" : "Purchase order", vh.poNumber]] : []),
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-sm">
+                      <dt className="text-revix-secondary">{label}</dt>
+                      <dd className="text-end font-medium text-revix-dark tabular-nums">{value}</dd>
                     </div>
+                  ))}
+                </dl>
+              </section>
 
-                    <div className="pt-5">
-                      <ActivityTimeline
-                        entityType="fleet_vehicle"
-                        entityId={vh.id}
-                        limit={8}
-                        isRtl={isRtl}
-                        title={isRtl ? "آخر العمليات والموظفين" : "Recent Activity"}
-                      />
+              <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+                <div className="flex items-center justify-between border-b border-revix-border bg-revix-surface px-4 py-3">
+                  <h3 className="text-sm font-semibold text-revix-dark">
+                    {isRtl ? "الملخص المالي والتأمين" : "Financials & Insurance"}
+                  </h3>
+                  {!insExpiry && (
+                    <button
+                      type="button"
+                      onClick={() => switchVehicleTab("insurance", vh.id)}
+                      className="cursor-pointer text-xs font-semibold text-revix-primary hover:underline"
+                    >
+                      {isRtl ? "تسجيل التأمين" : "Add Insurance"}
+                    </button>
+                  )}
+                </div>
+                <dl className="divide-y divide-revix-border px-4">
+                  {[
+                    [
+                      isRtl ? "سعر الشراء" : "Purchase price",
+                      vh.purchasePrice != null ? `${Number(vh.purchasePrice).toLocaleString()} ${currency}` : "—",
+                    ],
+                    [
+                      isRtl ? "السعر اليومي" : "Daily rate",
+                      vh.dailyRate1to2 ? `${Number(vh.dailyRate1to2).toLocaleString()} ${currency}` : "—",
+                    ],
+                    [
+                      isRtl ? "تكلفة التأمين" : "Insurance paid",
+                      `${totalInsurancePaid.toLocaleString()} ${currency}`,
+                    ],
+                    [
+                      isRtl ? "تكلفة الصيانة" : "Maintenance cost",
+                      `${totalMaintCost.toLocaleString()} ${currency}`,
+                    ],
+                    [
+                      isRtl ? "بوليصة التأمين" : "Insurance policy",
+                      insExpiry || (isRtl ? "غير مسجل" : "Not set"),
+                    ],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-sm">
+                      <dt className="text-revix-secondary">{label}</dt>
+                      <dd className="text-end font-medium text-revix-dark tabular-nums">{value}</dd>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </dl>
+              </section>
+            </div>
+          )}
 
         {/* TAB 2: INSURANCE */}
         {activeVehicleTab === "insurance" && (() => {
@@ -474,141 +373,55 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
           };
 
           return (
-            <div className="space-y-5">
-              {/* Dual Coverage Overview: Compulsory Plate + Comprehensive */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-revix-border bg-revix-white p-5 shadow-2xs flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
-                      <RevixIcon name="file-text" size={18} />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-revix-dark">
-                          {isRtl ? "تأمين اللوحة (إجباري)" : "Compulsory Plate Insurance"}
-                        </span>
-                        <span
-                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                            platePolicy
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-amber-200 bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {platePolicy ? (isRtl ? "مسجل" : "Active") : (isRtl ? "غير مسجل" : "Missing")}
-                        </span>
-                      </div>
-                      {platePolicy ? (
-                        <div className="text-xs text-revix-secondary space-y-0.5">
-                          <div className="font-semibold text-revix-dark">{platePolicy.providerName}</div>
-                          <div className="font-mono text-[11px]" dir="ltr">
-                            {platePolicy.policyNumber} • {platePolicy.premiumAmount.toLocaleString()} EGP
-                          </div>
-                          <div className="text-[11px]">
-                            {isRtl ? "ينتهي في:" : "Expires:"}{" "}
-                            <span className="font-mono font-semibold text-revix-dark">{platePolicy.expiryDate}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-revix-secondary">
-                          {isRtl ? "التأمين الإجباري للوحة والمرور" : "Mandatory traffic & plate coverage"}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openInsModal("compulsory_plate")}
-                    className="shrink-0 cursor-pointer rounded-lg border border-revix-border bg-revix-white px-3.5 py-2 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
-                  >
-                    {platePolicy ? (isRtl ? "تحديث" : "Update") : (isRtl ? "تسجيل تأمين اللوحة" : "Add Plate")}
-                  </button>
-                </div>
-
-                <div className="rounded-2xl border border-revix-border bg-revix-white p-5 shadow-2xs flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700">
-                      <RevixIcon name="shield-check" size={18} />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-revix-dark">
-                          {isRtl ? "التأمين الشامل" : "Comprehensive Insurance"}
-                        </span>
-                        <span
-                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                            compPolicy
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-amber-200 bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {compPolicy ? (isRtl ? "مسجل" : "Active") : (isRtl ? "غير مسجل" : "Missing")}
-                        </span>
-                      </div>
-                      {compPolicy ? (
-                        <div className="text-xs text-revix-secondary space-y-0.5">
-                          <div className="font-semibold text-revix-dark">{compPolicy.providerName}</div>
-                          <div className="font-mono text-[11px]" dir="ltr">
-                            {compPolicy.policyNumber} • {compPolicy.premiumAmount.toLocaleString()} EGP
-                          </div>
-                          <div className="text-[11px]">
-                            {isRtl ? "ينتهي في:" : "Expires:"}{" "}
-                            <span className="font-mono font-semibold text-revix-dark">{compPolicy.expiryDate}</span>
-                            {compPolicy.deductibleAmount > 0 && (
-                              <span className="ms-2">
-                                • {isRtl ? "التحمل:" : "Deductible:"}{" "}
-                                <span className="font-mono">{compPolicy.deductibleAmount.toLocaleString()}</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-revix-secondary">
-                          {isRtl ? "تغطية شاملة ضد الحوادث والسرقة" : "Full commercial hull, accident & theft coverage"}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openInsModal("comprehensive")}
-                    className="shrink-0 cursor-pointer rounded-lg bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
-                  >
-                    {compPolicy ? (isRtl ? "تحديث" : "Update") : (isRtl ? "تسجيل تأمين شامل" : "Add Comprehensive")}
-                  </button>
-                </div>
-              </div>
-
-              {/* Full-Width Policy History Table */}
-              <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xs">
-                <div className="border-b border-revix-border/70 px-5 py-3.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-revix-dark">
-                      {isRtl ? "سجل بوالص التأمين" : "Insurance Policy History"}
+            <div className="space-y-4">
+              {/* Clean Single Policy Table Card — matches PO detail table */}
+              <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border bg-revix-surface px-4 py-2.5">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h3 className="text-sm font-semibold text-revix-dark">
+                      {isRtl ? "بوالص التأمين" : "Insurance Policies"}
                     </h3>
-                    <span className="rounded-full bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-semibold text-revix-secondary">
+                    <span className="rounded bg-revix-white border border-revix-border px-1.5 py-0.5 font-mono text-[11px] font-semibold text-revix-secondary">
                       {policies.length}
                     </span>
+                    <span className="hidden sm:inline text-revix-border">|</span>
+                    <div className="hidden sm:flex items-center gap-3 text-[11px]">
+                      <span className="inline-flex items-center gap-1.5 text-revix-secondary">
+                        <span className={`h-1.5 w-1.5 rounded-full ${platePolicy ? "bg-emerald-500" : "bg-amber-400"}`} />
+                        {isRtl ? "إجباري:" : "Plate:"}{" "}
+                        <strong className="font-medium text-revix-dark">
+                          {platePolicy ? platePolicy.expiryDate : isRtl ? "غير مسجل" : "None"}
+                        </strong>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-revix-secondary">
+                        <span className={`h-1.5 w-1.5 rounded-full ${compPolicy ? "bg-emerald-500" : "bg-amber-400"}`} />
+                        {isRtl ? "شامل:" : "Comp:"}{" "}
+                        <strong className="font-medium text-revix-dark">
+                          {compPolicy ? compPolicy.expiryDate : isRtl ? "غير مسجل" : "None"}
+                        </strong>
+                      </span>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => openInsModal("comprehensive")}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 py-1.5 text-xs font-semibold text-revix-dark hover:bg-revix-surface transition-colors"
+                    className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md bg-revix-primary px-3 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
                   >
                     <RevixIcon name="plus" size={14} />
                     <span>{isRtl ? "إضافة بوليصة" : "Add Policy"}</span>
                   </button>
                 </div>
                 {policies.length === 0 ? (
-                  <div className="p-10 text-center text-xs text-revix-secondary">
+                  <div className="py-12 text-center text-xs text-revix-secondary">
                     {isRtl ? "لا توجد بوالص تأمين مسجلة لهذه السيارة حتى الآن." : "No insurance policies recorded for this vehicle yet."}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <DataTable className="w-full text-start text-xs">
                       <thead>
-                        <tr className="border-b border-revix-border bg-revix-surface/40 text-[10px] font-bold uppercase text-revix-muted">
+                        <tr className="border-b border-revix-border bg-revix-surface/50 text-[11px] font-semibold text-revix-secondary">
                           <th className="px-4 py-2.5 text-start">{isRtl ? "النوع" : "Type"}</th>
-                          <th className="px-3 py-2.5 text-start">{isRtl ? "الشركة / الجهة" : "Provider"}</th>
+                          <th className="px-3 py-2.5 text-start">{isRtl ? "الشركة" : "Provider"}</th>
                           <th className="px-3 py-2.5 text-start">{isRtl ? "رقم البوليصة" : "Policy #"}</th>
                           <th className="px-3 py-2.5 text-start">{isRtl ? "المدفوع" : "Paid"}</th>
                           <th className="px-3 py-2.5 text-start">{isRtl ? "التحمل" : "Deductible"}</th>
@@ -618,10 +431,10 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                       </thead>
                       <tbody className="divide-y divide-revix-border/60">
                         {policies.map((p) => (
-                          <tr key={p.id} className="hover:bg-revix-surface/30">
+                          <tr key={p.id} className="hover:bg-revix-surface/40">
                             <td className="px-4 py-3">
                               <span
-                                className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-semibold ${
+                                className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium ${
                                   p.coverageType === "compulsory_plate"
                                     ? "border-blue-200 bg-blue-50 text-blue-700"
                                     : "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -630,23 +443,23 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                                 {coverageLabel(p.coverageType)}
                               </span>
                             </td>
-                            <td className="px-3 py-3 font-bold text-revix-dark">{p.providerName}</td>
-                            <td className="px-3 py-3 font-mono">{p.policyNumber}</td>
-                            <td className="px-3 py-3 font-mono font-bold text-revix-primary">
-                              <span dir="ltr" className="inline-block">{p.premiumAmount.toLocaleString()} EGP</span>
+                            <td className="px-3 py-3 font-semibold text-revix-dark">{p.providerName}</td>
+                            <td className="px-3 py-3 font-mono text-revix-secondary">{p.policyNumber}</td>
+                            <td className="px-3 py-3 font-mono font-semibold text-revix-dark tabular-nums">
+                              <span dir="ltr" className="inline-block">{p.premiumAmount.toLocaleString()} {currency}</span>
                             </td>
-                            <td className="px-3 py-3 font-mono text-revix-secondary">
+                            <td className="px-3 py-3 font-mono text-revix-secondary tabular-nums">
                               {p.deductibleAmount > 0 ? p.deductibleAmount.toLocaleString() : "—"}
                             </td>
-                            <td className="px-3 py-3 font-mono text-revix-secondary">{p.startDate}</td>
-                            <td className="px-4 py-3 font-mono font-semibold text-revix-dark">{p.expiryDate}</td>
+                            <td className="px-3 py-3 font-mono text-revix-secondary tabular-nums">{p.startDate}</td>
+                            <td className="px-4 py-3 font-mono font-semibold text-revix-dark tabular-nums">{p.expiryDate}</td>
                           </tr>
                         ))}
                       </tbody>
                     </DataTable>
                   </div>
                 )}
-              </div>
+              </section>
 
               {/* Clean Centered Modal for Adding / Updating Insurance Policy */}
               {isInsModalOpen && (
@@ -843,46 +656,15 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
 
         {/* TAB 4: MAINTENANCE */}
         {activeVehicleTab === "maintenance" && (
-          <div className="space-y-5">
-            {/* Maintenance Summary KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs text-start">
-                <div className="text-[11px] font-semibold text-revix-muted">
-                  {isRtl ? "عدد زيارات الصيانة" : "Total Service Visits"}
-                </div>
-                <div className="mt-1.5 font-mono text-lg font-bold text-revix-dark">
-                  {maintLogs.length}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs text-start">
-                <div className="text-[11px] font-semibold text-revix-muted">
-                  {isRtl ? "إجمالي تكلفة الصيانة" : "Total Maintenance Cost"}
-                </div>
-                <div className="mt-1.5 font-mono text-lg font-bold text-revix-primary">
-                  <span dir="ltr" className="inline-block">{totalMaintCost.toLocaleString()} EGP</span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-revix-border bg-revix-white p-4 shadow-2xs text-start">
-                <div className="text-[11px] font-semibold text-revix-muted">
-                  {isRtl ? "موعد الصيانة القادمة" : "Next Scheduled Service"}
-                </div>
-                <div className="mt-1.5 font-mono text-sm font-bold text-revix-dark">
-                  {nextScheduledMaint?.nextServiceDate ||
-                    (nextScheduledMaint?.nextServiceKm
-                      ? `${nextScheduledMaint.nextServiceKm.toLocaleString()} ${isRtl ? "كم" : "km"}`
-                      : isRtl ? "غير مجدولة" : "Not scheduled")}
-                </div>
-              </div>
-            </div>
-
-            {/* Full-Width Maintenance History Table */}
-            <div className="overflow-hidden rounded-2xl border border-revix-border bg-revix-white shadow-2xs">
-              <div className="border-b border-revix-border/70 px-5 py-3.5 flex items-center justify-between">
+          <div className="space-y-4">
+            {/* Clean Maintenance History Table — matches PO detail table */}
+            <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+              <div className="flex items-center justify-between gap-3 border-b border-revix-border bg-revix-surface px-4 py-2.5">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-revix-dark">
+                  <h3 className="text-sm font-semibold text-revix-dark">
                     {isRtl ? "سجل الصيانة" : "Maintenance History"}
                   </h3>
-                  <span className="rounded-full bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-semibold text-revix-secondary">
+                  <span className="rounded border border-revix-border bg-revix-white px-1.5 py-0.5 font-mono text-[11px] font-semibold text-revix-secondary">
                     {maintLogs.length}
                   </span>
                 </div>
@@ -892,21 +674,21 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                     setMaintOdo(vh.mileageOdometer || 0);
                     setIsMaintModalOpen(true);
                   }}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
+                  className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md bg-revix-primary px-3 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
                 >
                   <RevixIcon name="plus" size={14} />
                   <span>{isRtl ? "تسجيل صيانة" : "Log Maintenance"}</span>
                 </button>
               </div>
               {maintLogs.length === 0 ? (
-                <div className="p-10 text-center text-xs text-revix-secondary">
+                <div className="py-12 text-center text-xs text-revix-secondary">
                   {isRtl ? "لا توجد سجلات صيانة لهذه السيارة حتى الآن." : "No maintenance logs recorded for this vehicle yet."}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <DataTable className="w-full text-start text-xs">
                     <thead>
-                      <tr className="border-b border-revix-border bg-revix-surface/40 text-[10px] font-bold uppercase text-revix-muted">
+                      <tr className="border-b border-revix-border bg-revix-surface/50 text-[11px] font-semibold text-revix-secondary">
                         <th className="px-4 py-2.5 text-start">{isRtl ? "التاريخ" : "Date"}</th>
                         <th className="px-3 py-2.5 text-start">{isRtl ? "نوع الصيانة" : "Service"}</th>
                         <th className="px-3 py-2.5 text-start">{isRtl ? "المركز / الورشة" : "Workshop"}</th>
@@ -917,10 +699,10 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                     </thead>
                     <tbody className="divide-y divide-revix-border/60">
                       {maintLogs.map((m) => (
-                        <tr key={m.id} className="hover:bg-revix-surface/30">
-                          <td className="px-4 py-3 font-mono">{m.serviceDate}</td>
+                        <tr key={m.id} className="hover:bg-revix-surface/40">
+                          <td className="px-4 py-3 font-mono text-revix-secondary tabular-nums">{m.serviceDate}</td>
                           <td className="px-3 py-3">
-                            <div className="font-bold text-revix-dark">{m.serviceType}</div>
+                            <div className="font-semibold text-revix-dark">{m.serviceType}</div>
                             {m.createdByUserName && (
                               <div className="mt-0.5 text-[10px] text-revix-muted">
                                 {isRtl ? "بواسطة:" : "By:"} {m.createdByUserName}
@@ -928,12 +710,12 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                             )}
                           </td>
                           <td className="px-3 py-3 text-revix-secondary">{m.workshopName || "—"}</td>
-                          <td className="px-3 py-3 font-mono">{m.odometerAtService.toLocaleString()} {isRtl ? "كم" : "km"}</td>
-                          <td className="px-3 py-3 font-mono text-revix-secondary">
+                          <td className="px-3 py-3 font-mono text-revix-dark tabular-nums">{m.odometerAtService.toLocaleString()} {isRtl ? "كم" : "km"}</td>
+                          <td className="px-3 py-3 font-mono text-revix-secondary tabular-nums">
                             {m.nextServiceDate || (m.nextServiceKm ? `${m.nextServiceKm.toLocaleString()} ${isRtl ? "كم" : "km"}` : "—")}
                           </td>
-                          <td className="px-4 py-3 font-mono font-bold text-revix-primary">
-                            <span dir="ltr" className="inline-block">{m.cost.toLocaleString()} EGP</span>
+                          <td className="px-4 py-3 font-mono font-semibold text-revix-dark tabular-nums">
+                            <span dir="ltr" className="inline-block">{m.cost.toLocaleString()} {currency}</span>
                           </td>
                         </tr>
                       ))}
@@ -941,7 +723,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                   </DataTable>
                 </div>
               )}
-            </div>
+            </section>
 
             {/* Clean Centered Modal for Logging Maintenance */}
             {isMaintModalOpen && (
@@ -1216,7 +998,12 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                 entityType="fleet_vehicle"
                 entityId={vh.id}
                 isRtl={isRtl}
-                title={isRtl ? "سجل الموظفين والعمليات على السيارة" : "Vehicle Employee Activity & Audit Log"}
+                participantsLabel={isRtl ? "مسؤولو السيارة" : "Vehicle participants"}
+                participants={[
+                  { label: isRtl ? "أضاف السيارة" : "Added by", value: vh.createdByUserName },
+                  { label: isRtl ? "الفرع الحالي" : "Current branch", value: locationLabel },
+                  { label: isRtl ? "أمر الشراء" : "Purchase order", value: vh.poNumber },
+                ]}
               />
             )}
 
@@ -1307,16 +1094,13 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
             )}
           </div>
         )}
-            </div>
-          </div>
         </div>
-      </div>
-      <DispatchMovementModal
-        isOpen={isMoveModalOpen}
-        isRtl={isRtl}
-        initialVehicle={vh}
-        onClose={() => setIsMoveModalOpen(false)}
-      />
+        <DispatchMovementModal
+          isOpen={isMoveModalOpen}
+          isRtl={isRtl}
+          initialVehicle={vh}
+          onClose={() => setIsMoveModalOpen(false)}
+        />
       </div>
     );
 

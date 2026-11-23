@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { RevixIcon } from "@/components/ui/RevixIcons";
 import { useMemo, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -243,71 +244,72 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-revix-border bg-white px-4 py-3 shadow-2xs">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {[
-            { id: "all", ar: "الكل", en: "All", count: movements.length },
-            {
-              id: "in_transit",
-              ar: "في الطريق",
-              en: "In Transit",
-              count: movements.filter((m) => m.status === "in_transit").length,
-            },
-            {
-              id: "received",
-              ar: "تم الاستلام",
-              en: "Received",
-              count: movements.filter((m) => m.status === "received").length,
-            },
-            {
-              id: "cancelled",
-              ar: "ملغي",
-              en: "Cancelled",
-              count: movements.filter((m) => m.status === "cancelled").length,
-            },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setStatusFilter(t.id)}
-              className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                statusFilter === t.id
-                  ? "border-revix-primary bg-revix-primary text-white"
-                  : "border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-              }`}
-            >
-              <span>{isRtl ? t.ar : t.en}</span>
-              <span
-                className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] ${
-                  statusFilter === t.id
-                    ? "bg-white/20 text-white"
-                    : "bg-revix-surface text-revix-muted"
-                }`}
-              >
-                {t.count}
-              </span>
-            </button>
-          ))}
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
+            {isRtl ? "حركة ونقل السيارات" : "Vehicle Movements"}
+          </h1>
+          <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+            {movements.length}
+          </span>
         </div>
 
-        <Button
+        <button
+          type="button"
           onClick={() => setIsDispatchOpen(true)}
-          className="h-9 px-3.5 text-xs font-semibold"
+          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-colors"
         >
-          {isRtl ? "+ حركة / نقل سيارة" : "+ Dispatch Movement"}
-        </Button>
+          <RevixIcon name="plus" size={14} />
+          <span>{isRtl ? "حركة / نقل سيارة" : "Dispatch Movement"}</span>
+        </button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-revix-border bg-white shadow-2xs">
-        <div className="overflow-x-auto">
-          <DataTable className="w-full text-start text-xs">
-            <thead>
-              <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
-                <th className="px-4 py-3 text-start">{isRtl ? "رقم الحركة" : "Movement #"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "السيارة" : "Vehicle"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "المسار" : "Route"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "السواق" : "Driver"}</th>
+      <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-revix-border">
+        {[
+          { id: "all", ar: "الكل", en: "All", count: movements.length },
+          {
+            id: "in_transit",
+            ar: "في الطريق",
+            en: "In Transit",
+            count: movements.filter((m) => m.status === "in_transit").length,
+          },
+          {
+            id: "received",
+            ar: "تم الاستلام",
+            en: "Received",
+            count: movements.filter((m) => m.status === "received").length,
+          },
+          {
+            id: "cancelled",
+            ar: "ملغي",
+            en: "Cancelled",
+            count: movements.filter((m) => m.status === "cancelled").length,
+          },
+        ].map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setStatusFilter(t.id)}
+            className={`cursor-pointer shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs transition-colors ${
+              statusFilter === t.id
+                ? "border-revix-primary font-semibold text-revix-primary"
+                : "border-transparent text-revix-secondary hover:text-revix-dark"
+            }`}
+          >
+            {isRtl ? t.ar : t.en} ({t.count})
+          </button>
+        ))}
+      </nav>
+
+      <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+        <DataTable fitAvailableHeight className="text-xs">
+          <thead>
+            <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "رقم الحركة" : "Movement #"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "السيارة" : "Vehicle"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "المسار" : "Route"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "السواق" : "Driver"}</th>
                 <th className="px-3 py-3 text-start">{isRtl ? "العداد" : "Odometer"}</th>
                 <th className="px-3 py-3 text-start">{isRtl ? "الموظفون" : "Staff"}</th>
                 <th className="px-3 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
@@ -443,7 +445,6 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
               )}
             </tbody>
           </DataTable>
-        </div>
       </div>
 
       <DispatchMovementModal

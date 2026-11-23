@@ -1502,7 +1502,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     const poRecord: PurchaseOrderRecord = {
       id: input.id ?? crypto.randomUUID(),
       companyId: input.companyId,
-      branchId: input.branchId,
+      branchId: input.branchId ?? null,
       vendorId: input.vendorId,
       poNumber,
       status: "draft",
@@ -1540,7 +1540,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       ...poRecord,
       items: items.map((i) => ({ ...i })),
       vendorName: this.vendorsById.get(poRecord.vendorId)?.name,
-      branchName: this.branchesById.get(poRecord.branchId)?.name,
+      branchName: poRecord.branchId ? this.branchesById.get(poRecord.branchId)?.name : undefined,
     };
   }
 
@@ -1554,7 +1554,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       ...po,
       items,
       vendorName: this.vendorsById.get(po.vendorId)?.name,
-      branchName: this.branchesById.get(po.branchId)?.name,
+      branchName: po.branchId ? this.branchesById.get(po.branchId)?.name : undefined,
     };
   }
 
@@ -1579,7 +1579,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
         ...po,
         items,
         vendorName: this.vendorsById.get(po.vendorId)?.name,
-        branchName: this.branchesById.get(po.branchId)?.name,
+        branchName: po.branchId ? this.branchesById.get(po.branchId)?.name : undefined,
       });
     }
     return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -1617,7 +1617,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     // Create the vehicle asset
     const vehicle = await this.createFleetVehicle({
       companyId: po.companyId,
-      branchId: input.branchId || po.branchId,
+      branchId: input.branchId ?? po.branchId ?? "",
       variantId: item.variantId,
       purchaseOrderId: po.id,
       vin: input.vin,
@@ -1626,8 +1626,6 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       color: input.color,
       mileageOdometer: input.mileageOdometer ?? 0,
       isBookable: Boolean(input.isBookable),
-      registrationExpiry: input.registrationExpiry,
-      insuranceExpiry: input.insuranceExpiry,
       notes: input.notes,
       photoUrl: input.photoUrl,
       locationType: input.locationType,
@@ -1702,8 +1700,6 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       isBookable: Boolean(input.isBookable),
       publishedToFleetAt: input.isBookable ? new Date() : null,
       status: input.status ?? "available",
-      registrationExpiry: input.registrationExpiry ?? null,
-      insuranceExpiry: input.insuranceExpiry ?? null,
       notes: input.notes?.trim() || null,
       photoUrl: input.photoUrl?.trim() || null,
       locationType: input.locationType || "airport_terminal",
@@ -1874,8 +1870,6 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     if (input.color !== undefined) v.color = input.color.trim();
     if (input.mileageOdometer !== undefined) v.mileageOdometer = input.mileageOdometer;
     if (input.status !== undefined) v.status = input.status;
-    if (input.registrationExpiry !== undefined) v.registrationExpiry = input.registrationExpiry;
-    if (input.insuranceExpiry !== undefined) v.insuranceExpiry = input.insuranceExpiry;
     if (input.notes !== undefined) v.notes = input.notes ? input.notes.trim() : null;
     if (input.photoUrl !== undefined) v.photoUrl = input.photoUrl ? input.photoUrl.trim() : null;
     if (input.locationType !== undefined) v.locationType = input.locationType;
@@ -2104,6 +2098,63 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     return Array.from(this.insuranceCompaniesById.values()).filter(
       (c) => c.companyId === companyId,
     );
+  }
+
+  async listInsurancePoliciesByInsuranceCompany(
+    companyId: string,
+    insuranceCompanyId: string,
+  ) {
+    const insCompany = this.insuranceCompaniesById.get(insuranceCompanyId);
+    const targetName = insCompany?.name?.trim().toLowerCase() ?? "";
+    const out: Array<{
+      id: string;
+      vehicleId: string;
+      vehicleTitle: string;
+      licensePlate: string;
+      vin: string;
+      branchName: string | null;
+      providerName: string;
+      policyNumber: string;
+      coverageType: string;
+      premiumAmount: number;
+      deductibleAmount: number;
+      startDate: string;
+      expiryDate: string;
+      status: string;
+    }> = [];
+    for (const [vehicleId, policies] of this.vehiclePoliciesByVehicleId.entries()) {
+      const vh = this.vehiclesById.get(vehicleId);
+      if (!vh || vh.companyId !== companyId) continue;
+      const variant = this.variantsById.get(vh.variantId);
+      const branch = vh.branchId ? this.branchesById.get(vh.branchId) : null;
+      const vehicleTitle = variant
+        ? `${variant.make} ${variant.model}${variant.trim ? ` ${variant.trim}` : ""} ${variant.modelYear}`
+        : vh.licensePlate;
+      for (const p of policies) {
+        if (
+          p.insuranceCompanyId === insuranceCompanyId ||
+          (targetName && String(p.providerName || "").trim().toLowerCase() === targetName)
+        ) {
+          out.push({
+            id: p.id,
+            vehicleId,
+            vehicleTitle,
+            licensePlate: vh.licensePlate,
+            vin: vh.vin,
+            branchName: branch?.name ?? null,
+            providerName: p.providerName,
+            policyNumber: p.policyNumber,
+            coverageType: p.coverageType,
+            premiumAmount: Number(p.premiumAmount) || 0,
+            deductibleAmount: Number(p.deductibleAmount) || 0,
+            startDate: p.startDate,
+            expiryDate: p.expiryDate,
+            status: p.status || "active",
+          });
+        }
+      }
+    }
+    return out;
   }
 
   async createInsuranceCompany(input: any) {

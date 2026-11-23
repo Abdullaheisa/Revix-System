@@ -1411,7 +1411,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         [
           id,
           input.companyId,
-          input.branchId,
+          input.branchId ?? null,
           input.vendorId,
           poNumber,
           "draft",
@@ -1619,15 +1619,15 @@ export class PostgresAuthDataStore implements AuthDataStore {
       const vehicleRes = await client.query<DbFleetVehicleRow>(
         `INSERT INTO fleet_vehicles
           (id, company_id, branch_id, variant_id, purchase_order_id, vin, license_plate,
-           key_number, color, mileage_odometer, status, registration_expiry, insurance_expiry, notes,
+           key_number, color, mileage_odometer, status, notes,
            photo_url, location_type, fuel_policy, instant_confirmation, description, delivery_policy,
            daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
            mileage_policy, daily_km_limit, extra_km_rate, inclusions,
          seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission,
          is_bookable, published_to_fleet_at, in_service_date, created_by_user_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'available', $11, $12, $13,
-                 $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33,
-                 $34, CASE WHEN $34 THEN NOW() ELSE NULL END, COALESCE($35::date, CURRENT_DATE), $36)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'available', $11,
+                 $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31,
+                 $32, CASE WHEN $32 THEN NOW() ELSE NULL END, COALESCE($33::date, CURRENT_DATE), $34)
          RETURNING *`,
         [
           vehicleId,
@@ -1640,8 +1640,6 @@ export class PostgresAuthDataStore implements AuthDataStore {
           input.keyNumber?.trim() || null,
           input.color.trim(),
           input.mileageOdometer ?? 0,
-          input.registrationExpiry ?? null,
-          input.insuranceExpiry ?? null,
           input.notes?.trim() || null,
           input.photoUrl?.trim() || null,
           input.locationType ?? "airport_terminal",
@@ -1736,15 +1734,15 @@ export class PostgresAuthDataStore implements AuthDataStore {
     const res = await this.pool.query<DbFleetVehicleRow>(
       `INSERT INTO fleet_vehicles
         (id, company_id, branch_id, variant_id, purchase_order_id, vin, license_plate,
-         key_number, color, mileage_odometer, status, registration_expiry, insurance_expiry, notes,
+         key_number, color, mileage_odometer, status, notes,
          photo_url, location_type, fuel_policy, instant_confirmation, description, delivery_policy,
          daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
          mileage_policy, daily_km_limit, extra_km_rate, inclusions,
          seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission,
          is_bookable, published_to_fleet_at, created_by_user_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-               $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34,
-               $35, CASE WHEN $35 THEN NOW() ELSE NULL END, $36)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+               $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32,
+               $33, CASE WHEN $33 THEN NOW() ELSE NULL END, $34)
        RETURNING *`,
       [
         id,
@@ -1758,8 +1756,6 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.color.trim(),
         input.mileageOdometer ?? 0,
         input.status ?? "available",
-        input.registrationExpiry?.trim() || null,
-        input.insuranceExpiry?.trim() || null,
         input.notes?.trim() || null,
         input.photoUrl?.trim() || null,
         input.locationType ?? "airport_terminal",
@@ -1979,29 +1975,27 @@ export class PostgresAuthDataStore implements AuthDataStore {
            color = COALESCE($4, color),
            mileage_odometer = COALESCE($5, mileage_odometer),
            status = COALESCE($6, status),
-           registration_expiry = COALESCE($7, registration_expiry),
-           insurance_expiry = COALESCE($8, insurance_expiry),
-           notes = CASE WHEN $9::text IS NOT NULL THEN $9 ELSE notes END,
-           photo_url = CASE WHEN $10::text IS NOT NULL THEN $10 ELSE photo_url END,
-           location_type = COALESCE($11, location_type),
-           fuel_policy = COALESCE($12, fuel_policy),
-           instant_confirmation = COALESCE($13, instant_confirmation),
-           description = CASE WHEN $14::text IS NOT NULL THEN $14 ELSE description END,
-           delivery_policy = CASE WHEN $15::text IS NOT NULL THEN $15 ELSE delivery_policy END,
-           daily_rate_1_to_2 = COALESCE($16, daily_rate_1_to_2),
-           daily_rate_3_to_7 = COALESCE($17, daily_rate_3_to_7),
-           daily_rate_8_plus = COALESCE($18, daily_rate_8_plus),
-           damage_excess = COALESCE($19, damage_excess),
-           mileage_policy = COALESCE($20, mileage_policy),
-           daily_km_limit = COALESCE($21, daily_km_limit),
-           extra_km_rate = COALESCE($22, extra_km_rate),
-           inclusions = COALESCE($23, inclusions),
-           seats = COALESCE($24, seats),
-           doors = COALESCE($25, doors),
-           air_conditioning = COALESCE($26, air_conditioning),
-           fuel_type = COALESCE($27, fuel_type),
-           luggage_capacity = COALESCE($28, luggage_capacity),
-           transmission = COALESCE($29, transmission),
+           notes = CASE WHEN $7::text IS NOT NULL THEN $7 ELSE notes END,
+           photo_url = CASE WHEN $8::text IS NOT NULL THEN $8 ELSE photo_url END,
+           location_type = COALESCE($9, location_type),
+           fuel_policy = COALESCE($10, fuel_policy),
+           instant_confirmation = COALESCE($11, instant_confirmation),
+           description = CASE WHEN $12::text IS NOT NULL THEN $12 ELSE description END,
+           delivery_policy = CASE WHEN $13::text IS NOT NULL THEN $13 ELSE delivery_policy END,
+           daily_rate_1_to_2 = COALESCE($14, daily_rate_1_to_2),
+           daily_rate_3_to_7 = COALESCE($15, daily_rate_3_to_7),
+           daily_rate_8_plus = COALESCE($16, daily_rate_8_plus),
+           damage_excess = COALESCE($17, damage_excess),
+           mileage_policy = COALESCE($18, mileage_policy),
+           daily_km_limit = COALESCE($19, daily_km_limit),
+           extra_km_rate = COALESCE($20, extra_km_rate),
+           inclusions = COALESCE($21, inclusions),
+           seats = COALESCE($22, seats),
+           doors = COALESCE($23, doors),
+           air_conditioning = COALESCE($24, air_conditioning),
+           fuel_type = COALESCE($25, fuel_type),
+           luggage_capacity = COALESCE($26, luggage_capacity),
+           transmission = COALESCE($27, transmission),
            updated_at = NOW()
        WHERE id = $1
        RETURNING id`,
@@ -2012,8 +2006,6 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.color?.trim() ?? null,
         input.mileageOdometer ?? null,
         input.status ?? null,
-        input.registrationExpiry !== undefined ? input.registrationExpiry?.trim() || null : null,
-        input.insuranceExpiry !== undefined ? input.insuranceExpiry?.trim() || null : null,
         input.notes !== undefined ? input.notes?.trim() || null : null,
         input.photoUrl !== undefined ? input.photoUrl?.trim() || null : null,
         input.locationType ?? null,
@@ -2361,6 +2353,50 @@ export class PostgresAuthDataStore implements AuthDataStore {
       email: r.email ?? null,
       address: r.address ?? null,
       createdAt: new Date(r.created_at),
+    }));
+  }
+
+  async listInsurancePoliciesByInsuranceCompany(
+    companyId: string,
+    insuranceCompanyId: string,
+  ) {
+    const res = await this.pool.query(
+      `SELECT p.id, p.vehicle_id, p.provider_name, p.policy_number, p.coverage_type,
+              p.premium_amount, p.deductible_amount, p.start_date, p.expiry_date, p.status,
+              v.license_plate, v.vin, b.name AS branch_name,
+              vv.make, vv.model, vv.trim, vv.model_year
+       FROM vehicle_insurance_policies p
+       INNER JOIN fleet_vehicles v ON v.id = p.vehicle_id
+       LEFT JOIN vehicle_variants vv ON vv.id = v.variant_id
+       LEFT JOIN branches b ON b.id = v.branch_id
+       LEFT JOIN insurance_companies ic ON ic.id = $2 AND ic.company_id = $1
+       WHERE p.company_id = $1
+         AND (
+           p.insurance_company_id = $2
+           OR (ic.name IS NOT NULL AND LOWER(TRIM(p.provider_name)) = LOWER(TRIM(ic.name)))
+         )
+       ORDER BY p.expiry_date DESC, p.created_at DESC`,
+      [companyId, insuranceCompanyId],
+    );
+    const fmtDate = (d: unknown) =>
+      d instanceof Date ? d.toISOString().slice(0, 10) : String(d ?? "").slice(0, 10);
+    return res.rows.map((r) => ({
+      id: r.id as string,
+      vehicleId: r.vehicle_id as string,
+      vehicleTitle: r.make
+        ? `${r.make} ${r.model}${r.trim ? ` ${r.trim}` : ""} ${r.model_year}`
+        : (r.license_plate as string),
+      licensePlate: (r.license_plate as string) || "",
+      vin: (r.vin as string) || "",
+      branchName: (r.branch_name as string | null) ?? null,
+      providerName: (r.provider_name as string) || "",
+      policyNumber: (r.policy_number as string) || "",
+      coverageType: (r.coverage_type as string) || "comprehensive",
+      premiumAmount: Number(r.premium_amount ?? 0),
+      deductibleAmount: Number(r.deductible_amount ?? 0),
+      startDate: fmtDate(r.start_date),
+      expiryDate: fmtDate(r.expiry_date),
+      status: (r.status as string) || "active",
     }));
   }
 

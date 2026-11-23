@@ -4,8 +4,9 @@ import { DataTable } from "@/components/ui/DataTable";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { parseFleetResourceRoute, vendorHref } from "@/lib/workspace/resourceRoutes";
 import { RevixIcon } from "@/components/ui/RevixIcons";
-import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import {
   CitySelectField,
@@ -15,41 +16,52 @@ import { getCitiesForCountry } from "@/lib/workspace/countryCatalog";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import {
   useCreateVendorMutation,
+  useLazyListVendorsQuery,
   useListVendorsQuery,
   useUpdateVendorMutation,
   type VendorCategory,
   type VendorDto,
   type PaymentTermsType,
 } from "@/store/api/fleetApi";
-import { PaymentTermsSelector } from "./PaymentTermsSelector";
-import { formatVendorPaymentTerms } from "@/lib/fleet/paymentTerms";
+import { VendorDetailPage } from "./VendorDetailPage";
+import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
+import { exportStyledExcel } from "@/lib/export/excelExport";
+import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 
 interface VendorsDirectoryPanelProps {
   isRtl: boolean;
 }
 
-const VENDOR_CATEGORY_LABELS: Record<VendorCategory, { en: string; ar: string }> = {
-  dealership: { en: "Dealership / Agency", ar: "وكيل / معرض سيارات" },
-  leasing: { en: "Leasing Company", ar: "شركة تأجير تمويلي" },
-  auction: { en: "Automotive Auction", ar: "مزاد سيارات" },
-  maintenance_parts: { en: "Maintenance & Parts", ar: "صيانة وقطع غيار" },
-};
-
 export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const resourceRoute = parseFleetResourceRoute(pathname);
+  const selectedVendorId =
+    resourceRoute?.resource === "vendors" ? resourceRoute.id : null;
+
+  const { data: wsCtx } = useGetWorkspaceContextQuery();
+  const companyName = wsCtx?.data?.company?.name || "Revix";
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [page, setPage] = usePersistedPage("fleet/vendors");
   const pageSize = 15;
   const { data, isLoading, refetch, isFetching } = useListVendorsQuery({
-    category: selectedCategory !== "all" ? (selectedCategory as VendorCategory) : undefined,
     search: search.trim() || undefined,
-    page,
-    pageSize,
+    page: selectedVendorId ? 1 : page,
+    pageSize: selectedVendorId ? 100 : pageSize,
   });
   const [createVendor, { isLoading: isCreating }] = useCreateVendorMutation();
   const [updateVendor, { isLoading: isUpdating }] = useUpdateVendorMutation();
+  const [triggerExportVendors, { isFetching: isExporting }] = useLazyListVendorsQuery();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<VendorDto | null>(null);
+
+  const openVendorDetails = (vendorId: string) => {
+    router.push(vendorHref(vendorId));
+  };
+
+  const closeVendorDetails = () => {
+    router.push(vendorHref());
+  };
 
   // Form State
   const [formName, setFormName] = useState("");
@@ -195,243 +207,257 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
     }
   }
 
+  const selectedVendor = useMemo(
+    () => (selectedVendorId ? paginatedVendors.find((v) => v.id === selectedVendorId) ?? null : null),
+    [selectedVendorId, paginatedVendors],
+  );
+
+  async function handleExportExcel() {
+    try {
+      const res = await triggerExportVendors({
+        search: search.trim() || undefined,
+        page: 1,
+        pageSize: 1000,
+      }).unwrap();
+      const rows = res?.data ?? paginatedVendors;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      await exportStyledExcel({
+        fileName: `vendors-${dateStr}.xlsx`,
+        sheetName: isRtl ? "الموردين" : "Vendors",
+        title: isRtl ? `${companyName} — دليل الموردين` : `${companyName} — Vendors Directory`,
+        subtitle: isRtl
+          ? `تاريخ التصدير: ${dateStr}  |  إجمالي الموردين: ${rows.length}`
+          : `Exported on: ${dateStr}  |  Total vendors: ${rows.length}`,
+        isRtl,
+        rows,
+        columns: [
+          {
+            key: "index",
+            header: "#",
+            minWidth: 6,
+            align: "center",
+            value: (_v, idx) => idx + 1,
+          },
+          {
+            key: "name",
+            header: isRtl ? "اسم المورد" : "Vendor Name",
+            minWidth: 20,
+            value: (v) => v.name,
+          },
+          {
+            key: "legalName",
+            header: isRtl ? "الاسم القانوني" : "Legal Name",
+            minWidth: 20,
+            value: (v) => v.legalName,
+          },
+          {
+            key: "contactPerson",
+            header: isRtl ? "مسؤول التواصل" : "Contact Person",
+            minWidth: 20,
+            value: (v) => v.contactPerson,
+          },
+          {
+            key: "phone",
+            header: isRtl ? "رقم الهاتف" : "Phone",
+            minWidth: 18,
+            isTextCode: true,
+            value: (v) => v.phone,
+          },
+          {
+            key: "email",
+            header: isRtl ? "البريد الإلكتروني" : "Email",
+            minWidth: 24,
+            value: (v) => v.email,
+          },
+          {
+            key: "location",
+            header: isRtl ? "الموقع" : "Location",
+            minWidth: 18,
+            value: (v) => `${v.city}, ${v.countryCode}`,
+          },
+          {
+            key: "commercialRegister",
+            header: isRtl ? "السجل التجاري" : "Commercial Reg",
+            minWidth: 18,
+            isTextCode: true,
+            value: (v) => v.commercialRegister,
+          },
+          {
+            key: "taxNumber",
+            header: isRtl ? "الرقم الضريبي" : "Tax ID",
+            minWidth: 18,
+            isTextCode: true,
+            value: (v) => v.taxNumber,
+          },
+        ],
+      });
+    } catch {
+      // ignore export error
+    }
+  }
+
   return (
-    <div className="space-y-6" dir={isRtl ? "rtl" : "ltr"}>
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
-              {isRtl ? "دليل الموردين وشركات التوريد" : "Vendors Directory"}
-            </h1>
-          </div>
-          <p className="mt-1 text-xs text-revix-secondary sm:text-sm">
-            {isRtl
-              ? "إدارة شبكة الموردين، وكلاء السيارات، شروط الدفع، والتفاصيل البنكية والضريبية."
-              : "Manage car suppliers, dealerships, leasing agencies, payment terms, and banking details."}
-          </p>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      {selectedVendorId ? (
+        selectedVendor ? (
+          <VendorDetailPage
+            vendor={selectedVendor}
+            isRtl={isRtl}
+            onBack={closeVendorDetails}
+            onEdit={handleOpenEditModal}
+          />
+        ) : (
+          <ResourceFeedback
+            isRtl={isRtl}
+            isLoading={isLoading}
+            onRetry={() => refetch()}
+            onBack={closeVendorDetails}
+            loadingTitle={isRtl ? "جارٍ تحميل ملف المورد..." : "Loading vendor file..."}
+            backLabel={isRtl ? "العودة لدليل الموردين" : "Back to Vendors"}
+          />
+        )
+      ) : (
+      <>
+      {/* Clean Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
+            {isRtl ? "دليل الموردين" : "Vendors Directory"}
+          </h1>
+          <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+            {totalVendors}
+          </span>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-52">
+            <RevixIcon
+              name="search"
+              className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder={isRtl ? "بحث بالمورد، الهاتف..." : "Search vendor, phone..."}
+              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={isExporting || totalVendors === 0}
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 text-xs font-semibold text-revix-dark shadow-xs transition hover:bg-revix-surface disabled:opacity-50"
+          >
+            <RevixIcon name="file-text" className="h-3.5 w-3.5 text-revix-primary" />
+            <span>{isRtl ? "تصدير إكسل" : "Export Excel"}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 text-xs font-medium text-revix-dark shadow-xs transition hover:bg-revix-surface active:scale-95 disabled:opacity-50"
+            aria-label={isRtl ? "تحديث" : "Refresh"}
+            title={isRtl ? "تحديث" : "Refresh"}
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark shadow-xs transition hover:bg-revix-surface disabled:opacity-50"
           >
             <RevixIcon
               name="refresh-cw"
               className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-revix-primary" : "text-revix-secondary"}`}
             />
-            <span>{isRtl ? "تحديث" : "Refresh"}</span>
           </button>
 
           <button
             type="button"
             onClick={handleOpenCreateModal}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-revix-white shadow-xs transition hover:bg-revix-primary-hover active:scale-95"
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-revix-white shadow-xs transition hover:bg-revix-primary-hover"
           >
             <RevixIcon name="plus" className="h-4 w-4" />
-            <span>{isRtl ? "إضافة مورد جديد" : "Add Vendor"}</span>
+            <span>{isRtl ? "إضافة مورد" : "Add Vendor"}</span>
           </button>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border border-revix-border bg-revix-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-revix-secondary">
-              {isRtl ? "إجمالي الموردين" : "Total Vendors"}
-            </span>
-            <div className="rounded-md bg-revix-surface p-1.5 text-revix-primary">
-              <RevixIcon name="building-2" className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-revix-dark">
-            {stats.total}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-revix-border bg-revix-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-revix-secondary">
-              {isRtl ? "المعارض والوكلاء" : "Dealerships"}
-            </span>
-            <div className="rounded-md bg-revix-accent-soft p-1.5 text-revix-accent">
-              <RevixIcon name="car-front" className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-revix-dark">
-            {stats.dealerships}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-revix-border bg-revix-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-revix-secondary">
-              {isRtl ? "التأجير التمويلي" : "Leasing Partners"}
-            </span>
-            <div className="rounded-md bg-revix-info-soft p-1.5 text-revix-info">
-              <RevixIcon name="wallet" className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-revix-dark">
-            {stats.leasing}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-revix-border bg-revix-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-revix-secondary">
-              {isRtl ? "صيانة وقطع غيار" : "Parts & Service"}
-            </span>
-            <div className="rounded-md bg-revix-warning-soft p-1.5 text-revix-warning">
-              <RevixIcon name="wrench" className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-revix-dark">
-            {stats.maintenance}
-          </p>
-        </div>
-      </div>
-
-      {/* Filter Toolbar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-revix-border bg-revix-surface/60 p-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search */}
-        <div className="relative flex-1 sm:max-w-xs">
-          <RevixIcon
-            name="search"
-            className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
-          />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder={
-              isRtl
-                ? "بحث باسم المورد، مسؤول التواصل، أو الهاتف..."
-                : "Search by vendor, contact, phone..."
-            }
-            className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted transition focus:border-revix-primary focus:outline-hidden focus:ring-1 focus:ring-revix-primary ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
-          />
-        </div>
-
-        {/* Category Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory("all");
-              setPage(1);
-            }}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-              selectedCategory === "all"
-                ? "bg-revix-primary text-revix-white"
-                : "border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-            }`}
-          >
-            {isRtl ? "الكل" : "All"} ({vendors.length})
-          </button>
-          {(
-            ["dealership", "leasing", "auction", "maintenance_parts"] as VendorCategory[]
-          ).map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => {
-                setSelectedCategory(cat);
-                setPage(1);
-              }}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                selectedCategory === cat
-                  ? "bg-revix-primary text-revix-white"
-                  : "border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-              }`}
-            >
-              {isRtl ? VENDOR_CATEGORY_LABELS[cat].ar : VENDOR_CATEGORY_LABELS[cat].en}
-            </button>
-          ))}
         </div>
       </div>
 
       {/* Vendors List */}
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center rounded-xl border border-revix-border bg-revix-white text-xs text-revix-secondary">
+        <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-revix-border bg-revix-white text-xs text-revix-secondary">
           <RevixIcon name="refresh-cw" className="mr-2 h-4 w-4 animate-spin text-revix-primary" />
-          {isRtl ? "جاري تحميل دليل الموردين..." : "Loading vendors directory..."}
-        </div>
-      ) : filteredVendors.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-revix-border bg-revix-white p-10 text-center">
-          <div className="rounded-full bg-revix-surface p-3 text-revix-secondary">
-            <RevixIcon name="building-2" className="h-8 w-8" />
-          </div>
-          <h3 className="mt-3 text-sm font-semibold text-revix-dark">
-            {isRtl ? "لا يوجد موردون مسجلون" : "No vendors registered yet"}
-          </h3>
-          <p className="mt-1 max-w-sm text-xs text-revix-secondary">
-            {isRtl
-              ? "سجل موردي السيارات ومعارض الوكلاء لبدء إنشاء أوامر شراء السيارات ومتابعة الدفعات."
-              : "Register car dealerships and suppliers to start creating POs and tracking invoices."}
-          </p>
-          <button
-            type="button"
-            onClick={handleOpenCreateModal}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 py-1.5 text-xs font-semibold text-revix-white shadow-xs hover:bg-revix-primary-hover"
-          >
-            <RevixIcon name="plus" className="h-3.5 w-3.5" />
-            <span>{isRtl ? "إضافة مورد جديد" : "Add Vendor Now"}</span>
-          </button>
+          {isRtl ? "جاري التحميل..." : "Loading..."}
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-revix-border bg-revix-white">
-            <DataTable className="w-full min-w-[1050px] text-xs">
+          <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+            <DataTable fitAvailableHeight className="text-xs">
               <thead>
-                <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold text-revix-muted">
-                  <th className="px-4 py-3 text-start">{isRtl ? "المورد" : "Vendor"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "التصنيف" : "Category"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "مسؤول التواصل" : "Contact"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "الهاتف" : "Phone"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "البريد الإلكتروني" : "Email"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "الموقع" : "Location"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "السجل التجاري" : "Commercial Reg."}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "شروط الدفع" : "Payment Terms"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
-                  <th className="px-4 py-3 text-end">{isRtl ? "إجراءات" : "Actions"}</th>
+                <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "المورد" : "Vendor"}</th>
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "مسؤول التواصل" : "Contact"}</th>
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "الهاتف" : "Phone"}</th>
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "البريد الإلكتروني" : "Email"}</th>
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "الموقع" : "Location"}</th>
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-end font-semibold">{isRtl ? "إجراءات" : "Actions"}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-revix-border/70">
-                {paginatedVendors.map((v) => {
-                  const terms = formatVendorPaymentTerms(v, isRtl);
-                  return (
-                    <tr key={v.id} className="align-middle transition-colors hover:bg-revix-surface/35">
-                      <td className="px-4 py-3">
-                        <div className="font-bold text-revix-dark">{v.name}</div>
-                        {v.legalName && <div className="mt-0.5 text-[11px] text-revix-secondary">{v.legalName}</div>}
+              <tbody className="divide-y divide-revix-border/60">
+                {paginatedVendors.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="h-48 text-center text-sm text-revix-secondary">
+                      {isRtl ? "لا يوجد موردون مسجلون" : "No vendors registered"}
+                    </td>
+                  </tr>
+                ) : paginatedVendors.map((v) => (
+                    <tr
+                      key={v.id}
+                      onClick={() => openVendorDetails(v.id)}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") openVendorDetails(v.id);
+                      }}
+                      className="cursor-pointer align-middle transition-colors hover:bg-revix-surface/60 focus:bg-revix-surface/60 focus:outline-none"
+                    >
+                      <td className="py-2.5 px-3.5 font-semibold text-revix-dark whitespace-nowrap">
+                        {v.name}
                       </td>
-                      <td className="px-3 py-3 text-revix-secondary">{VENDOR_CATEGORY_LABELS[v.category]?.[isRtl ? "ar" : "en"] ?? v.category}</td>
-                      <td className="px-3 py-3 font-medium text-revix-dark">{v.contactPerson}</td>
-                      <td className="px-3 py-3 font-mono"><a href={`tel:${v.phone}`} className="text-revix-primary hover:underline">{v.phone}</a></td>
-                      <td className="max-w-48 truncate px-3 py-3 text-revix-secondary">{v.email ? <a href={`mailto:${v.email}`} className="hover:text-revix-primary hover:underline">{v.email}</a> : "—"}</td>
-                      <td className="px-3 py-3 text-revix-secondary">{v.city}, {v.countryCode}</td>
-                      <td className="px-3 py-3 font-mono text-revix-secondary">{v.commercialRegister || "—"}</td>
-                      <td className="px-3 py-3"><span className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-bold ${terms.badgeClass}`} title={terms.details}><RevixIcon name={terms.icon} className="h-3 w-3" />{terms.label}</span></td>
-                      <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${v.status === "active" ? "bg-revix-accent-soft text-revix-accent" : "bg-revix-surface text-revix-muted"}`}>{v.status === "active" ? (isRtl ? "نشط" : "Active") : (isRtl ? "معطل" : "Inactive")}</span></td>
-                      <td className="px-4 py-3 text-end"><button type="button" onClick={() => handleOpenEditModal(v)} className="rounded-md border border-revix-border bg-revix-white px-2.5 py-1.5 text-[11px] font-medium text-revix-dark transition hover:bg-revix-surface">{isRtl ? "تعديل" : "Edit"}</button></td>
+                      <td className="py-2.5 px-3.5 font-medium text-revix-dark whitespace-nowrap">{v.contactPerson}</td>
+                      <td className="py-2.5 px-3.5 font-mono text-revix-dark whitespace-nowrap" dir="ltr">
+                        {v.phone}
+                      </td>
+                      <td className="max-w-48 truncate py-2.5 px-3.5 text-revix-secondary">
+                        {v.email || "—"}
+                      </td>
+                      <td className="py-2.5 px-3.5 text-revix-secondary whitespace-nowrap">{v.city}, {v.countryCode}</td>
+                      <td className="py-2.5 px-3.5 text-end whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(v)}
+                            className="h-7 cursor-pointer rounded-md border border-revix-border bg-revix-white px-2.5 text-[11px] font-medium text-revix-dark transition hover:bg-revix-surface"
+                          >
+                            {isRtl ? "تعديل" : "Edit"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openVendorDetails(v.id)}
+                            className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border border-revix-border bg-revix-white px-2.5 text-[11px] font-medium text-revix-secondary transition hover:bg-revix-surface hover:text-revix-dark"
+                          >
+                            <RevixIcon name="eye" size={12} />
+                            <span>{isRtl ? "عرض" : "View"}</span>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </DataTable>
           </div>
 
-          {/* Unified Pagination */}
-          <div className="overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-2xs">
-            <RevixPagination
+          {/* Unified Compact Pagination */}
+          <div className="shrink-0 overflow-hidden rounded-lg border border-revix-border bg-revix-white empty:hidden">
+            <RevixPagination compact
               currentPage={page}
               totalItems={totalVendors}
               pageSize={pageSize}
@@ -441,6 +467,8 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
             />
           </div>
         </>
+      )}
+      </>
       )}
 
       {/* Modal Dialog */}
@@ -506,24 +534,6 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-revix-dark mb-1">
-                    {isRtl ? "تصنيف المورد" : "Category"}
-                  </label>
-                  <RevixSelect
-                    size="sm"
-                    isRtl={isRtl}
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value as VendorCategory)}
-                    buttonClassName="h-9 rounded-lg text-xs"
-                    options={[
-                      { value: "dealership", label: isRtl ? "معرض / وكيل سيارات" : "Dealership" },
-                      { value: "leasing", label: isRtl ? "تأجير تمويلي" : "Leasing Company" },
-                      { value: "auction", label: isRtl ? "مزاد سيارات" : "Auction" },
-                      { value: "maintenance_parts", label: isRtl ? "صيانة وقطع غيار" : "Maintenance & Parts" },
-                    ]}
-                  />
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-revix-dark">
                     {isRtl ? "مسؤول التواصل" : "Contact Person"} *
                   </label>
@@ -536,9 +546,6 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
                     className="mt-1 h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark placeholder:text-revix-disabled/60 focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-revix-dark">
                     {isRtl ? "الهاتف" : "Phone Number"} *
@@ -552,18 +559,19 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
                     className="mt-1 h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs font-mono text-revix-dark placeholder:text-revix-disabled/60 focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-revix-dark">
-                    {isRtl ? "البريد الإلكتروني" : "Email Address"}
-                  </label>
-                  <input
-                    type="email"
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    placeholder="sales@vendor.com"
-                    className="mt-1 h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark placeholder:text-revix-disabled/60 focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                  />
-                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-revix-dark">
+                  {isRtl ? "البريد الإلكتروني" : "Email Address"}
+                </label>
+                <input
+                  type="email"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  placeholder="sales@vendor.com"
+                  className="mt-1 h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark placeholder:text-revix-disabled/60 focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -588,29 +596,6 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
                   countryCode={formCountryCode}
                   city={formCity}
                   onChange={setFormCity}
-                />
-              </div>
-
-              {/* Enterprise Payment Terms Selector */}
-              <div className="rounded-xl border border-revix-border bg-white p-3.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-revix-dark">
-                    {isRtl ? "اتفاقية وشروط الدفع المعتمدة مع المورد" : "Commercial Payment Terms Standard"}
-                  </label>
-                  <span className="text-[10px] font-medium text-revix-muted">
-                    {isRtl ? "المعيار العالمي ERP" : "Global ERP Standard"}
-                  </span>
-                </div>
-                <PaymentTermsSelector
-                  valueType={formPaymentTermsType}
-                  valueDays={formPaymentTerms}
-                  valueConfig={formPaymentTermsConfig}
-                  isRtl={isRtl}
-                  onChange={(res) => {
-                    setFormPaymentTermsType(res.type);
-                    setFormPaymentTerms(res.days);
-                    setFormPaymentTermsConfig(res.config || null);
-                  }}
                 />
               </div>
 

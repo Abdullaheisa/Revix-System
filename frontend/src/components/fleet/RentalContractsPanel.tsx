@@ -65,190 +65,167 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
     .reduce((acc, c) => acc + (c.totalAmount || 0), 0);
 
   return (
-    <div className="space-y-6" dir={isRtl ? "rtl" : "ltr"}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
             {isRtl ? "عقود التأجير" : "Rental Contracts"}
           </h1>
-          <p className="mt-1 text-xs text-revix-secondary">
-            {isRtl
-              ? "إدارة عقود الإيجار، تسليم واستلام السيارات، وحساب الأيام والشرائح تلقائياً"
-              : "Manage active rentals, vehicle check-out/return, and automated tiered billing"}
-          </p>
+          <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+            {filtered.length}
+          </span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-revix-primary px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-colors"
-        >
-          <RevixIcon name="plus" size={15} />
-          <span>{isRtl ? "إنشاء عقد جديد" : "New Contract"}</span>
-        </button>
-      </div>
-
-      {/* KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="rounded-xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-          <div className="text-[11px] font-semibold text-revix-secondary">
-            {isRtl ? "عقود سارية حالياً" : "Active Contracts"}
-          </div>
-          <div className="mt-1 font-mono text-2xl font-bold text-emerald-700">{activeCount}</div>
-        </div>
-        <div className="rounded-xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-          <div className="text-[11px] font-semibold text-revix-secondary">
-            {isRtl ? "عقود مكتملة" : "Completed"}
-          </div>
-          <div className="mt-1 font-mono text-2xl font-bold text-revix-dark">{completedCount}</div>
-        </div>
-        <div className="col-span-2 sm:col-span-1 rounded-xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-          <div className="text-[11px] font-semibold text-revix-secondary">
-            {isRtl ? "إجمالي قيمة العقود" : "Total Contract Value"}
-          </div>
-          <div className="mt-1 font-mono text-2xl font-bold text-revix-primary">
-            {totalRevenue.toLocaleString()}
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {[
-            { id: "all", ar: "الكل", en: "All" },
-            { id: "active", ar: "ساري", en: "Active" },
-            { id: "completed", ar: "مكتمل", en: "Completed" },
-            { id: "cancelled", ar: "ملغي", en: "Cancelled" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setStatusFilter(tab.id);
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-56">
+            <RevixIcon
+              name="search"
+              className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
                 setPage(1);
               }}
-              className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                statusFilter === tab.id
-                  ? "border-revix-primary bg-revix-primary text-white"
-                  : "border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-              }`}
-            >
-              {isRtl ? tab.ar : tab.en}
-            </button>
-          ))}
-        </div>
+              placeholder={isRtl ? "بحث بالعقد، العميل، اللوحة..." : "Search contract, customer, plate..."}
+              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
+            />
+          </div>
 
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          placeholder={isRtl ? "بحث برقم العقد أو العميل أو اللوحة..." : "Search contract, customer, plate..."}
-          className="h-9 w-full max-w-xs rounded-xl border border-revix-border bg-revix-white px-3 text-xs focus:border-revix-primary focus:outline-hidden"
-        />
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-colors"
+          >
+            <RevixIcon name="plus" size={14} />
+            <span>{isRtl ? "إنشاء عقد جديد" : "New Contract"}</span>
+          </button>
+        </div>
       </div>
 
-      <SectionCard noPadding>
-        {isLoading ? (
-          <EmptyState message={isRtl ? "جاري تحميل عقود التأجير..." : "Loading contracts..."} />
-        ) : paginated.length === 0 ? (
-          <EmptyState message={isRtl ? "لا توجد عقود تأجير مطابقة." : "No matching rental contracts."} />
-        ) : (
-          <div className="overflow-x-auto">
-            <DataTable className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
-                  <th className="px-4 py-3 text-start">{isRtl ? "رقم العقد" : "Contract #"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "العميل" : "Customer"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "السيارة" : "Vehicle"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "الفترة" : "Dates"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "الإجمالي" : "Total"}</th>
-                  <th className="px-3 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
-                  <th className="px-4 py-3 text-end">{isRtl ? "إجراءات" : "Actions"}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-revix-border/70">
-                {paginated.map((c) => {
-                  const st = STATUS_BADGE[c.status] || STATUS_BADGE.active;
-                  return (
-                    <tr key={c.id} className="hover:bg-revix-surface/35">
-                      <td className="px-4 py-3">
-                        <div className="font-mono font-bold text-revix-primary">
-                          {c.contractNumber}
-                        </div>
-                        {c.createdByUserName && (
-                          <div className="mt-0.5 text-[10px] text-revix-muted">
-                            {isRtl ? "بواسطة:" : "By:"} {c.createdByUserName}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="font-bold text-revix-dark">{c.customerName || "—"}</div>
-                        {c.customerPhone && (
-                          <div className="font-mono text-[11px] text-revix-secondary">{c.customerPhone}</div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="font-semibold text-revix-dark">{c.vehicleName || "—"}</div>
-                        <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
-                          {c.vehiclePlate}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 font-mono text-revix-secondary">
-                        <div>{c.startDate} → {c.endDate}</div>
-                        <div className="text-[11px]">{c.totalDays} {isRtl ? "يوم" : "d"}</div>
-                      </td>
-                      <td className="px-3 py-3 font-mono font-bold text-revix-dark">
-                        {c.totalAmount.toLocaleString()}
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.cls}`}>
-                          {isRtl ? st.ar : st.en}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        {c.status === "active" ? (
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setCompletingContract(c)}
-                              className="cursor-pointer rounded-md bg-revix-primary px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-revix-primary-hover"
-                            >
-                              {isRtl ? "استلام وإغلاق" : "Return"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => cancelContract(c.id)}
-                              className="cursor-pointer rounded-md border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50"
-                            >
-                              {isRtl ? "إلغاء" : "Cancel"}
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="font-mono text-[11px] text-revix-muted">
-                            {c.returnOdometer != null ? `${c.returnOdometer.toLocaleString()} km` : "—"}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </DataTable>
-          </div>
-        )}
-      </SectionCard>
+      {/* Status Underline Tabs */}
+      <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-revix-border">
+        {[
+          { id: "all", ar: "الكل", en: "All" },
+          { id: "active", ar: "ساري", en: "Active" },
+          { id: "completed", ar: "مكتمل", en: "Completed" },
+          { id: "cancelled", ar: "ملغي", en: "Cancelled" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => {
+              setStatusFilter(tab.id);
+              setPage(1);
+            }}
+            className={`cursor-pointer shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs transition-colors ${
+              statusFilter === tab.id
+                ? "border-revix-primary font-semibold text-revix-primary"
+                : "border-transparent text-revix-secondary hover:text-revix-dark"
+            }`}
+          >
+            {isRtl ? tab.ar : tab.en}
+          </button>
+        ))}
+      </nav>
 
-      <RevixPagination
-        currentPage={page}
-        totalItems={filtered.length}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        lang={isRtl ? "ar" : "en"}
-      />
+      <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+        <DataTable fitAvailableHeight className="text-xs">
+          <thead>
+            <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "رقم العقد" : "Contract #"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "العميل" : "Customer"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "السيارة" : "Vehicle"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الفترة" : "Dates"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الإجمالي" : "Total"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold">{isRtl ? "الحالة" : "Status"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold">{isRtl ? "إجراءات" : "Actions"}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-revix-border/60">
+            {isLoading ? (
+              <tr><td colSpan={7} className="h-48 text-center text-xs text-revix-secondary">{isRtl ? "جاري التحميل..." : "Loading..."}</td></tr>
+            ) : paginated.length === 0 ? (
+              <tr><td colSpan={7} className="h-48 text-center text-sm text-revix-secondary">{isRtl ? "لا توجد عقود تأجير مطابقة" : "No matching rental contracts"}</td></tr>
+            ) : paginated.map((c) => {
+              const st = STATUS_BADGE[c.status] || STATUS_BADGE.active;
+              return (
+                <tr key={c.id} className="transition-colors hover:bg-revix-surface/60">
+                  <td className="py-2.5 px-3 whitespace-nowrap">
+                    <div className="font-mono font-bold text-revix-primary">{c.contractNumber}</div>
+                    {c.createdByUserName && (
+                      <div className="mt-0.5 text-[10px] text-revix-muted">
+                        {isRtl ? "بواسطة:" : "By:"} {c.createdByUserName}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <div className="font-bold text-revix-dark">{c.customerName || "—"}</div>
+                    {c.customerPhone && (
+                      <div className="font-mono text-[11px] text-revix-secondary">{c.customerPhone}</div>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <div className="font-semibold text-revix-dark">{c.vehicleName || "—"}</div>
+                    <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
+                      {c.vehiclePlate}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">
+                    <div>{c.startDate} → {c.endDate}</div>
+                    <div className="text-[11px]">{c.totalDays} {isRtl ? "يوم" : "d"}</div>
+                  </td>
+                  <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap">
+                    {c.totalAmount.toLocaleString()}
+                  </td>
+                  <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.cls}`}>
+                      {isRtl ? st.ar : st.en}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                    {c.status === "active" ? (
+                      <div className="inline-flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setCompletingContract(c)}
+                          className="h-8 cursor-pointer rounded-md bg-revix-primary px-2.5 text-[11px] font-semibold text-white hover:bg-revix-primary-hover"
+                        >
+                          {isRtl ? "استلام وإغلاق" : "Return"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => cancelContract(c.id)}
+                          className="h-8 cursor-pointer rounded-md border border-red-200 bg-white px-2.5 text-[11px] font-semibold text-red-600 hover:bg-red-50"
+                        >
+                          {isRtl ? "إلغاء" : "Cancel"}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="font-mono text-[11px] text-revix-muted">
+                        {c.returnOdometer != null ? `${c.returnOdometer.toLocaleString()} km` : "—"}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </DataTable>
+      </div>
+
+      <div className="shrink-0 overflow-hidden rounded-lg border border-revix-border bg-revix-white empty:hidden">
+        <RevixPagination compact
+          currentPage={page}
+          totalItems={filtered.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          lang={isRtl ? "ar" : "en"}
+          itemLabel={isRtl ? "عقد" : "contracts"}
+        />
+      </div>
 
       <CreateContractModal
         isOpen={isCreateOpen}

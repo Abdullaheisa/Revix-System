@@ -230,34 +230,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
           ],
         },
         {
-          groupTitleEn: "3. DISPATCH & DRIVERS",
-          groupTitleAr: "٣. النقل والسواقين",
-          items: [
-            {
-              id: "drivers",
-              titleEn: "Drivers",
-              titleAr: "السواقين",
-              descEn: "Driver directory, phones, license validity, passport, and status.",
-              descAr: "دليل السواقين وأرقام الهاتف والرخصة وجواز السفر.",
-              shortcut: "G V",
-              keyCode: "v",
-              isReady: true,
-            },
-            {
-              id: "movements",
-              titleEn: "Vehicle Movements",
-              titleAr: "حركة ونقل السيارات",
-              descEn: "Dispatch vehicles to branches with driver & odometer, and confirm branch receipt.",
-              descAr: "إرسال ونقل السيارات للفروع بالسواق والعداد وتأكيد استلام الفرع.",
-              shortcut: "G M",
-              keyCode: "m",
-              isReady: true,
-            },
-          ],
-        },
-        {
-          groupTitleEn: "4. PRICING & READINESS",
-          groupTitleAr: "٤. التسعير والجاهزية",
+          groupTitleEn: "3. PRICING & READINESS",
+          groupTitleAr: "٣. التسعير والجاهزية",
           items: [
             {
               id: "rental-inclusions",
@@ -294,8 +268,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
           ],
         },
         {
-          groupTitleEn: "5. CUSTOMERS & RENTALS",
-          groupTitleAr: "٥. العملاء والتأجير",
+          groupTitleEn: "4. CUSTOMERS & RENTALS",
+          groupTitleAr: "٤. العملاء والتأجير",
           items: [
             {
               id: "customers",

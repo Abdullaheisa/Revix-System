@@ -251,18 +251,6 @@ export class FleetService {
     actor: TenantActor,
     input: Omit<CreatePurchaseOrderInput, "companyId" | "createdByUserId">,
   ): Promise<PurchaseOrderRecord> {
-    // Branch scope check
-    if (
-      actor.role.scopeType === "assigned_branches" &&
-      !actor.branchIds.includes(input.branchId)
-    ) {
-      throw new FleetServiceError(
-        403,
-        "BRANCH_SCOPE_DENIED",
-        "You do not have permission to create purchase orders for this branch.",
-      );
-    }
-
     // Verify vendor
     await this.getVendor(actor, input.vendorId);
 
@@ -279,12 +267,7 @@ export class FleetService {
       await this.getVariant(actor, item.variantId);
     }
 
-    const branch = await this.store.findBranchById(input.branchId);
-    if (!branch || branch.companyId !== actor.company.id) {
-      throw new FleetServiceError(400, "INVALID_BRANCH", "The branch must belong to the issuing company.");
-    }
-
-    const poCurrency = input.currency || branch?.currencyCode || "EGP";
+    const poCurrency = input.currency || actor.company.baseCurrency || "EGP";
 
     const orderDate = new Intl.DateTimeFormat("en-CA", {
       timeZone: actor.company.timezone || "UTC",
@@ -293,6 +276,7 @@ export class FleetService {
 
     const po = await this.store.createPurchaseOrder({
       ...input,
+      branchId: null,
       orderDate,
       currency: poCurrency,
       companyId: actor.company.id,
@@ -342,22 +326,10 @@ export class FleetService {
       status?: PurchaseOrderStatus;
     },
   ): Promise<PurchaseOrderRecord[]> {
-    let effectiveBranchId = filter?.branchId;
-    if (actor.role.scopeType === "assigned_branches") {
-      if (effectiveBranchId && !actor.branchIds.includes(effectiveBranchId)) {
-        return [];
-      }
-    }
-
-    const pos = await this.store.listPurchaseOrders(actor.company.id, {
-      ...filter,
-      branchId: effectiveBranchId,
+    return this.store.listPurchaseOrders(actor.company.id, {
+      vendorId: filter?.vendorId,
+      status: filter?.status,
     });
-
-    if (actor.role.scopeType === "assigned_branches") {
-      return pos.filter((p) => actor.branchIds.includes(p.branchId));
-    }
-    return pos;
   }
 
   async getPurchaseOrder(
@@ -374,6 +346,7 @@ export class FleetService {
     }
     if (
       actor.role.scopeType === "assigned_branches" &&
+      po.branchId &&
       !actor.branchIds.includes(po.branchId)
     ) {
       throw new FleetServiceError(
@@ -963,6 +936,16 @@ export class FleetService {
 
   async listInsuranceCompanies(actor: TenantActor) {
     return this.store.listInsuranceCompanies(actor.company.id);
+  }
+
+  async listInsurancePoliciesByInsuranceCompany(
+    actor: TenantActor,
+    insuranceCompanyId: string,
+  ) {
+    return this.store.listInsurancePoliciesByInsuranceCompany(
+      actor.company.id,
+      insuranceCompanyId,
+    );
   }
 
   async createInsuranceCompany(

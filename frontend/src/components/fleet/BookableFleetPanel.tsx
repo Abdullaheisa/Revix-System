@@ -157,133 +157,108 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
   const onRentCount = allVehicles.filter((v) => v.status === "on_rent").length;
 
   return (
-    <div className="space-y-6" dir={isRtl ? "rtl" : "ltr"}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      {/* Clean Header & Search */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
-            {isRtl ? "الأسطول (حسب الفريانت)" : "Fleet Overview (By Variant)"}
+            {isRtl ? "الأسطول الجاهز للحجز" : "Fleet Overview"}
           </h1>
-          <p className="mt-1 text-xs text-revix-secondary">
-            {isRtl
-              ? "متابعة أنواع السيارات المتاحة، الأسعار، إجمالي الأعداد، المحجوز، والمؤجر خارج الشركة"
-              : "Monitor fleet variants, daily rates, total counts, reserved, and vehicles currently on rent"}
-          </p>
+          <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+            {totalCount}
+          </span>
         </div>
-      </div>
 
-      {/* KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-          <div className="text-[11px] font-semibold text-revix-secondary">
-            {isRtl ? "إجمالي الأسطول" : "Total Fleet"}
-          </div>
-          <div className="mt-1 font-mono text-2xl font-bold text-revix-dark">{totalCount}</div>
-        </div>
-        <div className="rounded-xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-          <div className="text-[11px] font-semibold text-revix-secondary">
-            {isRtl ? "متاح للحجز" : "Available"}
-          </div>
-          <div className="mt-1 font-mono text-2xl font-bold text-emerald-700">{availableCount}</div>
-        </div>
-        <div className="rounded-xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-          <div className="text-[11px] font-semibold text-revix-secondary">
-            {isRtl ? "محجوز" : "Reserved"}
-          </div>
-          <div className="mt-1 font-mono text-2xl font-bold text-amber-600">{reservedCount}</div>
-        </div>
-        <div className="rounded-xl border border-revix-border bg-revix-white p-4 shadow-2xs">
-          <div className="text-[11px] font-semibold text-revix-secondary">
-            {isRtl ? "بره / مؤجر" : "On Rent"}
-          </div>
-          <div className="mt-1 font-mono text-2xl font-bold text-revix-primary">{onRentCount}</div>
-        </div>
-      </div>
-
-      {/* View Mode Tabs + Network Ownership Filter + Search */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode("by_variant");
-              setPage(1);
-            }}
-            className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-              viewMode === "by_variant"
-                ? "border-revix-primary bg-revix-primary text-white"
-                : "border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-            }`}
-          >
-            {isRtl ? `ملخص الفئات (${variantSummaries.length})` : `By Variant (${variantSummaries.length})`}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode("bookable");
-              setPage(1);
-            }}
-            className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-              viewMode === "bookable"
-                ? "border-revix-primary bg-revix-primary text-white"
-                : "border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-            }`}
-          >
-            {isRtl ? `الأسطول المنشور (${bookableVehicles.length})` : `Live Units (${bookableVehicles.length})`}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode("ready_to_publish");
-              setPage(1);
-            }}
-            className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-              viewMode === "ready_to_publish"
-                ? "border-revix-primary bg-revix-primary text-white"
-                : "border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface"
-            }`}
-          >
-            {isRtl ? `أصول غير منشورة (${unpublishedVehicles.length})` : `Unpublished (${unpublishedVehicles.length})`}
-          </button>
-        </div>
-        {isNetworkMain && (
-          <div className="flex items-center gap-1 rounded-lg border border-revix-border bg-revix-surface/50 p-0.5 text-[11px]">
-            {[
-              { id: "all" as const, ar: "الكل", en: "All" },
-              { id: "own" as const, ar: "الشركة الأم", en: "Main Co." },
-              { id: "partners" as const, ar: "الشركات المحلية", en: "Local Partners" },
-            ].map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => {
-                  setOwnerFilter(opt.id);
-                  setPage(1);
-                }}
-                className={`cursor-pointer rounded-md px-2.5 py-1 font-semibold transition-colors ${
-                  ownerFilter === opt.id
-                    ? "bg-white text-revix-primary shadow-2xs"
-                    : "text-revix-secondary hover:text-revix-dark"
-                }`}
-              >
-                {isRtl ? opt.ar : opt.en}
-              </button>
-            ))}
+          {isNetworkMain && (
+            <div className="flex items-center gap-1 rounded-lg border border-revix-border bg-revix-surface/50 p-0.5 text-[11px]">
+              {[
+                { id: "all" as const, ar: "الكل", en: "All" },
+                { id: "own" as const, ar: "الشركة الأم", en: "Main Co." },
+                { id: "partners" as const, ar: "الشركات المحلية", en: "Local Partners" },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setOwnerFilter(opt.id);
+                    setPage(1);
+                  }}
+                  className={`cursor-pointer rounded-md px-2.5 py-1 font-semibold transition-colors ${
+                    ownerFilter === opt.id
+                      ? "bg-white text-revix-primary shadow-2xs"
+                      : "text-revix-secondary hover:text-revix-dark"
+                  }`}
+                >
+                  {isRtl ? opt.ar : opt.en}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="relative w-56">
+            <RevixIcon
+              name="search"
+              className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder={isRtl ? "بحث بالفريانت أو اللوحة..." : "Search variant or plate..."}
+              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
+            />
           </div>
-        )}
         </div>
+      </div>
 
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+      {/* Clean Underline Tabs */}
+      <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-revix-border">
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode("by_variant");
             setPage(1);
           }}
-          placeholder={isRtl ? "بحث بالفريانت أو اللوحة..." : "Search variant or plate..."}
-          className="h-9 w-full max-w-xs rounded-xl border border-revix-border bg-revix-white px-3 text-xs focus:border-revix-primary focus:outline-hidden"
-        />
-      </div>
+          className={`cursor-pointer shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs transition-colors ${
+            viewMode === "by_variant"
+              ? "border-revix-primary font-semibold text-revix-primary"
+              : "border-transparent text-revix-secondary hover:text-revix-dark"
+          }`}
+        >
+          {isRtl ? `ملخص الفئات (${variantSummaries.length})` : `By Variant (${variantSummaries.length})`}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode("bookable");
+            setPage(1);
+          }}
+          className={`cursor-pointer shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs transition-colors ${
+            viewMode === "bookable"
+              ? "border-revix-primary font-semibold text-revix-primary"
+              : "border-transparent text-revix-secondary hover:text-revix-dark"
+          }`}
+        >
+          {isRtl ? `الأسطول المنشور (${bookableVehicles.length})` : `Live Units (${bookableVehicles.length})`}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode("ready_to_publish");
+            setPage(1);
+          }}
+          className={`cursor-pointer shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs transition-colors ${
+            viewMode === "ready_to_publish"
+              ? "border-revix-primary font-semibold text-revix-primary"
+              : "border-transparent text-revix-secondary hover:text-revix-dark"
+          }`}
+        >
+          {isRtl ? `أصول غير منشورة (${unpublishedVehicles.length})` : `Unpublished (${unpublishedVehicles.length})`}
+        </button>
+      </nav>
 
       {viewMode === "by_variant" ? (
         <SectionCard noPadding>

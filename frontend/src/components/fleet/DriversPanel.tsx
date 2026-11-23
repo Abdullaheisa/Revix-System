@@ -19,6 +19,7 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 
 export interface DriversPanelProps {
   isRtl: boolean;
+  embedded?: boolean;
 }
 
 async function compressImageToDataUrl(file: File, maxDim = 1200): Promise<string> {
@@ -102,7 +103,7 @@ function DocumentUploadCard({
   );
 }
 
-export function DriversPanel({ isRtl }: DriversPanelProps) {
+export function DriversPanel({ isRtl, embedded = false }: DriversPanelProps) {
   const { data, isLoading } = useListDriversQuery();
   const [createDriver, { isLoading: isCreating }] = useCreateDriverMutation();
   const [updateDriver, { isLoading: isUpdating }] = useUpdateDriverMutation();
@@ -382,40 +383,73 @@ export function DriversPanel({ isRtl }: DriversPanelProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-revix-dark">
-          {isRtl ? "السواقين" : "Drivers"}
-        </h2>
-        <div className="flex items-center gap-2.5">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={isRtl ? "بحث بالاسم، الهاتف، الرخصة..." : "Search name, phone, license..."}
-            className="h-9 w-60 rounded-lg border border-revix-border bg-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:outline-hidden"
-          />
-          <Button onClick={openNew}>
-            {isRtl ? "+ إضافة سواق" : "+ Add Driver"}
-          </Button>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
+        {!embedded ? (
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
+              {isRtl ? "السواقين" : "Drivers"}
+            </h1>
+            <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+              {filtered.length}
+            </span>
+          </div>
+        ) : (
+          <div className="relative w-64">
+            <RevixIcon
+              name="search"
+              className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={isRtl ? "بحث بالاسم، الهاتف، الرخصة..." : "Search name, phone, license..."}
+              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
+            />
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {!embedded && (
+            <div className="relative w-56">
+              <RevixIcon
+                name="search"
+                className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
+              />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={isRtl ? "بحث بالاسم، الهاتف، الرخصة..." : "Search name, phone, license..."}
+                className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
+              />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={openNew}
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-colors"
+          >
+            <RevixIcon name="plus" size={14} />
+            <span>{isRtl ? "إضافة سواق" : "Add Driver"}</span>
+          </button>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-revix-border bg-white shadow-2xs">
-        <div className="overflow-x-auto">
-          <DataTable className="w-full text-start text-xs">
-            <thead>
-              <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
-                <th className="px-4 py-3 text-start">{isRtl ? "الاسم" : "Name"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "الهاتف" : "Phones"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "الرخصة" : "License"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "الصلاحية" : "Validity"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "الهوية / الجواز" : "ID / Passport"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "المرفقات" : "Docs"}</th>
-                <th className="px-3 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
-                <th className="px-4 py-3 text-end">{isRtl ? "إجراء" : "Actions"}</th>
-              </tr>
-            </thead>
+      <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+        <DataTable fitAvailableHeight className="text-xs">
+          <thead>
+            <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الاسم" : "Name"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الهاتف" : "Phones"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الرخصة" : "License"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الصلاحية" : "Validity"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الهوية / الجواز" : "ID / Passport"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "المرفقات" : "Docs"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold">{isRtl ? "الحالة" : "Status"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold">{isRtl ? "إجراءات" : "Actions"}</th>
+            </tr>
+          </thead>
             <tbody className="divide-y divide-revix-border/60">
               {isLoading ? (
                 <tr>
@@ -510,7 +544,6 @@ export function DriversPanel({ isRtl }: DriversPanelProps) {
               )}
             </tbody>
           </DataTable>
-        </div>
       </div>
     </div>
   );

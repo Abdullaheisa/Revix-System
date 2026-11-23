@@ -304,6 +304,27 @@ export interface AuthDataStore {
 
   // Insurance Companies & Vehicle Lifecycle
   listInsuranceCompanies(companyId: string): Promise<InsuranceCompanyRecord[]>;
+  listInsurancePoliciesByInsuranceCompany(
+    companyId: string,
+    insuranceCompanyId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      vehicleId: string;
+      vehicleTitle: string;
+      licensePlate: string;
+      vin: string;
+      branchName: string | null;
+      providerName: string;
+      policyNumber: string;
+      coverageType: string;
+      premiumAmount: number;
+      deductibleAmount: number;
+      startDate: string;
+      expiryDate: string;
+      status: string;
+    }>
+  >;
   createInsuranceCompany(input: {
     companyId: string;
     name: string;

@@ -3,10 +3,9 @@ import { WorkspacePageContent } from "./WorkspacePageContent";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { RevixIcon } from "@/components/ui/RevixIcons";
-
 import {
   StudioMobileDrawer,
+  StudioSmartSidebar,
   StudioTopBar,
 } from "@/components/shared/workspace";
 
@@ -29,6 +28,7 @@ import {
   setCommandPaletteOpen,
   setSelectedBranchId,
   syncRouteFromUrl,
+  toggleIconRailPinned,
   type WorkspaceSectionId,
 } from "@/store/slices/workspaceSlice";
 
@@ -64,6 +64,9 @@ export function WorkspaceStudioShell({
   const isCommandPaletteOpen = useAppSelector(
     (state) => state.workspace.isCommandPaletteOpen,
   );
+  const isIconRailPinned = useAppSelector(
+    (state) => state.workspace.isIconRailPinned,
+  );
   const pageByRoute = useAppSelector(
     (state) => state.workspace.pageByRoute,
   );
@@ -76,9 +79,6 @@ export function WorkspaceStudioShell({
   const activeSubPage = pendingUrlPush ? storedSubPage : route.subPage;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [openSidebarSections, setOpenSidebarSections] = useState<
-    Record<string, boolean>
-  >(() => ({ [activeSection]: true }));
   const gChordActiveRef = useRef(false);
   const gChordTimerRef = useRef<number | null>(null);
 
@@ -98,7 +98,9 @@ export function WorkspaceStudioShell({
     const isFleetResourceDetail =
       activeSection === "fleet" &&
       ((activeSubPage === "vehicles" && /^\/workspace\/fleet\/vehicles\/[^/]+/.test(currentResourcePath)) ||
-        (activeSubPage === "purchase-orders" && /^\/workspace\/fleet\/purchase-orders\/[^/]+/.test(currentResourcePath)));
+        (activeSubPage === "purchase-orders" && /^\/workspace\/fleet\/purchase-orders\/[^/]+/.test(currentResourcePath)) ||
+        (activeSubPage === "vendors" && /^\/workspace\/fleet\/vendors\/[^/]+/.test(currentResourcePath)) ||
+        (activeSubPage === "insurance-companies" && /^\/workspace\/fleet\/insurance-companies\/[^/]+/.test(currentResourcePath)));
     if (isFleetResourceDetail) return;
 
     const routeKey = `${activeSection}/${activeSubPage}`;
@@ -358,142 +360,22 @@ export function WorkspaceStudioShell({
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <aside
-          aria-label={isRtl ? "القائمة الجانبية" : "Workspace navigation"}
-          className="hidden md:flex w-[240px] shrink-0 flex-col gap-2 overflow-y-auto border-e border-revix-border bg-revix-surface/40 px-2.5 py-3"
-        >
-          {availableSections
-            .filter((sec) => sec.id !== "network" && sec.id !== "team")
-            .map((sec) => {
-              const mergedItems =
-                sec.id === "settings"
-                  ? [
-                      ...sec.groups.flatMap((g) => g.items).map((item) => ({
-                        sectionId: sec.id,
-                        item,
-                      })),
-                      ...availableSections
-                        .filter((s) => s.id === "network" || s.id === "team")
-                        .flatMap((s) =>
-                          s.groups.flatMap((g) =>
-                            g.items.map((item) => ({
-                              sectionId: s.id,
-                              item,
-                            })),
-                          ),
-                        ),
-                    ]
-                  : sec.groups.flatMap((g) => g.items).map((item) => ({
-                      sectionId: sec.id,
-                      item,
-                    }));
-
-              const isSectionActive =
-                activeSection === sec.id ||
-                (sec.id === "settings" &&
-                  (activeSection === "network" || activeSection === "team"));
-              const isExpanded =
-                openSidebarSections[sec.id] ?? isSectionActive;
-
-              return (
-                <div key={sec.id} className="space-y-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setOpenSidebarSections((prev) => ({
-                        ...prev,
-                        [sec.id]: !(prev[sec.id] ?? isSectionActive),
-                      }))
-                    }
-                    className="flex w-full cursor-pointer items-center justify-between rounded-[6px] px-2.5 py-1.5 text-start text-[11px] font-semibold uppercase tracking-wider text-revix-secondary transition-colors hover:bg-revix-surface hover:text-revix-dark"
-                  >
-                    <span className="truncate">
-                      {isRtl ? sec.titleAr : sec.titleEn}
-                    </span>
-                    <RevixIcon
-                      name="chevron-down"
-                      size={12}
-                      className={`shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  {isExpanded ? (
-                    sec.id === "fleet" && sec.groups.length > 1 ? (
-                      <div className="space-y-2.5 ps-1 pt-0.5">
-                        {sec.groups.map((grp, gIdx) => (
-                          <div key={grp.groupTitleEn} className={gIdx > 0 ? "border-t border-revix-border/60 pt-2" : ""}>
-                            <div className="px-2.5 pb-1 text-[10px] font-bold tracking-wide text-revix-muted">
-                              {isRtl ? grp.groupTitleAr : grp.groupTitleEn}
-                            </div>
-                            <div className="space-y-0.5">
-                              {grp.items.map((item) => {
-                                const isActive =
-                                  activeSection === sec.id &&
-                                  activeSubPage === item.id;
-                                return (
-                                  <button
-                                    key={`${sec.id}-${item.id}`}
-                                    type="button"
-                                    onClick={() =>
-                                      dispatch(
-                                        navigateToWorkspacePage({
-                                          section: sec.id,
-                                          subPage: item.id,
-                                        }),
-                                      )
-                                    }
-                                    className={`flex w-full cursor-pointer items-center rounded-[6px] px-2.5 py-1.5 text-start text-[13px] transition-colors ${
-                                      isActive
-                                        ? "bg-revix-tint font-semibold text-revix-primary"
-                                        : "font-medium text-revix-dark hover:bg-revix-surface"
-                                    }`}
-                                  >
-                                    <span className="truncate">
-                                      {isRtl ? item.titleAr : item.titleEn}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-0.5 ps-1">
-                        {mergedItems.map(({ sectionId, item }) => {
-                          const isActive =
-                            activeSection === sectionId &&
-                            activeSubPage === item.id;
-                          return (
-                            <button
-                              key={`${sectionId}-${item.id}`}
-                              type="button"
-                              onClick={() =>
-                                dispatch(
-                                  navigateToWorkspacePage({
-                                    section: sectionId,
-                                    subPage: item.id,
-                                  }),
-                                )
-                              }
-                              className={`flex w-full cursor-pointer items-center rounded-[6px] px-2.5 py-1.5 text-start text-[13px] transition-colors ${
-                                isActive
-                                  ? "bg-revix-tint font-semibold text-revix-primary"
-                                  : "font-medium text-revix-dark hover:bg-revix-surface"
-                              }`}
-                            >
-                              <span className="truncate">
-                                {isRtl ? item.titleAr : item.titleEn}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )
-                  ) : null}
-                </div>
-              );
-            })}
-        </aside>
+        <StudioSmartSidebar
+          isRtl={isRtl}
+          sections={availableSections}
+          activeSection={activeSection}
+          activeSubPage={activeSubPage}
+          isCollapsed={isIconRailPinned}
+          onSelectSection={(sec) => {
+            const target = availableSections.find((s) => s.id === sec);
+            const firstSubPage = target?.groups[0]?.items[0]?.id || "summary";
+            dispatch(navigateToWorkspacePage({ section: sec, subPage: firstSubPage }));
+          }}
+          onSelectSubPage={(section, subPage) =>
+            dispatch(navigateToWorkspacePage({ section, subPage }))
+          }
+          onToggleCollapse={() => dispatch(toggleIconRailPinned())}
+        />
 
         <StudioMobileDrawer
           isRtl={isRtl}

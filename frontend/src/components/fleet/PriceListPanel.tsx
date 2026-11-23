@@ -285,25 +285,25 @@ export function PriceListPanel({
   // Dedicated Branch Breakdown View for a Selected Variant (Owner / Multi-Branch HQ)
   if (selectedVariantRow) {
     return (
-      <div className="space-y-4" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setSelectedVariantId(null)}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-white px-3 py-1.5 text-xs font-semibold text-revix-secondary hover:text-revix-dark transition-colors"
+              title={isRtl ? "قائمة الأسعار" : "Price List"}
+              className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface transition-colors"
             >
               <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
-              <span>{isRtl ? "قائمة الأسعار" : "Price List"}</span>
             </button>
             <div>
-              <h1 className="text-[19px] font-bold tracking-tight text-revix-dark">
+              <h1 className="text-xl font-bold tracking-tight text-revix-dark">
                 {selectedVariantRow.title}
               </h1>
               <p className="text-xs text-revix-secondary">
                 {isRtl
-                  ? `${selectedVariantRow.totalCount} سيارة موزعة على ${selectedVariantRow.branches.length} ${selectedVariantRow.branches.length === 1 ? "فرع" : "فروع"} — يمكنك تعديل سعر كل فرع على حدة`
-                  : `${selectedVariantRow.totalCount} units across ${selectedVariantRow.branches.length} branch(es) — edit pricing per branch`}
+                  ? `${selectedVariantRow.totalCount} سيارة — ${selectedVariantRow.branches.length} ${selectedVariantRow.branches.length === 1 ? "فرع" : "فروع"}`
+                  : `${selectedVariantRow.totalCount} units — ${selectedVariantRow.branches.length} branch(es)`}
               </p>
             </div>
           </div>
@@ -324,15 +324,14 @@ export function PriceListPanel({
                 damageExcess: selectedVariantRow.damageExcess,
               })
             }
-            className="cursor-pointer rounded-lg bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
+            className="inline-flex h-9 cursor-pointer items-center rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
           >
             {isRtl ? "توحيد السعر لكل الفروع" : "Set Price for All Branches"}
           </button>
         </div>
 
-        <div className="overflow-hidden rounded-[8px] border border-revix-border bg-revix-white">
-          <div className="overflow-x-auto">
-            <DataTable className="w-full border-collapse text-start text-[13px]">
+        <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+          <DataTable fitAvailableHeight className="text-xs">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
                   <th className="px-4 py-2.5 text-start">{isRtl ? "الفرع / الموقع" : "Branch / Location"}</th>
@@ -402,7 +401,6 @@ export function PriceListPanel({
                 ))}
               </tbody>
             </DataTable>
-          </div>
         </div>
 
         <StudioModal
@@ -480,34 +478,33 @@ export function PriceListPanel({
   }
 
   return (
-    <div className="space-y-4" dir={isRtl ? "rtl" : "ltr"}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.015em] text-revix-dark">
-            {isRtl ? "قائمة الأسعار (حسب الفريانت)" : "Price List (By Variant)"}
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
+            {isRtl ? "قائمة الأسعار" : "Price List"}
           </h1>
-          <p className="mt-0.5 text-xs text-revix-secondary">
-            {isAllBranchesViewer
-              ? isRtl
-                ? "اضغط على أي فئة لعرض عدد السيارات وسعر كل فرع على حدة أو توحيد السعر"
-                : "Click any variant to view unit counts and pricing per branch, or unify rates"
-              : isRtl
-                ? "يتم تعديل أسعار سيارات فرعك فقط حسب الفريانت"
-                : "Update daily rate tiers per variant for your branch's vehicles"}
-          </p>
+          <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+            {filteredRows.length}
+          </span>
         </div>
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={isRtl ? "بحث بالفريانت أو الفرع..." : "Search variant or branch..."}
-          className="h-[34px] w-64 rounded-[6px] border border-revix-border bg-revix-white px-3 text-[13px] text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden"
-        />
+        <div className="relative w-56">
+          <RevixIcon
+            name="search"
+            className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
+          />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={isRtl ? "بحث بالفريانت أو الفرع..." : "Search variant or branch..."}
+            className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
+          />
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-[8px] border border-revix-border bg-revix-white">
-        <div className="overflow-x-auto">
-          <DataTable className="w-full border-collapse text-start text-[13px]">
+      <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+        <DataTable fitAvailableHeight className="text-xs">
             <thead>
               <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
                 <th className="px-4 py-2.5 text-start">
@@ -651,7 +648,6 @@ export function PriceListPanel({
               )}
             </tbody>
           </DataTable>
-        </div>
       </div>
 
       <StudioModal

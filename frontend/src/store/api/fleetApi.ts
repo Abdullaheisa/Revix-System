@@ -133,7 +133,7 @@ export interface PurchaseOrderItemDto {
 export interface PurchaseOrderDto {
   id: string;
   companyId: string;
-  branchId: string;
+  branchId: string | null;
   vendorId: string;
   poNumber: string;
   status: PurchaseOrderStatus;
@@ -176,7 +176,7 @@ export interface CreatePurchaseOrderItemInput {
 }
 
 export interface CreatePurchaseOrderInput {
-  branchId: string;
+  branchId?: string | null;
   vendorId: string;
   poNumber?: string;
   orderDate?: string;
@@ -199,7 +199,6 @@ export interface ReceiveVehicleInput {
   color: string;
   mileageOdometer?: number;
   isBookable?: boolean;
-  registrationExpiry?: string | null;
   insuranceExpiry?: string | null;
   inServiceDate?: string | null;
   insuranceCompanyId?: string | null;
@@ -251,8 +250,6 @@ export interface FleetVehicleDto {
   color: string;
   mileageOdometer: number;
   status: FleetVehicleStatus;
-  registrationExpiry: string | null;
-  insuranceExpiry: string | null;
   notes: string | null;
   photoUrl?: string | null;
   locationType?: string;
@@ -360,6 +357,23 @@ export interface InsuranceCompanyDto {
   email: string | null;
   address: string | null;
   createdAt: string;
+}
+
+export interface InsuranceCompanyPolicyDto {
+  id: string;
+  vehicleId: string;
+  vehicleTitle: string;
+  licensePlate: string;
+  vin: string;
+  branchName: string | null;
+  providerName: string;
+  policyNumber: string;
+  coverageType: string;
+  premiumAmount: number;
+  deductibleAmount: number;
+  startDate: string;
+  expiryDate: string;
+  status: string;
 }
 
 export interface VehicleInsurancePolicyDto {
@@ -521,8 +535,6 @@ export interface CreateFleetVehicleInput {
   mileageOdometer?: number;
   isBookable?: boolean;
   status?: FleetVehicleStatus;
-  registrationExpiry?: string | null;
-  insuranceExpiry?: string | null;
   inServiceDate?: string | null;
   insuranceCompanyId?: string | null;
   insuranceProviderName?: string | null;
@@ -559,8 +571,6 @@ export interface UpdateFleetVehicleInput {
   color?: string;
   mileageOdometer?: number;
   status?: FleetVehicleStatus;
-  registrationExpiry?: string | null;
-  insuranceExpiry?: string | null;
   inServiceDate?: string | null;
   insuranceCompanyId?: string | null;
   insuranceProviderName?: string | null;
@@ -692,6 +702,14 @@ export const fleetApi = baseApi.injectEndpoints({
       void
     >({
       query: () => "/fleet/insurance-companies",
+      providesTags: ["Fleet"],
+    }),
+
+    listInsuranceCompanyPolicies: builder.query<
+      { ok: boolean; data: InsuranceCompanyPolicyDto[] },
+      string
+    >({
+      query: (id) => `/fleet/insurance-companies/${encodeURIComponent(id)}/policies`,
       providesTags: ["Fleet"],
     }),
 
@@ -1470,6 +1488,7 @@ export const {
   useGetFleetMetricsQuery,
   useListAuditLogsQuery,
   useListInsuranceCompaniesQuery,
+  useListInsuranceCompanyPoliciesQuery,
   useCreateInsuranceCompanyMutation,
   useDeleteInsuranceCompanyMutation,
   useGetVehicleLifecycleQuery,
@@ -1497,9 +1516,11 @@ export const {
   useUpdateVariantMutation,
   useDeleteVariantMutation,
   useListVendorsQuery,
+  useLazyListVendorsQuery,
   useCreateVendorMutation,
   useUpdateVendorMutation,
   useListPurchaseOrdersQuery,
+  useLazyListPurchaseOrdersQuery,
   useCreatePurchaseOrderMutation,
   useUpdatePurchaseOrderStatusMutation,
   useReceiveVehicleMutation,

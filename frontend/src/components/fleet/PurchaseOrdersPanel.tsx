@@ -22,7 +22,8 @@ import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
-import { useCreatePurchaseOrderMutation, useListPurchaseOrdersQuery, useListVariantsQuery, useListVendorsQuery, useListVehiclesQuery, useReceiveVehicleMutation, useSignPurchaseOrderMutation, useUpdatePurchaseOrderStatusMutation, type CreatePurchaseOrderItemInput, type PurchaseOrderDto, type PurchaseOrderStatus, type PaymentTermsType } from "@/store/api/fleetApi";
+import { useCreatePurchaseOrderMutation, useLazyListPurchaseOrdersQuery, useListPurchaseOrdersQuery, useListVariantsQuery, useListVendorsQuery, useListVehiclesQuery, useReceiveVehicleMutation, useSignPurchaseOrderMutation, useUpdatePurchaseOrderStatusMutation, type CreatePurchaseOrderItemInput, type PurchaseOrderDto, type PurchaseOrderStatus, type PaymentTermsType } from "@/store/api/fleetApi";
+import { exportStyledExcel } from "@/lib/export/excelExport";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import type { BranchDto } from "@/store/api/workspaceApi";
 import { PaymentTermsSelector } from "./PaymentTermsSelector";
@@ -96,10 +97,10 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   const [pendingDeletePo, setPendingDeletePo] = useState<PurchaseOrderDto | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useListPurchaseOrdersQuery({
-    branchId: selectedBranchId !== "all" ? selectedBranchId : undefined,
     page,
     pageSize,
   });
+  const [triggerExportPos, { isFetching: isExportingPos }] = useLazyListPurchaseOrdersQuery();
 
   const dispatch = useAppDispatch();
 
@@ -147,8 +148,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   const [recvKeyNumber, setRecvKeyNumber] = useState("");
   const [recvColor, setRecvColor] = useState("White");
   const [recvMileage, setRecvMileage] = useState(15);
-  const [recvRegExpiry, setRecvRegExpiry] = useState("");
-  const [recvInsExpiry, setRecvInsExpiry] = useState("");
   const [recvNotes, setRecvNotes] = useState("");
   const [recvError, setRecvError] = useState<string | null>(null);
 
@@ -531,7 +530,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
           purchaseOrderId: po.id,
           itemId: targetItem.id,
           variantId: targetItem.variantId,
-          branchId: po.branchId,
+          branchId: po.branchId ?? undefined,
           poNumber: po.poNumber,
           unitPrice: targetItem.unitPrice,
           vin: targetItem.vin || "",
@@ -566,8 +565,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
         keyNumber: recvKeyNumber.trim() || null,
         color: recvColor.trim() || "White",
         mileageOdometer: Number(recvMileage) || 0,
-        registrationExpiry: recvRegExpiry || null,
-        insuranceExpiry: recvInsExpiry || null,
         notes: recvNotes.trim() || null,
       }).unwrap();
 
@@ -595,7 +592,13 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
         lang={isRtl ? "ar" : "en"}
         purchaseOrder={activePoForConvert}
         onBack={() => setIsConvertingVehicle(false)}
-        onSuccess={() => setIsConvertingVehicle(false)}
+        onSuccess={(vehicleId) => {
+          if (vehicleId) {
+            router.push(vehicleHref(vehicleId));
+          } else {
+            setIsConvertingVehicle(false);
+          }
+        }}
       />
     );
   }
@@ -993,19 +996,21 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             </div>
           </div>
         )}
-        {detailSection === "activity" && <section className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-          <ActivityTimeline entityType="purchase_order" entityId={po.id} isRtl={isRtl} />
-          <details className="w-full border-t border-revix-border py-3 text-xs">
-            <summary className="cursor-pointer font-medium text-revix-secondary">{isRtl ? "مسؤولو الطلب" : "Order participants"}</summary>
-            <dl className="mt-3 grid gap-2 sm:grid-cols-3">
-              {[
-                [isRtl ? "أنشأ الطلب" : "Created by", po.createdByUserName],
-                [isRtl ? "اعتمد الطلب" : "Approved by", po.approvedByUserName],
-                [isRtl ? "وقّع الطلب" : "Signed by", po.signedByName?.split("|")[0]],
-              ].map(([label, value]) => <div key={label} className="flex gap-3"><dt className="text-revix-secondary">{label}</dt><dd>{value || "—"}</dd></div>)}
-            </dl>
-          </details>
-        </section>}
+        {detailSection === "activity" && (
+          <section className="min-h-0 flex-1 overflow-y-auto">
+            <ActivityTimeline
+              entityType="purchase_order"
+              entityId={po.id}
+              isRtl={isRtl}
+              participantsLabel={isRtl ? "مسؤولو الطلب" : "Order participants"}
+              participants={[
+                { label: isRtl ? "أنشأ الطلب" : "Created by", value: po.createdByUserName },
+                { label: isRtl ? "اعتمد الطلب" : "Approved by", value: po.approvedByUserName },
+                { label: isRtl ? "وقّع الطلب" : "Signed by", value: po.signedByName?.split("|")[0] },
+              ]}
+            />
+          </section>
+        )}
 
         <RevixConfirmModal
           isOpen={Boolean(pendingDeletePo)}
@@ -1059,6 +1064,108 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
     );
   }
 
+  const handleExportPurchaseOrdersExcel = async () => {
+    try {
+      const res = await triggerExportPos({
+        page: 1,
+        pageSize: 1000,
+      }).unwrap();
+      const rows = res?.data ?? purchaseOrders;
+      const companyName = wsContext?.data?.company?.name || "Revix";
+      const dateStr = new Date().toISOString().slice(0, 10);
+      await exportStyledExcel({
+        fileName: `purchase-orders-${dateStr}.xlsx`,
+        sheetName: isRtl ? "أوامر الشراء" : "Purchase Orders",
+        title: isRtl ? `${companyName} — أوامر شراء السيارات` : `${companyName} — Purchase Orders`,
+        subtitle: isRtl
+          ? `تاريخ التصدير: ${dateStr}  |  إجمالي الأوامر: ${rows.length}`
+          : `Exported on: ${dateStr}  |  Total orders: ${rows.length}`,
+        isRtl,
+        rows,
+        columns: [
+          {
+            key: "index",
+            header: "#",
+            minWidth: 6,
+            align: "center",
+            value: (_p, idx) => idx + 1,
+          },
+          {
+            key: "poNumber",
+            header: isRtl ? "رقم الطلب" : "PO Number",
+            minWidth: 18,
+            isTextCode: true,
+            value: (p) => p.poNumber,
+          },
+          {
+            key: "orderDate",
+            header: isRtl ? "التاريخ" : "Order Date",
+            minWidth: 14,
+            isTextCode: true,
+            value: (p) => p.orderDate?.slice(0, 10) || "—",
+          },
+          {
+            key: "vendorName",
+            header: isRtl ? "المورد" : "Vendor",
+            minWidth: 20,
+            value: (p) => p.vendorName || "—",
+          },
+          {
+            key: "units",
+            header: isRtl ? "السيارات (مستلم/مطلوب)" : "Vehicles (Rec/Ord)",
+            minWidth: 18,
+            isTextCode: true,
+            value: (p) => {
+              const total = (p.items ?? []).reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+              const rec = (p.items ?? []).reduce((s, it) => s + (Number(it.receivedCount) || 0), 0);
+              return `${rec} / ${total}`;
+            },
+          },
+          {
+            key: "totalAmount",
+            header: isRtl ? "الإجمالي" : "Total",
+            minWidth: 16,
+            align: "center",
+            value: (p) => Number(p.totalAmount) || 0,
+          },
+          {
+            key: "upfrontPaid",
+            header: isRtl ? "المدفوع" : "Paid",
+            minWidth: 16,
+            align: "center",
+            value: (p) => Number(p.upfrontPaid) || 0,
+          },
+          {
+            key: "remainingAmount",
+            header: isRtl ? "المتبقي" : "Remaining",
+            minWidth: 16,
+            align: "center",
+            value: (p) => Number(p.remainingAmount) || 0,
+          },
+          {
+            key: "currency",
+            header: isRtl ? "العملة" : "Currency",
+            minWidth: 10,
+            isTextCode: true,
+            value: (p) => p.currency,
+          },
+          {
+            key: "status",
+            header: isRtl ? "الحالة" : "Status",
+            minWidth: 16,
+            align: "center",
+            value: (p) => {
+              const st = PO_STATUS_LABELS[p.status];
+              return st ? (isRtl ? st.ar : st.en) : p.status;
+            },
+          },
+        ],
+      });
+    } catch {
+      // ignore export error
+    }
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
       {!isCreateModalOpen && (
@@ -1074,6 +1181,16 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleExportPurchaseOrdersExcel}
+            disabled={isExportingPos || totalPurchaseOrders === 0}
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-3 text-xs font-semibold text-revix-dark shadow-xs transition hover:bg-revix-surface disabled:opacity-50"
+          >
+            <RevixIcon name="file-text" className="h-3.5 w-3.5 text-revix-primary" />
+            <span>{isRtl ? "تصدير إكسل" : "Export Excel"}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => refetch()}
@@ -1236,7 +1353,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
 
 
         {/* Pagination */}
-        <div className="shrink-0 overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+        <div className="shrink-0 overflow-hidden rounded-lg border border-revix-border bg-revix-white empty:hidden">
           <RevixPagination compact
             currentPage={page}
             totalItems={totalPurchaseOrders}
@@ -1791,35 +1908,6 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                       value={recvMileage}
                       onChange={(e) => setRecvMileage(Number(e.target.value))}
                       className="mt-1 h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "انتهاء رخصة السير" : "Registration Expiry"}
-                    </label>
-                    <RevixDatePicker
-                      size="sm"
-                      isRtl={isRtl}
-                      value={recvRegExpiry}
-                      onChange={(val) => setRecvRegExpiry(val)}
-                      placeholder={isRtl ? "تاريخ انتهاء الرخصة..." : "Registration expiry..."}
-                      buttonClassName="h-9 rounded-lg text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-revix-dark mb-1">
-                      {isRtl ? "انتهاء التأمين" : "Insurance Expiry"}
-                    </label>
-                    <RevixDatePicker
-                      size="sm"
-                      isRtl={isRtl}
-                      value={recvInsExpiry}
-                      onChange={(val) => setRecvInsExpiry(val)}
-                      placeholder={isRtl ? "تاريخ انتهاء التأمين..." : "Insurance expiry..."}
-                      buttonClassName="h-9 rounded-lg text-xs"
                     />
                   </div>
                 </div>

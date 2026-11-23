@@ -51,15 +51,8 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
     return pages;
   }, [totalPages, safePage]);
 
-  if (totalItems === 0) {
-    if (compact) return null;
-    return (
-      <div
-        className={`flex items-center justify-between px-6 py-4 border-t border-gray-100 text-xs sm:text-sm text-gray-500 bg-white ${className}`}
-      >
-        <span>{isAr ? "لا توجد عناصر لعرضها" : "Showing 0 items"}</span>
-      </div>
-    );
+  if (totalPages <= 1) {
+    return null;
   }
 
   return (

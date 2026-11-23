@@ -194,10 +194,10 @@ export function CommandPaletteModal({ isRtl }: CommandPaletteModalProps) {
                         type="button"
                         onMouseEnter={() => setHighlightedIndex(idx)}
                         onClick={() => selectEntry(entry)}
-                        className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-2.5 text-start transition-colors ${
+                        className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-2 text-start transition-colors ${
                           isActive
-                            ? "bg-revix-tint text-revix-primary"
-                            : "text-revix-dark hover:bg-revix-surface"
+                            ? "bg-revix-accent-soft text-revix-primary"
+                            : "text-revix-dark hover:bg-revix-accent-soft/80 hover:text-revix-primary"
                         }`}
                       >
                         <div className="flex min-w-0 items-center gap-3">
@@ -210,16 +210,9 @@ export function CommandPaletteModal({ isRtl }: CommandPaletteModalProps) {
                           >
                             <RevixIcon name={entry.icon} size={14} />
                           </span>
-                          <div className="min-w-0">
-                            <p className="truncate text-[13.5px] font-semibold">
-                              {isRtl ? entry.item.titleAr : entry.item.titleEn}
-                            </p>
-                            <p className="truncate text-[11.5px] text-revix-secondary">
-                              {isRtl
-                                ? entry.sectionTitleAr
-                                : entry.sectionTitleEn}
-                            </p>
-                          </div>
+                          <p className="min-w-0 truncate text-[13.5px] font-semibold">
+                            {isRtl ? entry.item.titleAr : entry.item.titleEn}
+                          </p>
                         </div>
 
                         {entry.item.badgeEn ? (
@@ -234,18 +227,6 @@ export function CommandPaletteModal({ isRtl }: CommandPaletteModalProps) {
               })}
             </ul>
           )}
-        </div>
-
-        {/* Footer Tip */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-revix-border bg-revix-surface px-4 py-2 text-[11.5px] text-revix-secondary">
-          <span>
-            {isRtl
-              ? "اختصار مباشر: اضغط G ثم حرف الصفحة، أو Alt+1..8 للأقسام الرئيسية"
-              : "Quick jump: Press G then page letter, or Alt+1..8 for main modules"}
-          </span>
-          <span dir="ltr" className="font-mono text-[11px]">
-            Ctrl + K
-          </span>
         </div>
       </div>
     </div>

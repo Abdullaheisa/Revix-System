@@ -6,12 +6,19 @@ import { useListAuditLogsQuery, type AuditLogEntryDto } from "@/store/api/fleetA
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import { formatCompanyDate, formatCompanyDateTime } from "@/lib/date/companyDate";
 
+interface ActivityParticipant {
+  label: string;
+  value?: string | null;
+}
+
 interface ActivityTimelineProps {
   entityType?: string;
   entityId?: string;
   limit?: number;
   isRtl?: boolean;
   title?: string;
+  participantsLabel?: string;
+  participants?: ActivityParticipant[];
 }
 
 function getActionMeta(action: string, isRtl: boolean): {
@@ -162,136 +169,95 @@ export function ActivityTimeline({
   entityId,
   limit = 50,
   isRtl = true,
-  title,
+  participantsLabel,
+  participants,
 }: ActivityTimelineProps) {
   const { data: ctx } = useGetWorkspaceContextQuery();
   const company = ctx?.data?.company;
-  const { currentData: data, isLoading, isFetching, isError, refetch } = useListAuditLogsQuery({ entityType, entityId, limit });
+  const { currentData: data, isFetching, isError, refetch } = useListAuditLogsQuery({ entityType, entityId, limit });
   const logs = data?.data ?? [];
 
-  if (entityType === "purchase_order") {
-    const options = { timezone: company?.timezone, locale: isRtl ? "ar-EG" : "en-GB" };
-    const days = new Map<string, AuditLogEntryDto[]>();
-    for (const entry of [...logs].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))) {
-      const day = formatCompanyDate(entry.createdAt, options);
-      const entries = days.get(day);
-      if (entries) entries.push(entry);
-      else days.set(day, [entry]);
-    }
-    return (
-      <div dir={isRtl ? "rtl" : "ltr"} className="@container w-full space-y-1 py-1 text-sm">
-        {isError ? (
-          <p role="alert">{isRtl ? "تعذّر تحميل السجل." : "Could not load activity."}{" "}
-            <button type="button" className="underline" onClick={() => refetch()}>{isRtl ? "إعادة المحاولة" : "Retry"}</button>
-          </p>
-        ) : !data && isFetching ? (
-          <p role="status">{isRtl ? "جارٍ تحميل النشاط…" : "Loading activity…"}</p>
-        ) : !logs.length ? (
-          <p>{isRtl ? "لا توجد حركات مسجلة." : "No activity recorded."}</p>
-        ) : Array.from(days, ([day, entries], index) => (
-          <details key={day} open={index === 0}>
-            <summary className="cursor-pointer py-1.5 text-xs font-semibold text-revix-secondary">
-              {day} <span className="ms-1 font-normal">({entries.length})</span>
-            </summary>
-            <ol className="grid grid-cols-1 gap-x-5 gap-y-1 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4 max-h-[min(36dvh,18rem)] overflow-y-auto overscroll-contain pe-2">
-              {entries.map(entry => {
-                const meta = getActionMeta(entry.action, isRtl);
-                const details = formatMetaSummary(entry, isRtl).filter(value => !value.startsWith("PO:"));
-                return (
-                  <li key={entry.id} className="flex min-w-0 items-start gap-2 border-s-2 border-revix-border ps-2 py-1">
-                    <span className={`relative grid size-5 shrink-0 place-items-center rounded-full border ${meta.tone}`}>
-                      <RevixIcon name={meta.icon} size={12} />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="flex flex-wrap items-baseline gap-x-2 text-xs leading-5 text-revix-secondary">
-                        <strong className="font-semibold text-revix-dark">{meta.label}</strong>
-                        <time dateTime={entry.createdAt} className="tabular-nums">{formatCompanyDateTime(entry.createdAt, options)}</time>
-                      </p>
-                      <p className="text-xs leading-5 text-revix-secondary">
-                        <bdi>{entry.actorName || entry.actorEmail || (isRtl ? "النظام" : "System")}</bdi>
-                      </p>
-                      {details.length > 0 && <p className="mt-1 text-xs text-revix-secondary">{details.join(" · ")}</p>}
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </details>
-        ))}
-      </div>
-    );
+  const options = { timezone: company?.timezone, locale: isRtl ? "ar-EG" : "en-GB" };
+  const days = new Map<string, AuditLogEntryDto[]>();
+  for (const entry of [...logs].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))) {
+    const day = formatCompanyDate(entry.createdAt, options);
+    const entries = days.get(day);
+    if (entries) entries.push(entry);
+    else days.set(day, [entry]);
   }
 
   return (
-    <div className="rounded-xl border border-revix-border bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-revix-border bg-revix-surface/40">
-        <div className="flex items-center gap-2">
-          <RevixIcon name="clock" size={16} className="text-revix-green" />
-          <h3 className="text-sm font-bold text-revix-dark">
-            {title || (isRtl ? "سجل الموظفين والعمليات (Audit Trail)" : "Employee Activity & Audit Trail")}
-          </h3>
-        </div>
-        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white border border-revix-border text-revix-muted">
-          {logs.length} {isRtl ? "عملية" : "events"}
-        </span>
+    <div dir={isRtl ? "rtl" : "ltr"} className="@container w-full space-y-3 py-1 text-sm">
+      <div className="space-y-1">
+        {isError ? (
+          <p role="alert" className="text-xs text-rose-600">
+            {isRtl ? "تعذّر تحميل السجل." : "Could not load activity."}{" "}
+            <button type="button" className="cursor-pointer underline" onClick={() => refetch()}>
+              {isRtl ? "إعادة المحاولة" : "Retry"}
+            </button>
+          </p>
+        ) : !data && isFetching ? (
+          <p role="status" className="text-xs text-revix-secondary">
+            {isRtl ? "جارٍ تحميل النشاط…" : "Loading activity…"}
+          </p>
+        ) : !logs.length ? (
+          <p className="text-xs text-revix-secondary">
+            {isRtl ? "لا توجد حركات مسجلة." : "No activity recorded."}
+          </p>
+        ) : (
+          Array.from(days, ([day, entries], index) => (
+            <details key={day} open={index === 0}>
+              <summary className="cursor-pointer py-1.5 text-xs font-semibold text-revix-secondary">
+                {day} <span className="ms-1 font-normal">({entries.length})</span>
+              </summary>
+              <ol className="grid grid-cols-1 gap-x-5 gap-y-1 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4 max-h-[min(36dvh,18rem)] overflow-y-auto overscroll-contain pe-2">
+                {entries.map((entry) => {
+                  const meta = getActionMeta(entry.action, isRtl);
+                  const details = formatMetaSummary(entry, isRtl).filter(
+                    (value) => !(entityType === "purchase_order" && value.startsWith("PO:")),
+                  );
+                  return (
+                    <li key={entry.id} className="flex min-w-0 items-start gap-2 border-s-2 border-revix-border ps-2 py-1">
+                      <span className={`relative grid size-5 shrink-0 place-items-center rounded-full border ${meta.tone}`}>
+                        <RevixIcon name={meta.icon} size={12} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="flex flex-wrap items-baseline gap-x-2 text-xs leading-5 text-revix-secondary">
+                          <strong className="font-semibold text-revix-dark">{meta.label}</strong>
+                          <time dateTime={entry.createdAt} className="tabular-nums">
+                            {formatCompanyDateTime(entry.createdAt, options)}
+                          </time>
+                        </p>
+                        <p className="text-xs leading-5 text-revix-secondary">
+                          <bdi>{entry.actorName || entry.actorEmail || (isRtl ? "النظام" : "System")}</bdi>
+                        </p>
+                        {details.length > 0 && (
+                          <p className="mt-1 text-xs text-revix-secondary">{details.join(" · ")}</p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </details>
+          ))
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="p-6 text-center text-xs text-revix-muted">
-          {isRtl ? "جاري تحميل سجل العمليات..." : "Loading activity log..."}
-        </div>
-      ) : logs.length === 0 ? (
-        <div className="p-6 text-center text-xs text-revix-muted">
-          {isRtl ? "لا توجد عمليات مسجلة بعد" : "No recorded actions yet."}
-        </div>
-      ) : (
-        <div className="divide-y divide-revix-border/60">
-          {logs.map((entry) => {
-            const meta = getActionMeta(entry.action, isRtl);
-            const chips = formatMetaSummary(entry, isRtl);
-            const actorLabel =
-              entry.actorName || entry.actorEmail || (isRtl ? "مستخدم النظام" : "System User");
-
-            return (
-              <div
-                key={entry.id}
-                className="flex items-start justify-between gap-3 px-5 py-3 hover:bg-revix-surface/30 transition-colors"
-              >
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${meta.tone}`}>
-                    <RevixIcon name={meta.icon} size={14} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-bold text-revix-dark">{meta.label}</span>
-                      <span className="inline-flex items-center gap-1 rounded-md bg-revix-surface px-2 py-0.5 text-[11px] font-semibold text-revix-dark border border-revix-border/60">
-                        <RevixIcon name="users-round" size={12} className="text-revix-green" />
-                        {actorLabel}
-                      </span>
-                    </div>
-                    {chips.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {chips.map((chip, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-block rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-revix-muted"
-                          >
-                            {chip}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="shrink-0 text-[11px] font-mono text-revix-muted" dir="ltr">
-                  <span className="inline-block">
-                    {formatCompanyDateTime(entry.createdAt, company ?? undefined)}
-                  </span>
-                </div>
+      {participants && participants.length > 0 && (
+        <details className="w-full border-t border-revix-border py-3 text-xs">
+          <summary className="cursor-pointer font-medium text-revix-secondary">
+            {participantsLabel || (isRtl ? "المسؤولون" : "Participants")}
+          </summary>
+          <dl className="mt-3 grid gap-2 sm:grid-cols-3">
+            {participants.map((p) => (
+              <div key={p.label} className="flex gap-3">
+                <dt className="text-revix-secondary">{p.label}</dt>
+                <dd className="font-medium text-revix-dark">{p.value || "—"}</dd>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </dl>
+        </details>
       )}
     </div>
   );

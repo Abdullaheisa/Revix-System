@@ -564,16 +564,6 @@ export function mapFleetVehicleRow(row: DbFleetVehicleRow): FleetVehicleRecord {
     color: row.color,
     mileageOdometer: Number(row.mileage_odometer),
     status: row.status,
-    registrationExpiry: row.registration_expiry
-      ? typeof row.registration_expiry === "string"
-        ? row.registration_expiry.slice(0, 10)
-        : new Date(row.registration_expiry).toISOString().slice(0, 10)
-      : null,
-    insuranceExpiry: row.insurance_expiry
-      ? typeof row.insurance_expiry === "string"
-        ? row.insurance_expiry.slice(0, 10)
-        : new Date(row.insurance_expiry).toISOString().slice(0, 10)
-      : null,
     notes: row.notes,
     photoUrl: row.photo_url ?? null,
     locationType: (row.location_type as any) ?? "airport_terminal",

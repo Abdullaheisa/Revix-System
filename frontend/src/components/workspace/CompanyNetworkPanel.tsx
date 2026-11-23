@@ -12,6 +12,7 @@ import { extractApiErrorCode, resolveAssetUrl } from "@/store/api/baseApi";
 import { FormInput } from "@/components/ui/FormField";
 import { CompanyLogoUploader } from "@/components/shared/workspace/CompanyLogoUploader";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import { StudioTooltip, RevixConfirmModal } from "@/components/shared/workspace";
 
@@ -24,7 +25,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   const currentCompany = wsData?.data.company;
   const currentBranches = useMemo(() => wsData?.data.branches ?? [], [wsData?.data.branches]);
 
-  const { data: overviewData, isFetching, refetch } = useGetNetworkOverviewQuery();
+  const { data: overviewData, isLoading, isFetching, refetch } = useGetNetworkOverviewQuery();
 
   const [inviteLocalPartner, { isLoading: isInviting }] = useInviteLocalPartnerMutation();
   const [updateLinkStatus, { isLoading: isUpdatingStatus }] = useUpdateLinkStatusMutation();
@@ -56,11 +57,14 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
 
   // Search / filter partners
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
+  const [activeTab, setActiveTab] = useState<"partners" | "invitations">("partners");
   const [page, setPage] = usePersistedPage("network/local-companies");
   const pageSize = 15;
 
   const overview = overviewData?.data;
   const partners = overview?.connectedPartners;
+  const pendingInvitations = overview?.pendingInvitations ?? [];
   const isMainCompany =
     overview?.isMainCompany || currentCompany?.operatingMode === "network_main";
   const isLocalPartner =
@@ -68,29 +72,27 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
 
   const connectedPartners = useMemo(() => {
     if (!partners) return [];
-    if (!searchTerm.trim()) return partners;
+    let list = partners;
+    if (statusFilter !== "all") {
+      list = list.filter((p) => p.status === statusFilter);
+    }
+    if (!searchTerm.trim()) return list;
     const q = searchTerm.toLowerCase();
-    return partners.filter(
+    return list.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.legalName.toLowerCase().includes(q) ||
         p.city.toLowerCase().includes(q) ||
-        p.countryCode.toLowerCase().includes(q),
+        p.countryCode.toLowerCase().includes(q) ||
+        p.email.toLowerCase().includes(q) ||
+        p.phone.toLowerCase().includes(q),
     );
-  }, [partners, searchTerm]);
+  }, [partners, searchTerm, statusFilter]);
 
   const paginatedPartners = useMemo(() => {
     const start = (page - 1) * pageSize;
     return connectedPartners.slice(start, start + pageSize);
   }, [connectedPartners, page, pageSize]);
-
-  const totalSharedBranches = useMemo(() => {
-    if (!partners) return 0;
-    return partners.reduce(
-      (acc, p) => acc + (p.permittedBranches?.length || 0),
-      0,
-    );
-  }, [partners]);
 
   const localCountriesCount = useMemo(() => {
     return new Set(currentBranches.map((b) => b.countryCode).filter(Boolean)).size;
@@ -203,15 +205,13 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner & Heading */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-revix-border pb-5">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-[20px] sm:text-[22px] font-bold tracking-tight text-revix-dark">
-              {isRtl ? "شبكة الشركات المحلية" : "Company Network"}
-            </h1>
-          </div>
+    <div className="space-y-4">
+      {/* Clean Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
+            {isRtl ? "شبكة الشركات المحلية" : "Company Network"}
+          </h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -220,13 +220,13 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
               type="button"
               onClick={() => refetch()}
               disabled={isFetching}
-              className="inline-flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-[6px] border border-revix-border bg-revix-white text-revix-secondary hover:border-revix-primary/40 hover:bg-revix-surface hover:text-revix-dark transition-all disabled:opacity-50"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-revix-border bg-revix-white text-revix-secondary shadow-xs hover:bg-revix-surface hover:text-revix-dark transition-all disabled:opacity-50"
               aria-label={isRtl ? "تحديث" : "Refresh"}
             >
               <RevixIcon
                 name="refresh-cw"
                 size={14}
-                className={isFetching ? "animate-spin" : ""}
+                className={isFetching ? "animate-spin text-revix-primary" : ""}
               />
             </button>
           </StudioTooltip>
@@ -235,7 +235,7 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
             <button
               type="button"
               onClick={handleOpenInviteModal}
-              className="inline-flex h-[34px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-primary bg-revix-primary px-3 text-[12.5px] font-semibold text-revix-white shadow-sm hover:bg-revix-primary-hover active:scale-[0.98] transition-all"
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-revix-white shadow-xs hover:bg-revix-primary-hover transition-all"
             >
               <RevixIcon name="plus" size={14} />
               <span>{isRtl ? "دعوة شركة محلية" : "Invite Local Partner"}</span>
@@ -244,188 +244,33 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
         </div>
       </div>
 
-      {/* Network Stats Cards */}
-      {isLocalPartner && !isMainCompany ? (
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Local Stat 1: Main HQ */}
-          <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center justify-between">
-              <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
-                {isRtl ? "الشركة الرئيسية" : "Network HQ"}
-              </span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-blue-200/80 bg-blue-50 text-blue-700">
-                <RevixIcon name="network" size={15} />
-              </div>
-            </div>
-            <div className="mt-2 truncate text-[18px] font-bold text-revix-dark">
-              {overview?.parentLinks?.[0]?.mainCompany.name || "—"}
-            </div>
-            <p className="mt-0.5 text-[11.5px] text-revix-secondary">
-              {isRtl ? "الشركة الأم المشرفة على الشبكة" : "Parent network company"}
-            </p>
-          </div>
-
-          {/* Local Stat 2: My Branches */}
-          <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center justify-between">
-              <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
-                {isRtl ? "فروعي" : "My Branches"}
-              </span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-sky-200/80 bg-sky-50 text-sky-700">
-                <RevixIcon name="building-2" size={15} />
-              </div>
-            </div>
-            <div className="mt-2 text-[24px] font-bold tabular-nums text-revix-dark">
-              {currentBranches.length}
-            </div>
-            <p className="mt-0.5 text-[11.5px] text-revix-secondary">
-              {isRtl ? "فروعك وأسطولها مرئية للرئيسية" : "Your branches visible to HQ"}
-            </p>
-          </div>
-
-          {/* Local Stat 3: Countries */}
-          <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center justify-between">
-              <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
-                {isRtl ? "الدول" : "Countries"}
-              </span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-indigo-200/80 bg-indigo-50 text-indigo-700">
-                <RevixIcon name="globe-2" size={15} />
-              </div>
-            </div>
-            <div className="mt-2 text-[24px] font-bold tabular-nums text-revix-dark">
-              {localCountriesCount}
-            </div>
-            <p className="mt-0.5 text-[11.5px] text-revix-secondary">
-              {isRtl ? "الدول التي تغطيها فروعك" : "Countries covered by your branches"}
-            </p>
-          </div>
-
-          {/* Local Stat 4: Independence */}
-          <div className="rounded-[8px] border border-emerald-200/80 bg-emerald-50/50 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center justify-between">
-              <span className="text-[11.5px] font-medium text-emerald-800 uppercase tracking-wider">
-                {isRtl ? "عزل الصلاحيات" : "Access Isolation"}
-              </span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-emerald-100 text-emerald-700">
-                <RevixIcon name="shield-check" size={15} />
-              </div>
-            </div>
-            <div className="mt-2 text-[15px] font-bold text-emerald-900">
-              {isRtl ? "عرض فقط (View-Only)" : "Strict View-Only"}
-            </div>
-            <p className="mt-0.5 text-[11.5px] text-emerald-700">
-              {isRtl
-                ? "فروعك وموظفيك مستقلون بالكامل عن فروع الرئيسية"
-                : "Your branches & team stay isolated from HQ"}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Stat 1 */}
-        <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all hover:border-revix-primary/30">
-          <div className="flex items-center justify-between">
-            <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
-              {isRtl ? "الشركات الشريكة" : "Connected Partners"}
-            </span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-emerald-200/80 bg-emerald-50 text-revix-primary">
-              <RevixIcon name="network" size={15} />
-            </div>
-          </div>
-          <div className="mt-2 text-[24px] font-bold tabular-nums text-revix-dark">
-            {partners?.length || 0}
-          </div>
-          <p className="mt-0.5 text-[11.5px] text-revix-secondary">
-            {isRtl ? "شركات محلية نشطة بالشبكة" : "Active local partner firms"}
-          </p>
-        </div>
-
-        {/* Stat 2 */}
-        <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all hover:border-sky-300">
-          <div className="flex items-center justify-between">
-            <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
-              {isRtl ? "الفروع المشاركة" : "Shared Branches"}
-            </span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-sky-200/80 bg-sky-50 text-sky-700">
-              <RevixIcon name="globe-2" size={15} />
-            </div>
-          </div>
-          <div className="mt-2 text-[24px] font-bold tabular-nums text-revix-dark">
-            {totalSharedBranches}
-          </div>
-          <p className="mt-0.5 text-[11.5px] text-revix-secondary">
-            {isRtl ? "فروع محلية متاحة للمعاينة" : "Branches visible across network"}
-          </p>
-        </div>
-
-        {/* Stat 3 */}
-        <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all hover:border-amber-300">
-          <div className="flex items-center justify-between">
-            <span className="text-[11.5px] font-medium text-revix-secondary uppercase tracking-wider">
-              {isRtl ? "الدعوات المعلقة" : "Pending Invites"}
-            </span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-amber-200/80 bg-amber-50 text-amber-700">
-              <RevixIcon name="clock" size={15} />
-            </div>
-          </div>
-          <div className="mt-2 text-[24px] font-bold tabular-nums text-revix-dark">
-            {overview?.pendingInvitations?.length || 0}
-          </div>
-          <p className="mt-0.5 text-[11.5px] text-revix-secondary">
-            {isRtl ? "بانتظار قبول الشركاء" : "Awaiting partner acceptance"}
-          </p>
-        </div>
-
-        {/* Stat 4 - View-Only Protection */}
-        <div className="rounded-[8px] border border-emerald-200/80 bg-emerald-50/50 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-          <div className="flex items-center justify-between">
-            <span className="text-[11.5px] font-medium text-emerald-800 uppercase tracking-wider">
-              {isRtl ? "عزل الصلاحيات" : "Access Isolation"}
-            </span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-emerald-100 text-emerald-700">
-              <RevixIcon name="shield-check" size={15} />
-            </div>
-          </div>
-          <div className="mt-2 text-[15px] font-bold text-emerald-900">
-            {isRtl ? "عرض فقط (View-Only)" : "Strict View-Only"}
-          </div>
-          <p className="mt-0.5 text-[11.5px] text-emerald-700">
-            {isRtl
-              ? "محمي برمجياً: يمنع أي تعديل على بيانات الشركاء"
-              : "Engineered guard: all writes are 403 Forbidden"}
-          </p>
-        </div>
-      </div>
-      )}
-
-      {/* VIEW AS LOCAL PARTNER: Shows Parent Company Card */}
+      {/* VIEW AS LOCAL PARTNER: Parent Company Card */}
       {isLocalPartner && overview?.parentLinks && overview.parentLinks.length > 0 && (
-        <div className="rounded-[10px] border border-blue-200 bg-blue-50/40 p-4 sm:p-5 space-y-4">
+        <div className="rounded-xl border border-revix-border bg-revix-white p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 shrink-0 rounded-[8px] bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-revix-accent-soft text-revix-primary">
               <RevixIcon name="network" size={18} />
             </div>
             <div>
-              <h3 className="font-semibold text-[14px] text-revix-dark">
+              <h3 className="text-[14px] font-bold text-revix-dark">
                 {isRtl ? "الشركة الرئيسية المرتبطة" : "Connected Network HQ"}
               </h3>
               <p className="text-[12px] text-revix-secondary">
                 {isRtl
-                  ? "ترى الشركة الرئيسية فروعك ودولك وسياراتك (عرض فقط)، بينما تظل فروعك وموظفيك مستقلين تمامًا ولا علاقة لك بفروع الشركة الرئيسية."
-                  : "HQ has View-Only visibility over your branches, countries, and fleet, while your branches and team remain completely independent."}
+                  ? "ترى الشركة الرئيسية فروعك ودولك وسياراتك (عرض فقط)، بينما تظل فروعك وموظفيك مستقلين تماماً."
+                  : "HQ has View-Only visibility over your branches and fleet, while your branches and team remain independent."}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-blue-100">
+          <div className="grid grid-cols-1 gap-3 border-t border-revix-border/70 pt-3.5 sm:grid-cols-2 lg:grid-cols-3">
             {overview.parentLinks.map((parent) => (
               <div
                 key={parent.linkId}
-                className="bg-revix-white rounded-[8px] border border-blue-100 p-3.5 text-[12.5px] space-y-2.5 shadow-xs"
+                className="space-y-2.5 rounded-xl border border-revix-border bg-revix-surface/35 p-3.5 text-[12.5px]"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-revix-border bg-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-revix-border bg-white">
                     {parent.mainCompany.logoUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <NextImage unoptimized width={640} height={480}
@@ -436,27 +281,27 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                     ) : (
                       <span
                         className="flex h-full w-full items-center justify-center text-xs font-bold text-white"
-                        style={{ backgroundColor: parent.mainCompany.brandColor || "#2563EB" }}
+                        style={{ backgroundColor: parent.mainCompany.brandColor || "#0F5132" }}
                       >
                         {parent.mainCompany.name.substring(0, 2).toUpperCase()}
                       </span>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="font-semibold text-revix-dark truncate">
+                    <div className="truncate font-semibold text-revix-dark">
                       {parent.mainCompany.name}
                     </div>
-                    <div className="text-[11.5px] text-revix-secondary truncate">
+                    <div className="truncate text-[11.5px] text-revix-secondary">
                       {parent.mainCompany.city}, {parent.mainCompany.countryCode}
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-blue-50 flex items-center justify-between text-[11.5px]">
+                <div className="flex items-center justify-between border-t border-revix-border/60 pt-2 text-[11.5px]">
                   <span className="text-revix-secondary">
                     {isRtl ? "فروعك ودولك المرئية:" : "Your visible coverage:"}
                   </span>
-                  <span className="font-semibold text-blue-700">
+                  <span className="font-semibold text-revix-primary">
                     {currentBranches.length} {isRtl ? "فرع" : "branch(es)"} · {localCountriesCount} {isRtl ? "دولة" : "country(s)"}
                   </span>
                 </div>
@@ -466,300 +311,155 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
         </div>
       )}
 
-      {/* MAIN COMPANY: Partners Directory & Pending Invites */}
+      {/* MAIN COMPANY: Unified Modern Table Directory */}
       {isMainCompany && (
         <div className="space-y-4">
-          {/* Search & Filter Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <RevixIcon
-                name="search"
-                size={14}
-                className={`absolute top-2.5 text-revix-disabled ${
-                  isRtl ? "right-3" : "left-3"
-                }`}
-              />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
-                placeholder={
-                  isRtl
-                    ? "البحث في الشركات الشريكة بالاسم، المدينة، الدولة..."
-                    : "Search partners by name, city, country..."
-                }
-                className={`w-full h-9 rounded-[6px] border border-revix-border bg-revix-white text-[12px] text-revix-dark placeholder:text-revix-secondary/70 focus:border-revix-primary focus:outline-none transition-all ${
-                  isRtl ? "pr-9 pl-3 text-right" : "pl-9 pr-3 text-left"
-                }`}
-              />
+          {/* Clean Toolbar: Tabs (when pending invites exist) + Search + Status Filter */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              {pendingInvitations.length > 0 && (
+                <div className="inline-flex rounded-lg border border-revix-border bg-revix-surface/60 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("partners")}
+                    className={`cursor-pointer rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition-all ${
+                      activeTab === "partners"
+                        ? "bg-revix-primary text-white shadow-xs"
+                        : "text-revix-secondary hover:text-revix-dark"
+                    }`}
+                  >
+                    {isRtl ? `الشركات الشريكة (${partners?.length || 0})` : `Partners (${partners?.length || 0})`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("invitations")}
+                    className={`cursor-pointer rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition-all ${
+                      activeTab === "invitations"
+                        ? "bg-revix-primary text-white shadow-xs"
+                        : "text-revix-secondary hover:text-revix-dark"
+                    }`}
+                  >
+                    {isRtl ? `الدعوات المعلقة (${pendingInvitations.length})` : `Pending Invites (${pendingInvitations.length})`}
+                  </button>
+                </div>
+              )}
+
+              {activeTab === "partners" && (
+                <div className="relative w-full sm:w-80">
+                  <RevixIcon
+                    name="search"
+                    size={14}
+                    className="pointer-events-none absolute top-1/2 start-3 -translate-y-1/2 text-revix-secondary"
+                  />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder={
+                      isRtl
+                        ? "ابحث بالاسم، المدينة، الهاتف، البريد..."
+                        : "Search by name, city, phone, email..."
+                    }
+                    className="h-9 w-full rounded-lg border border-revix-border bg-revix-white ps-9 pe-3 text-[12.5px] text-revix-dark placeholder:text-revix-secondary/75 focus:border-revix-primary focus:outline-none focus:ring-2 focus:ring-revix-primary/15"
+                  />
+                </div>
+              )}
             </div>
-            <div className="text-[12px] text-revix-secondary">
-              {isRtl
-                ? `عرض ${connectedPartners.length} من أصل ${
-                    partners?.length || 0
-                  } شركة`
-                : `Showing ${connectedPartners.length} of ${
-                    partners?.length || 0
-                  } partners`}
-            </div>
+
+            {activeTab === "partners" && (
+              <div className="inline-flex items-center gap-1 rounded-lg border border-revix-border bg-revix-surface/50 p-0.5">
+                {(
+                  [
+                    { id: "all", labelAr: "الكل", labelEn: "All" },
+                    { id: "active", labelAr: "نشط", labelEn: "Active" },
+                    { id: "paused", labelAr: "موقوف", labelEn: "Paused" },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter(opt.id);
+                      setPage(1);
+                    }}
+                    className={`cursor-pointer rounded-md px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+                      statusFilter === opt.id
+                        ? "bg-revix-white text-revix-dark shadow-xs"
+                        : "text-revix-secondary hover:text-revix-dark"
+                    }`}
+                  >
+                    {isRtl ? opt.labelAr : opt.labelEn}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Connected Partners Cards Grid */}
-          {connectedPartners.length === 0 ? (
-            <div className="rounded-[10px] border border-dashed border-revix-border bg-revix-white p-8 sm:p-12 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-revix-primary">
-                <RevixIcon name="network" size={22} />
-              </div>
-              <h3 className="mt-3 text-[14px] font-semibold text-revix-dark">
-                {isRtl ? "لا توجد شركات محلية مرتبطة حالياً" : "No connected partners yet"}
-              </h3>
-              <p className="mt-1 text-[12px] text-revix-secondary max-w-sm mx-auto">
-                {isRtl
-                  ? "ابدأ بتوسيع شبكتك عبر دعوة شركات تأجير محلية في دول ومدن مختلفة للربط مع نظامك الرئيسي."
-                  : "Start expanding your network by inviting local car rental companies to link with your HQ."}
-              </p>
-              <button
-                type="button"
-                onClick={handleOpenInviteModal}
-                className="mt-4 inline-flex h-[34px] cursor-pointer items-center gap-1.5 rounded-[6px] border border-revix-primary bg-revix-primary px-3.5 text-[12.5px] font-semibold text-revix-white shadow-sm hover:bg-revix-primary-hover active:scale-[0.98] transition-all"
-              >
-                <RevixIcon name="plus" size={14} />
-                <span>{isRtl ? "إرسال أول دعوة شراكة" : "Send First Partner Invite"}</span>
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {paginatedPartners.map((partner) => {
-                const isActive = partner.status === "active";
-                return (
-                  <div
-                    key={partner.linkId}
-                    className="flex flex-col justify-between rounded-[8px] border border-revix-border bg-revix-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:border-revix-primary/40 transition-all"
-                  >
-                    <div>
-                      {/* Card Header */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className="h-9 w-9 rounded-[7px] flex items-center justify-center font-bold text-white text-[13px] shadow-xs"
-                            style={{ backgroundColor: partner.brandColor || "#059669" }}
-                          >
-                            {partner.name.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-[13.5px] text-revix-dark line-clamp-1">
-                              {partner.name}
-                            </h3>
-                            <p className="text-[11.5px] text-revix-secondary line-clamp-1">
-                              {partner.legalName}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Status badge */}
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold border ${
-                            isActive
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              isActive ? "bg-emerald-600" : "bg-amber-600"
-                            }`}
-                          />
-                          {isActive
-                            ? isRtl
-                              ? "نشط"
-                              : "Active"
-                            : isRtl
-                            ? "موقوف مؤقتاً"
-                            : "Paused"}
-                        </span>
-                      </div>
-
-                      {/* Partner Details */}
-                      <div className="mt-3.5 space-y-1.5 border-t border-revix-border/70 pt-3 text-[12px]">
-                        <div className="flex items-center justify-between text-revix-secondary">
-                          <span>{isRtl ? "الموقع والعملة:" : "Location & Currency:"}</span>
-                          <span className="font-medium text-revix-dark">
-                            {partner.city}, {partner.countryCode} ({partner.baseCurrency})
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-revix-secondary">
-                          <span>{isRtl ? "البريد الإلكتروني:" : "Email:"}</span>
-                          <span className="font-medium text-revix-dark truncate max-w-[170px]">
-                            {partner.email}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-revix-secondary">
-                          <span>{isRtl ? "الهاتف:" : "Phone:"}</span>
-                          <span className="font-medium text-revix-dark font-mono text-[11.5px]" dir="ltr">
-                            {partner.phone}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-revix-secondary">
-                          <span>{isRtl ? "الفروع والدول:" : "Branches & Countries:"}</span>
-                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
-                            <RevixIcon name="building-2" size={13} />
-                            {partner.permittedBranches.length} {isRtl ? "فرع" : "branch(es)"} ·{" "}
-                            {new Set(partner.permittedBranches.map((b) => b.countryCode)).size ||
-                              (partner.countryCode ? 1 : 0)}{" "}
-                            {isRtl ? "دولة" : "country(s)"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Actions */}
-                    <div className="mt-4 pt-3 border-t border-revix-border/70 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPartnerForBranches(partner)}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] border border-revix-border bg-revix-white px-2.5 py-1 text-[11.5px] font-medium text-revix-dark hover:border-revix-primary/40 hover:bg-revix-surface transition-all"
-                      >
-                        <RevixIcon name="eye" size={13} className="text-revix-secondary" />
-                        <span>{isRtl ? "فروع الشريك" : "View Branches"}</span>
-                      </button>
-
-                      <div className="flex items-center gap-1.5">
-                        <StudioTooltip
-                          label={
-                            isActive
-                              ? isRtl
-                                ? "إيقاف مؤقت للربط"
-                                : "Pause link"
-                              : isRtl
-                              ? "استئناف الربط"
-                              : "Resume link"
-                          }
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(partner.linkId, partner.status)}
-                            disabled={isUpdatingStatus}
-                            className="inline-flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[5px] border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface transition-all disabled:opacity-50"
-                          >
-                            <RevixIcon
-                              name={isActive ? "pause-circle" : "play-circle"}
-                              size={15}
-                              className={isActive ? "text-amber-600" : "text-emerald-600"}
-                            />
-                          </button>
-                        </StudioTooltip>
-
-                        <StudioTooltip label={isRtl ? "إنهاء الربط بالشريك" : "Terminate link"}>
-                          <button
-                            type="button"
-                            onClick={() => handleTerminate(partner.linkId, partner.name)}
-                            disabled={isTerminating}
-                            className="inline-flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[5px] border border-red-200 bg-revix-white text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
-                          >
-                            <RevixIcon name="trash-2" size={14} />
-                          </button>
-                        </StudioTooltip>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Unified Pagination */}
-            <div className="overflow-hidden rounded-[8px] border border-revix-border bg-revix-white">
-              <RevixPagination
-                currentPage={page}
-                totalItems={connectedPartners.length}
-                pageSize={pageSize}
-                onPageChange={setPage}
-                lang={isRtl ? "ar" : "en"}
-                itemLabel={isRtl ? "شركة شريكة" : "partner companies"}
-              />
-            </div>
-          </>
-        )}
-
-          {/* Pending Invitations Table */}
-          {overview?.pendingInvitations && overview.pendingInvitations.length > 0 && (
-            <div className="rounded-[8px] border border-revix-border bg-revix-white p-4 space-y-3 shadow-xs">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-[13.5px] text-revix-dark">
-                    {isRtl ? "دعوات الشراكة المعلقة" : "Pending Network Invitations"}
-                  </h3>
-                  <p className="text-[11.5px] text-revix-secondary">
-                    {isRtl
-                      ? "الدعوات المرسلة إلى مسؤولي الشركات الشريكة التي لم يتم تفعيلها بعد."
-                      : "Invitations sent to local company owners pending acceptance."}
-                  </p>
-                </div>
-                <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 border border-amber-200">
-                  {overview.pendingInvitations.length} {isRtl ? "معلقة" : "Pending"}
-                </span>
-              </div>
-
+          {isLoading ? (
+            <ResourceFeedback
+              isLoading
+              isRtl={isRtl}
+              loadingTitle={isRtl ? "جاري تحميل شبكة الشركات..." : "Loading partner network..."}
+            />
+          ) : activeTab === "invitations" && pendingInvitations.length > 0 ? (
+            <div className="overflow-hidden rounded-xl border border-revix-border bg-revix-white">
               <div className="overflow-x-auto">
-                <DataTable className="w-full text-[12px] text-left border-collapse">
+                <DataTable className="w-full text-[13px] border-collapse">
                   <thead>
-                    <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
-                      <th className={`py-2 px-3 ${isRtl ? "text-right" : "text-left"}`}>
-                        {isRtl ? "اسم الشركة الشريكة" : "Company Name"}
-                      </th>
-                      <th className={`py-2 px-3 ${isRtl ? "text-right" : "text-left"}`}>
-                        {isRtl ? "الشخص المسؤول" : "Contact Person"}
-                      </th>
-                      <th className={`py-2 px-3 ${isRtl ? "text-right" : "text-left"}`}>
-                        {isRtl ? "البريد الإلكتروني" : "Invitee Email"}
-                      </th>
-                      <th className={`py-2 px-3 ${isRtl ? "text-right" : "text-left"}`}>
-                        {isRtl ? "تاريخ الصلاحية" : "Expires At"}
-                      </th>
-                      <th className="py-2 px-3 text-center">{isRtl ? "الحالة" : "Status"}</th>
+                    <tr className="border-b border-revix-border bg-revix-surface/70 text-[12px] font-semibold text-revix-secondary">
+                      <th className="px-4 py-3 text-start">{isRtl ? "الشركة الشريكة" : "Partner Company"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "الشخص المسؤول" : "Contact Person"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "البريد الإلكتروني" : "Invitee Email"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "تاريخ الصلاحية" : "Expires At"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-revix-border/70">
-                    {overview.pendingInvitations.map((inv) => (
-                      <tr key={inv.id} className="hover:bg-revix-surface/40">
-                        <td className="py-2.5 px-3 font-semibold text-revix-dark">
-                          <div className="flex items-center gap-2">
+                    {pendingInvitations.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-revix-surface/40 transition-colors">
+                        <td className="px-4 py-3 font-semibold text-revix-dark">
+                          <div className="flex items-center gap-2.5">
                             {inv.logoUrl ? (
-                              <NextImage unoptimized width={640} height={480}
+                              <NextImage
+                                unoptimized
+                                width={640}
+                                height={480}
                                 src={inv.logoUrl}
                                 alt={inv.localCompanyName}
-                                className="h-7 w-7 rounded-[4px] border border-revix-border object-contain bg-white shrink-0"
+                                className="h-8 w-8 shrink-0 rounded-lg border border-revix-border bg-white object-contain p-0.5"
                               />
-                            ) : null}
+                            ) : (
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-revix-accent-soft text-[11px] font-bold text-revix-primary">
+                                {inv.localCompanyName.substring(0, 2).toUpperCase()}
+                              </span>
+                            )}
                             <span>{inv.localCompanyName}</span>
                           </div>
                         </td>
-                        <td className="py-2.5 px-3 text-revix-secondary">
+                        <td className="px-4 py-3 text-revix-secondary">
                           {inv.contactName || inv.contactPhone ? (
                             <div className="space-y-0.5">
                               {inv.contactName ? (
                                 <p className="font-medium text-revix-dark">{inv.contactName}</p>
                               ) : null}
                               {inv.contactPhone ? (
-                                <p className="font-mono text-[11px]" dir="ltr">{inv.contactPhone}</p>
+                                <p className="font-mono text-[11.5px]" dir="ltr">{inv.contactPhone}</p>
                               ) : null}
                             </div>
                           ) : (
                             <span>—</span>
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-revix-secondary font-mono text-[11.5px]">{inv.inviteeEmail}</td>
-                        <td className="py-2.5 px-3 text-revix-secondary">
+                        <td className="px-4 py-3 font-mono text-[12px] text-revix-secondary">{inv.inviteeEmail}</td>
+                        <td className="px-4 py-3 text-revix-secondary">
                           {new Date(inv.expiresAt).toLocaleDateString()}
                         </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10.5px] font-semibold text-amber-700">
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                            <span className="size-1.5 rounded-full bg-amber-500" />
                             {isRtl ? "في الانتظار" : "Pending"}
                           </span>
                         </td>
@@ -767,6 +467,195 @@ export function CompanyNetworkPanel({ isRtl }: CompanyNetworkPanelProps) {
                     ))}
                   </tbody>
                 </DataTable>
+              </div>
+            </div>
+          ) : connectedPartners.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-revix-border bg-revix-white p-10 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-revix-accent-soft text-revix-primary">
+                <RevixIcon name="network" size={22} />
+              </div>
+              <h3 className="mt-3 text-[14.5px] font-bold text-revix-dark">
+                {searchTerm.trim() || statusFilter !== "all"
+                  ? isRtl
+                    ? "لا توجد شركات مطابقة للبحث"
+                    : "No matching partner companies"
+                  : isRtl
+                    ? "لا توجد شركات محلية مرتبطة حالياً"
+                    : "No connected partners yet"}
+              </h3>
+              <p className="mx-auto mt-1 max-w-sm text-[12.5px] text-revix-secondary">
+                {searchTerm.trim() || statusFilter !== "all"
+                  ? isRtl
+                    ? "جرّب تعديل كلمة البحث أو الفلتر."
+                    : "Try adjusting your search or status filter."
+                  : isRtl
+                    ? "ابدأ بتوسيع شبكتك عبر دعوة شركات تأجير محلية للربط مع نظامك."
+                    : "Start expanding your network by inviting local rental partners."}
+              </p>
+              {!searchTerm.trim() && statusFilter === "all" && (
+                <button
+                  type="button"
+                  onClick={handleOpenInviteModal}
+                  className="mt-4 inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-4 text-[12.5px] font-semibold text-white shadow-xs transition-colors hover:bg-revix-primary-hover"
+                >
+                  <RevixIcon name="plus" size={14} />
+                  <span>{isRtl ? "دعوة شركة محلية" : "Invite Local Partner"}</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+              <div className="overflow-x-auto">
+                <DataTable className="w-full text-[13px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-revix-border bg-revix-surface/70 text-[12px] font-semibold text-revix-secondary">
+                      <th className="px-4 py-3 text-start">{isRtl ? "الشركة الشريكة" : "Partner Company"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "الموقع والعملة" : "Location & Currency"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "البريد الإلكتروني" : "Email"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "الهاتف" : "Phone"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "الفروع والدول" : "Branches"}</th>
+                      <th className="px-4 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
+                      <th className="px-4 py-3 text-end">{isRtl ? "إجراءات" : "Actions"}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-revix-border/70">
+                    {paginatedPartners.map((partner) => {
+                      const isActive = partner.status === "active";
+                      const countriesCount =
+                        new Set(partner.permittedBranches.map((b) => b.countryCode)).size ||
+                        (partner.countryCode ? 1 : 0);
+
+                      return (
+                        <tr
+                          key={partner.linkId}
+                          onClick={() => setSelectedPartnerForBranches(partner)}
+                          className="cursor-pointer transition-colors hover:bg-revix-accent-soft/40"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold text-white shadow-xs"
+                                style={{ backgroundColor: partner.brandColor || "#0F5132" }}
+                              >
+                                {partner.name.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-revix-dark">
+                                  {partner.name}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-revix-dark">
+                            <span>{partner.city}</span>
+                            <span className="mx-1 text-revix-secondary">·</span>
+                            <span className="font-mono text-[12px] text-revix-secondary">
+                              {partner.countryCode} ({partner.baseCurrency})
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[12px] text-revix-secondary">
+                            {partner.email}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[12px] text-revix-dark" dir="ltr">
+                            {partner.phone}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1.5 rounded-md bg-revix-accent-soft/70 px-2 py-0.5 text-[12px] font-semibold text-revix-primary">
+                              <RevixIcon name="building-2" size={12} />
+                              {partner.permittedBranches.length} {isRtl ? "فرع" : "br."} · {countriesCount}{" "}
+                              {isRtl ? "دولة" : "co."}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                                isActive
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  : "border-amber-200 bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              <span
+                                className={`size-1.5 rounded-full ${
+                                  isActive ? "bg-emerald-600" : "bg-amber-600"
+                                }`}
+                              />
+                              {isActive
+                                ? isRtl
+                                  ? "نشط"
+                                  : "Active"
+                                : isRtl
+                                  ? "موقوف مؤقتاً"
+                                  : "Paused"}
+                            </span>
+                          </td>
+                          <td
+                            className="px-4 py-3"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPartnerForBranches(partner)}
+                                className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-revix-border bg-revix-white px-2.5 text-[12px] font-semibold text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft/60 hover:text-revix-primary"
+                              >
+                                <RevixIcon name="eye" size={13} />
+                                <span>{isRtl ? "فروع الشريك" : "Branches"}</span>
+                              </button>
+
+                              <StudioTooltip
+                                label={
+                                  isActive
+                                    ? isRtl
+                                      ? "إيقاف مؤقت للربط"
+                                      : "Pause link"
+                                    : isRtl
+                                      ? "استئناف الربط"
+                                      : "Resume link"
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStatus(partner.linkId, partner.status)}
+                                  disabled={isUpdatingStatus}
+                                  className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-revix-border bg-revix-white text-revix-secondary transition-colors hover:bg-revix-surface disabled:opacity-50"
+                                >
+                                  <RevixIcon
+                                    name={isActive ? "pause-circle" : "play-circle"}
+                                    size={15}
+                                    className={isActive ? "text-amber-600" : "text-emerald-600"}
+                                  />
+                                </button>
+                              </StudioTooltip>
+
+                              <StudioTooltip label={isRtl ? "إنهاء الربط بالشريك" : "Terminate link"}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleTerminate(partner.linkId, partner.name)}
+                                  disabled={isTerminating}
+                                  className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-red-200 bg-revix-white text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  <RevixIcon name="trash-2" size={14} />
+                                </button>
+                              </StudioTooltip>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </DataTable>
+              </div>
+
+              {/* Unified Auto-Hide Pagination */}
+              <div className="border-t border-revix-border/70 empty:hidden">
+                <RevixPagination
+                  currentPage={page}
+                  totalItems={connectedPartners.length}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  lang={isRtl ? "ar" : "en"}
+                  itemLabel={isRtl ? "شركة شريكة" : "partner companies"}
+                />
               </div>
             </div>
           )}

@@ -3,9 +3,7 @@
 import { DataTable } from "@/components/ui/DataTable";
 import { useState } from "react";
 import { RevixSelect } from "@/components/ui/RevixSelect";
-import { SectionCard } from "@/components/ui/SectionCard";
 import { LabeledInput } from "@/components/ui/LabeledInput";
-import { EmptyState } from "@/components/ui/EmptyState";
 import {
   Vehicle3DDamageViewer,
   VEHICLE_ZONES,
@@ -84,32 +82,35 @@ export function VehicleInspectionsTab({
   }
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        <SectionCard
-          className="lg:col-span-7"
-          title={t.mapTitle}
-          rightSlot={
-            selectedZones.length > 0 ? (
-              <span className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        <section className="lg:col-span-7 overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+          <div className="flex items-center justify-between gap-2 border-b border-revix-border bg-revix-surface px-4 py-2.5">
+            <h3 className="text-sm font-semibold text-revix-dark">{t.mapTitle}</h3>
+            {selectedZones.length > 0 && (
+              <span className="rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
                 {t.selectedCount(selectedZones.length)}
               </span>
-            ) : null
-          }
-        >
-          <Vehicle3DDamageViewer
-            damagePoints={damagePoints}
-            selectedZones={selectedZones}
-            onToggleZone={toggleZone}
-            isRtl={isRtl}
-          />
-        </SectionCard>
+            )}
+          </div>
+          <div className="p-4">
+            <Vehicle3DDamageViewer
+              damagePoints={damagePoints}
+              selectedZones={selectedZones}
+              onToggleZone={toggleZone}
+              isRtl={isRtl}
+            />
+          </div>
+        </section>
 
-        <SectionCard className="lg:col-span-5" title={t.formTitle}>
-          <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+        <section className="lg:col-span-5 overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+          <div className="border-b border-revix-border bg-revix-surface px-4 py-2.5">
+            <h3 className="text-sm font-semibold text-revix-dark">{t.formTitle}</h3>
+          </div>
+          <form onSubmit={handleSubmit} className="p-4 space-y-3.5 text-xs">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold mb-1">{t.typeLabel}</label>
+                <label className="block text-xs font-medium text-revix-dark mb-1.5">{t.typeLabel}</label>
                 <RevixSelect
                   size="sm"
                   isRtl={isRtl}
@@ -149,8 +150,8 @@ export function VehicleInspectionsTab({
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block font-semibold">{t.damagedPartsLabel}</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-revix-dark">{t.damagedPartsLabel}</label>
                 {selectedZones.length > 0 && (
                   <button
                     type="button"
@@ -194,9 +195,9 @@ export function VehicleInspectionsTab({
             </div>
 
             {selectedZones.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+              <div className="grid grid-cols-2 gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3">
                 <div>
-                  <label className="block font-semibold mb-1">{t.severityLabel}</label>
+                  <label className="block text-xs font-medium text-revix-dark mb-1">{t.severityLabel}</label>
                   <RevixSelect
                     size="sm"
                     isRtl={isRtl}
@@ -227,11 +228,12 @@ export function VehicleInspectionsTab({
               </div>
             )}
 
-            <label className="flex items-center gap-2 font-semibold text-revix-dark">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-revix-dark">
               <input
                 type="checkbox"
                 checked={inspHasAccident}
                 onChange={(e) => setInspHasAccident(e.target.checked)}
+                className="h-4 w-4 rounded border-revix-border accent-revix-primary"
               />
               <span>{t.accidentCheckbox}</span>
             </label>
@@ -242,33 +244,37 @@ export function VehicleInspectionsTab({
                 value={inspAccidentNotes}
                 onChange={(e) => setInspAccidentNotes(e.target.value)}
                 placeholder={t.accidentPlaceholder}
-                className="w-full rounded-lg border border-revix-border p-2.5 text-xs"
+                className="w-full rounded-lg border border-revix-border p-2.5 text-xs focus:border-revix-primary focus:outline-hidden"
               />
             )}
 
             <button
               type="submit"
               disabled={isSaving}
-              className="w-full cursor-pointer rounded-lg bg-revix-primary py-2.5 font-semibold text-white hover:bg-revix-primary-hover disabled:opacity-50"
+              className="h-9 w-full cursor-pointer rounded-md bg-revix-primary text-xs font-semibold text-white hover:bg-revix-primary-hover disabled:opacity-50 transition-colors"
             >
               {isSaving ? t.savingBtn : t.saveBtn}
             </button>
           </form>
-        </SectionCard>
+        </section>
       </div>
 
-      <SectionCard
-        noPadding
-        title={t.tableTitle}
-        rightSlot={<span className="font-mono text-xs text-revix-secondary">{inspections.length}</span>}
-      >
+      <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
+        <div className="flex items-center justify-between border-b border-revix-border bg-revix-surface px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-revix-dark">{t.tableTitle}</h3>
+            <span className="rounded border border-revix-border bg-revix-white px-1.5 py-0.5 font-mono text-[11px] font-semibold text-revix-secondary">
+              {inspections.length}
+            </span>
+          </div>
+        </div>
         {inspections.length === 0 ? (
-          <EmptyState message={t.tableEmpty} />
+          <div className="py-10 text-center text-xs text-revix-secondary">{t.tableEmpty}</div>
         ) : (
           <div className="overflow-x-auto">
             <DataTable className="w-full text-xs">
               <thead>
-                <tr className="border-b border-revix-border bg-revix-surface/50 text-[10px] font-bold uppercase tracking-wider text-revix-muted">
+                <tr className="border-b border-revix-border bg-revix-surface/50 text-[11px] font-semibold text-revix-secondary">
                   <th className="px-4 py-2.5 text-start">{t.colDate}</th>
                   <th className="px-3 py-2.5 text-start">{t.colType}</th>
                   <th className="px-3 py-2.5 text-start">{t.colCustomerRef}</th>
@@ -279,8 +285,8 @@ export function VehicleInspectionsTab({
               </thead>
               <tbody className="divide-y divide-revix-border/60">
                 {inspections.map((insp) => (
-                  <tr key={insp.id} className="hover:bg-revix-surface/30">
-                    <td className="px-4 py-3 font-mono text-revix-secondary">
+                  <tr key={insp.id} className="hover:bg-revix-surface/40">
+                    <td className="px-4 py-3 font-mono text-revix-secondary tabular-nums">
                       {new Date(insp.inspectedAt).toLocaleDateString()}
                     </td>
                     <td className="px-3 py-3 font-semibold text-revix-dark capitalize">
@@ -294,7 +300,7 @@ export function VehicleInspectionsTab({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-3 font-mono font-semibold text-revix-dark">
+                    <td className="px-3 py-3 font-mono font-semibold text-revix-dark tabular-nums">
                       {insp.odometerKm.toLocaleString()} {t.kmUnit}
                     </td>
                     <td className="px-3 py-3">
@@ -332,7 +338,7 @@ export function VehicleInspectionsTab({
             </DataTable>
           </div>
         )}
-      </SectionCard>
+      </section>
     </div>
   );
 }

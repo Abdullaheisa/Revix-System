@@ -234,18 +234,16 @@ export function LocationsManager({
   const isBusy = isCreating || isUpdating;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Page Title */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.015em] text-revix-dark">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
             {isRtl ? "الفروع واللوكيشنات" : "Branches & Locations"}
           </h1>
-          <p className="mt-0.5 text-[13px] text-revix-secondary">
-            {isRtl
-              ? "عملة كل فرع تُحدد تلقائيًا وفق دولته بشكل مستقل عن عملة المقر الرئيسي، ويمكن وجود أكثر من فرع في نفس العنوان."
-              : "Each branch uses its country currency independently of the headquarters base currency. Multiple branches may share a physical address."}
-          </p>
+          <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+            {branches.length}
+          </span>
         </div>
       </div>
 

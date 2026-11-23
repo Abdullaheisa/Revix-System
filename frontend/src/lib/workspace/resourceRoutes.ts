@@ -2,7 +2,7 @@ export const VEHICLE_PROFILE_TABS = ["overview", "insurance", "pricing", "mainte
 export type VehicleProfileTab = (typeof VEHICLE_PROFILE_TABS)[number];
 
 export interface FleetResourceRoute {
-  resource: "vehicles" | "purchase-orders";
+  resource: "vehicles" | "purchase-orders" | "vendors" | "insurance-companies";
   id: string | null;
   action: "list" | "detail" | "create" | "receive";
   tab: VehicleProfileTab;
@@ -12,7 +12,16 @@ export function parseFleetResourceRoute(pathname: string): FleetResourceRoute | 
   const clean = pathname.replace(/^\/(en|ar)(?=\/|$)/, "");
   const parts = clean.split("/").filter(Boolean);
   const resource = parts[2];
-  if (parts[0] !== "workspace" || parts[1] !== "fleet" || (resource !== "vehicles" && resource !== "purchase-orders")) return null;
+  if (
+    parts[0] !== "workspace" ||
+    parts[1] !== "fleet" ||
+    (resource !== "vehicles" &&
+      resource !== "purchase-orders" &&
+      resource !== "vendors" &&
+      resource !== "insurance-companies")
+  ) {
+    return null;
+  }
   const id = parts[3] ? decodeURIComponent(parts[3]) : null;
   if (!id) return { resource, id: null, action: "list", tab: "overview" };
   if (id === "new") return { resource, id: null, action: "create", tab: "overview" };
@@ -28,4 +37,14 @@ export function purchaseOrderHref(id?: string | null, action?: "create" | "recei
   if (action === "create") return "/workspace/fleet/purchase-orders/new";
   if (!id) return "/workspace/fleet/purchase-orders";
   return `/workspace/fleet/purchase-orders/${encodeURIComponent(id)}${action === "receive" ? "/receive" : ""}`;
+}
+
+export function vendorHref(id?: string | null): string {
+  if (!id) return "/workspace/fleet/vendors";
+  return `/workspace/fleet/vendors/${encodeURIComponent(id)}`;
+}
+
+export function insuranceCompanyHref(id?: string | null): string {
+  if (!id) return "/workspace/fleet/insurance-companies";
+  return `/workspace/fleet/insurance-companies/${encodeURIComponent(id)}`;
 }

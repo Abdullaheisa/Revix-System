@@ -44,6 +44,23 @@ router.post(
     },
   );
 
+router.get(
+    "/insurance-companies/:id/policies",
+    guards.requirePermission("fleet", "read"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      try {
+        const list = await fleetService.listInsurancePoliciesByInsuranceCompany(
+          req.tenantActor!,
+          id!,
+        );
+        res.status(200).json({ ok: true, data: list });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
 router.delete(
     "/insurance-companies/:id",
     guards.requirePermission("fleet", "delete"),

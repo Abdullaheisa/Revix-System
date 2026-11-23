@@ -102,150 +102,24 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20" dir={isAr ? "rtl" : "ltr"}>
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100 pb-4">
-        <div>
-          <button
-            type="button"
-            onClick={() => dispatch(navigateToWorkspacePage({ section: "fleet", subPage: "vehicles" }))}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-emerald-800 mb-1 transition-colors"
-          >
-            <RevixIcon name="arrow-left" className={`w-3.5 h-3.5 ${isAr ? "rotate-180" : ""}`} />
-            <span>{isAr ? "الرجوع لسجل الأسطول" : "Back to Fleet"}</span>
-          </button>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-              {isAr ? "مزايا التأجير والعقود (What is included)" : "What is Included Features"}
-            </h1>
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-              {totalCount} {isAr ? "ميزة" : "Features"}
-            </span>
-          </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {isAr
-              ? "تعريف وإدارة قائمة المزايا والتغطيات التأمينية المشمولة في عقود التأجير، والتي تظهر في القوائم المنسدلة عند إضافة سيارات الأسطول."
-              : "Define and manage rental inclusions and insurance coverages selectable when registering vehicles."}
-          </p>
-        </div>
-
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isAr ? "rtl" : "ltr"}>
+      {/* Clean Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 shadow-2xs transition hover:bg-gray-50 active:scale-95 disabled:opacity-50"
-          >
+          <h1 className="text-xl font-bold text-revix-dark tracking-tight sm:text-2xl">
+            {isAr ? "مزايا وتغطيات العقود" : "Rental Inclusions"}
+          </h1>
+          <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
+            {totalCount}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-52">
             <RevixIcon
-              name="refresh-cw"
-              className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-emerald-700" : "text-gray-400"}`}
+              name="search"
+              className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
             />
-            <span>{isAr ? "تحديث" : "Refresh"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => dispatch(navigateToWorkspacePage({ section: "fleet", subPage: "add-vehicle" }))}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 px-3.5 text-xs font-semibold text-white shadow-2xs transition active:scale-95"
-          >
-            <RevixIcon name="plus" className="h-4 w-4" />
-            <span>{isAr ? "إضافة سيارة للأصول" : "Add Vehicle to Fleet"}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Notifications */}
-      {formError && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs sm:text-sm text-rose-700 flex items-center gap-2.5 shadow-2xs">
-          <RevixIcon name="info" className="w-4 h-4 shrink-0" />
-          <span>{formError}</span>
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm text-emerald-700 flex items-center gap-2.5 shadow-2xs">
-          <RevixIcon name="check-circle-2" className="w-4 h-4 shrink-0" />
-          <span>{successMessage}</span>
-        </div>
-      )}
-
-      {/* ====================================================================== */}
-      {/* CARD 1: + Add New Included Feature (Matches User Screenshot Exact Design) */}
-      {/* ====================================================================== */}
-      <div className="bg-white rounded-xl border border-gray-200/90 shadow-2xs overflow-hidden">
-        <div className="p-5">
-          <button
-            type="button"
-            onClick={() => setIsAddFormOpen(!isAddFormOpen)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100/70 rounded-lg text-xs font-bold transition mb-4"
-          >
-            <RevixIcon name="plus" className="w-3.5 h-3.5" />
-            <span>{isAr ? "+ إضافة ميزة مشمولة جديدة" : "+ Add New Included Feature"}</span>
-          </button>
-
-          {isAddFormOpen && (
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    required
-                    value={featureName}
-                    onChange={(e) => setFeatureName(e.target.value)}
-                    placeholder={
-                      isAr
-                        ? "مثال: Free Cancellation, GPS Navigation, إلغاء مجاني..."
-                        : "e.g. Free Cancellation, GPS Navigation..."
-                    }
-                    className="w-full h-[46px] px-4 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-700 focus:ring-3 focus:ring-emerald-700/15 transition"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isCreating || !featureName.trim()}
-                  className="h-[46px] px-6 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-lg shadow-sm flex items-center justify-center gap-2 transition active:scale-95 shrink-0"
-                >
-                  <RevixIcon name="plus" className="w-4 h-4" />
-                  <span>{isCreating ? (isAr ? "جاري الحفظ..." : "Saving...") : isAr ? "+ حفظ الميزة" : "+ Save Feature"}</span>
-                </button>
-              </div>
-
-              <input
-                type="text"
-                value={featureDesc}
-                onChange={(e) => setFeatureDesc(e.target.value)}
-                placeholder={
-                  isAr
-                    ? "وصف توضيحي اختياري للميزة (يظهر للعميل في تفاصيل الحجز)..."
-                    : "Optional feature details or terms..."
-                }
-                className="w-full h-[38px] px-3.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-emerald-700 transition"
-              />
-            </form>
-          )}
-        </div>
-      </div>
-
-      {/* ====================================================================== */}
-      {/* CARD 2: All Included Features Table (Matches User Screenshot Exact Design) */}
-      {/* ====================================================================== */}
-      <div className="bg-white rounded-xl border border-gray-200/90 shadow-2xs overflow-hidden">
-        {/* Table Toolbar Header */}
-        <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-base font-bold text-gray-900 tracking-tight">
-              {isAr ? "جميع المزايا والتغطيات المشمولة" : "All Included Features"}
-            </h2>
-            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 font-mono text-xs font-bold rounded-full">
-              {filteredInclusions.length}
-            </span>
-          </div>
-
-          <div className="relative w-full sm:w-72">
-            <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-gray-400">
-              <RevixIcon name="search" className="w-4 h-4" />
-            </div>
             <input
               type="text"
               value={search}
@@ -253,124 +127,164 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder={isAr ? "بحث في المزايا المشمولة..." : "Search included features..."}
-              className="w-full h-9 ps-9 pe-3 bg-white border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-700 transition"
+              placeholder={isAr ? "بحث في المزايا..." : "Search inclusions..."}
+              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
             />
           </div>
-        </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <DataTable className="w-full text-start border-collapse">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                <th className="py-3.5 px-6 text-start">
-                  {isAr ? "اسم الميزة والتغطية" : "Feature Name"}
-                </th>
-                <th className="py-3.5 px-6 text-center w-36">
-                  {isAr ? "الحالة" : "Status"}
-                </th>
-                <th className="py-3.5 px-6 text-end w-28">
-                  {isAr ? "الإجراءات" : "Actions"}
-                </th>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-label={isAr ? "تحديث" : "Refresh"}
+            title={isAr ? "تحديث" : "Refresh"}
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark shadow-xs transition hover:bg-revix-surface disabled:opacity-50"
+          >
+            <RevixIcon
+              name="refresh-cw"
+              className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-revix-primary" : "text-revix-secondary"}`}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsAddFormOpen(!isAddFormOpen)}
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs transition hover:bg-revix-primary-hover"
+          >
+            <RevixIcon name="plus" className="h-4 w-4" />
+            <span>{isAr ? "إضافة ميزة" : "Add Feature"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      {formError && (
+        <div className="shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700 flex items-center gap-2">
+          <RevixIcon name="info" className="w-4 h-4 shrink-0" />
+          <span>{formError}</span>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs text-emerald-700 flex items-center gap-2">
+          <RevixIcon name="check-circle-2" className="w-4 h-4 shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      )}
+
+      {isAddFormOpen && (
+        <form onSubmit={handleCreate} className="shrink-0 rounded-xl border border-revix-border bg-revix-white p-3.5 space-y-2.5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <input
+              type="text"
+              required
+              value={featureName}
+              onChange={(e) => setFeatureName(e.target.value)}
+              placeholder={
+                isAr
+                  ? "اسم الميزة (مثال: إلغاء مجاني، تأمين شامل، GPS)..."
+                  : "Feature name (e.g. Free Cancellation, GPS)..."
+              }
+              className="h-9 flex-1 rounded-lg border border-revix-border bg-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:outline-hidden"
+            />
+            <input
+              type="text"
+              value={featureDesc}
+              onChange={(e) => setFeatureDesc(e.target.value)}
+              placeholder={isAr ? "وصف اختياري..." : "Optional description..."}
+              className="h-9 flex-1 rounded-lg border border-revix-border bg-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:outline-hidden"
+            />
+            <button
+              type="submit"
+              disabled={isCreating || !featureName.trim()}
+              className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-revix-primary px-4 text-xs font-semibold text-white hover:bg-revix-primary-hover disabled:opacity-50"
+            >
+              <RevixIcon name="check" className="w-3.5 h-3.5" />
+              <span>{isCreating ? (isAr ? "جاري الحفظ..." : "Saving...") : isAr ? "حفظ" : "Save"}</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Table Card */}
+      <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+        <DataTable fitAvailableHeight className="text-xs">
+          <thead>
+            <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">
+                {isAr ? "اسم الميزة والتغطية" : "Feature Name"}
+              </th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold w-36">
+                {isAr ? "الحالة" : "Status"}
+              </th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold w-24">
+                {isAr ? "إجراءات" : "Actions"}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-revix-border/60">
+            {isLoading ? (
+              <tr>
+                <td colSpan={3} className="h-48 text-center text-xs text-revix-secondary">
+                  {isAr ? "جاري التحميل..." : "Loading..."}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={3} className="py-12 text-center text-gray-400 text-xs">
-                    <RevixIcon name="refresh-cw" className="w-6 h-6 animate-spin mx-auto text-emerald-700 mb-2" />
-                    <span>{isAr ? "جاري تحميل قائمة المزايا..." : "Loading features..."}</span>
-                  </td>
-                </tr>
-              ) : filteredInclusions.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="py-12 text-center text-gray-400 text-xs">
-                    <p className="font-semibold text-gray-700 text-sm">
-                      {isAr ? "لا توجد مزايا مطابقة لبحثك" : "No matching features found"}
-                    </p>
-                    <p className="mt-1">
-                      {isAr ? "أضف ميزة جديدة باستخدام النموذج في الأعلى" : "Add a new feature using the form above"}
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                paginatedInclusions.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50/70 transition-colors group"
-                  >
-                    {/* Feature Name with Checkmark */}
-                    <td className="py-3.5 px-6">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
-                            item.isActive
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-gray-100 text-gray-400 border border-gray-200"
-                          }`}
-                        >
-                          <RevixIcon name="check" className="w-3 h-3 stroke-[2.5]" />
-                        </div>
-                        <div>
-                          <span className="font-semibold text-gray-900 text-xs sm:text-sm">
-                            {item.name}
-                          </span>
-                          {item.description && (
-                            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
+            ) : filteredInclusions.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="h-48 text-center text-sm text-revix-secondary">
+                  {isAr ? "لا توجد مزايا مسجلة" : "No inclusions found"}
+                </td>
+              </tr>
+            ) : (
+              paginatedInclusions.map((item) => (
+                <tr key={item.id} className="transition-colors hover:bg-revix-surface/60">
+                  <td className="py-2.5 px-3">
+                    <div className="font-semibold text-revix-dark">{item.name}</div>
+                    {item.description && (
+                      <div className="text-[11px] text-revix-secondary mt-0.5 line-clamp-1">
+                        {item.description}
                       </div>
-                    </td>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStatus(item)}
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                        item.isActive
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-revix-border bg-revix-surface text-revix-muted"
+                      }`}
+                    >
+                      {item.isActive ? (isAr ? "نشط" : "Active") : isAr ? "معطل" : "Inactive"}
+                    </button>
+                  </td>
+                  <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item)}
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 transition"
+                      title={isAr ? "حذف الميزة" : "Delete feature"}
+                    >
+                      <RevixIcon name="trash-2" className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </DataTable>
+      </div>
 
-                    {/* Status Pill Badge */}
-                    <td className="py-3.5 px-6 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(item)}
-                        title={isAr ? "اضغط لتبديل الحالة" : "Click to toggle status"}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition active:scale-95 ${
-                          item.isActive
-                            ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100/80 border border-emerald-200"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200/80 border border-gray-200"
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            item.isActive ? "bg-emerald-500" : "bg-gray-400"
-                          }`}
-                        />
-                        <span>{item.isActive ? (isAr ? "نشط" : "Active") : isAr ? "معطل" : "Inactive"}</span>
-                      </button>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3.5 px-6 text-end">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item)}
-                        className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                        title={isAr ? "حذف الميزة" : "Delete feature"}
-                      >
-                        <RevixIcon name="trash-2" className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </DataTable>
-        </div>
-
-        {/* Unified Pagination */}
-        <RevixPagination
+      {/* Unified Compact Pagination */}
+      <div className="shrink-0 overflow-hidden rounded-lg border border-revix-border bg-revix-white empty:hidden">
+        <RevixPagination compact
           currentPage={page}
           totalItems={totalCount}
           pageSize={pageSize}
           onPageChange={setPage}
           lang={lang}
+          itemLabel={isAr ? "ميزة" : "features"}
         />
       </div>
 

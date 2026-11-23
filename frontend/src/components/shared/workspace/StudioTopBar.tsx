@@ -88,33 +88,6 @@ export function StudioTopBar({ isRtl, company, branches, activeBranch, isLogging
             isRtl={isRtl}
           />
         </button>
-
-        <span className="select-none text-[14px] text-revix-border">/</span>
-
-        {activeBranch ? (
-          <div className="flex items-center gap-1.5">
-            <RevixIcon
-              name="map-pin"
-              size={14}
-              className="shrink-0 text-revix-primary"
-            />
-            <div className="w-[180px]">
-              <RevixSelect
-                size="sm"
-                searchable={branches.length > 5}
-                isRtl={isRtl}
-                aria-label={isRtl ? "اختيار الفرع النشط" : "Select active branch"}
-                value={activeBranch.id}
-                onChange={(e) => onSelectBranch(e.target.value)}
-                options={branches.map((b) => ({
-                  value: b.id,
-                  label: `${b.name} (${b.code})`,
-                  description: `${b.city} · ${b.currencyCode}`,
-                }))}
-              />
-            </div>
-          </div>
-        ) : null}
       </div>
 
       {/* Desktop End Controls */}
@@ -128,10 +101,15 @@ export function StudioTopBar({ isRtl, company, branches, activeBranch, isLogging
           <button
             type="button"
             onClick={onOpenCommandPalette}
-            className="flex h-[32px] cursor-pointer items-center gap-2 rounded-full border border-revix-border bg-revix-surface/75 px-3 text-[12.5px] text-revix-secondary transition-colors hover:border-revix-primary/40 hover:bg-revix-white hover:text-revix-dark"
+            className="flex h-[34px] w-[210px] lg:w-[250px] cursor-pointer items-center justify-between gap-2 rounded-full border border-revix-border bg-revix-surface/75 px-3.5 text-[13px] text-revix-secondary transition-colors hover:border-revix-primary/40 hover:bg-revix-white hover:text-revix-dark"
           >
-            <RevixIcon name="search" size={13} />
-            <span>{isRtl ? "بحث..." : "Search..."}</span>
+            <span className="flex items-center gap-2">
+              <RevixIcon name="search" size={14} />
+              <span>{isRtl ? "بحث سريع..." : "Quick search..."}</span>
+            </span>
+            <kbd className="hidden sm:inline-flex rounded border border-revix-border/80 bg-revix-white px-1.5 py-0.5 font-mono text-[10px] text-revix-secondary">
+              Ctrl K
+            </kbd>
           </button>
         </StudioTooltip>
 
