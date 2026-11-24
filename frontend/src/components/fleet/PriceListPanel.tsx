@@ -880,7 +880,6 @@ export function PriceListPanel({
         <DataTable fitAvailableHeight className="text-xs">
           <thead>
             <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
-              <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-start">Vehicle ID</th>
               <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "الفريانت / الفئة" : "Model Variant"}</th>
               <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "إجمالي السيارات" : "Total Units"}</th>
               <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "1 - 2 يوم" : "1 - 2 Days"}</th>
@@ -893,13 +892,13 @@ export function PriceListPanel({
           <tbody className="divide-y divide-revix-border/80">
             {isLoading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-[13px] text-revix-secondary">
+                <td colSpan={7} className="px-4 py-8 text-center text-[13px] text-revix-secondary">
                   {isRtl ? "جاري التحميل..." : "Loading..."}
                 </td>
               </tr>
             ) : filteredRows.length === 0 ? (
               <TableEmptyRow
-                colSpan={8}
+                colSpan={7}
                 title={isRtl ? "لا توجد فئات سيارات مسجلة بعد" : "No variants found"}
                 description={
                   isRtl
@@ -922,27 +921,6 @@ export function PriceListPanel({
                       isAllBranchesViewer ? "cursor-pointer" : ""
                     }`}
                   >
-                    <td className="whitespace-nowrap px-3.5 py-3 text-start">
-                      {row.vehicleCodes.length > 0 ? (
-                        <div className="flex flex-wrap items-center gap-1" dir="ltr">
-                          {row.vehicleCodes.slice(0, 3).map((code) => (
-                            <span
-                              key={code}
-                              className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10.5px] font-bold text-revix-primary"
-                            >
-                              {code}
-                            </span>
-                          ))}
-                          {row.vehicleCodes.length > 3 && (
-                            <span className="font-mono text-[10.5px] font-semibold text-revix-secondary">
-                              +{row.vehicleCodes.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-revix-muted">—</span>
-                      )}
-                    </td>
                     <td className="whitespace-nowrap px-3.5 py-3 text-start">
                       <span className="font-semibold text-revix-dark">{row.title}</span>
                     </td>
