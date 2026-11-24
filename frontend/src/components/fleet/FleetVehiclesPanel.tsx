@@ -1,12 +1,12 @@
 "use client";
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { parseFleetResourceRoute, vehicleHref, type VehicleProfileTab } from "@/lib/workspace/resourceRoutes";
 import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
 import { useGetVehicleQuery } from "@/store/api/fleetApi";
 import { VehicleProfilePage } from "./vehicle-profile/VehicleProfilePage";
-import { DispatchMovementModal } from "./FleetMovementsPanel";
 
 import { getApiErrorMessage } from "@/lib/api/errors";
 
@@ -133,7 +133,6 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
   const [createVehicle, { isLoading: isCreatingDirect }] = useCreateVehicleMutation();
   const [receiveVehicle, { isLoading: isReceivingPo }] = useReceiveVehicleMutation();
   const [updateStatus] = useUpdateVehicleStatusMutation();
-  const [movingVehicle, setMovingVehicle] = useState<FleetVehicleDto | null>(null);
 
   const vehicles = useMemo(() => data?.data ?? [], [data?.data]);
 
@@ -373,7 +372,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder={isRtl ? "بحث باللوحة، الشاسيه..." : "Search plate, VIN..."}
+              placeholder={isRtl ? "بحث برقم المركبة، اللوحة، الشاسيه..." : "Search Vehicle ID, plate, VIN..."}
               className={`h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder:text-revix-muted focus:border-revix-primary focus:outline-hidden ${
                 isRtl ? "pr-8.5 pl-3" : "pl-8.5 pr-3"
               }`}
@@ -415,6 +414,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
             <DataTable fitAvailableHeight className="text-xs">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">Vehicle ID</th>
                   <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "السيارة" : "Vehicle"}</th>
                   <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "الفرع" : "Branch"}</th>
                   <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "اللوحة" : "Plate"}</th>
@@ -428,11 +428,15 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
               </thead>
               <tbody className="divide-y divide-revix-border/60">
                 {paginatedVehicles.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="h-48 text-center text-sm text-revix-secondary">
-                      {isRtl ? "لا توجد سيارات مسجلة في الأسطول" : "No vehicles registered in fleet"}
-                    </td>
-                  </tr>
+                  <TableEmptyRow
+                    colSpan={10}
+                    title={isRtl ? "لا توجد سيارات مسجلة في الأسطول" : "No vehicles registered in fleet"}
+                    description={
+                      isRtl
+                        ? "أضف أول مركبة لبدء متابعة حالتها وحجوزاتها وصيانتها."
+                        : "Add your first vehicle to start tracking status, bookings, and maintenance."
+                    }
+                  />
                 ) : paginatedVehicles.map((vh) => {
                     const statusConfig = VEHICLE_STATUS_CONFIG[vh.status] || VEHICLE_STATUS_CONFIG.available;
 
@@ -456,6 +460,11 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                         onKeyDown={(e) => { if (e.key === "Enter") openVehicleDetails(vh); }}
                         className="cursor-pointer transition-colors hover:bg-revix-surface/60 focus:bg-revix-surface/60 focus:outline-none"
                       >
+                        <td className="py-2.5 px-3.5 whitespace-nowrap">
+                          <span className="rounded bg-revix-accent-soft px-2 py-0.5 font-mono text-[11px] font-bold text-revix-primary" dir="ltr">
+                            {vh.assetCode || "—"}
+                          </span>
+                        </td>
                         <td className="py-2.5 px-3.5">
                           <div className="flex items-center gap-1.5">
                             <span className="font-semibold text-revix-dark whitespace-nowrap">{variantTitle}</span>
@@ -526,17 +535,6 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                         </td>
                         <td className="py-2.5 px-3.5 text-end whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <div className="inline-flex items-center justify-end gap-1.5">
-                            {!vh.isPartnerVehicle && company?.operatingMode !== "local_partner" && (
-                              <button
-                                type="button"
-                                onClick={() => setMovingVehicle(vh)}
-                                title={isRtl ? "نقل السيارة لفرع آخر" : "Move to another branch"}
-                                className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border border-revix-border bg-white px-2.5 text-[11px] font-medium text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-tint/40 hover:text-revix-primary"
-                              >
-                                <RevixIcon name={isRtl ? "arrow-left" : "arrow-right"} size={12} />
-                                <span>{isRtl ? "نقل" : "Move"}</span>
-                              </button>
-                            )}
                             <button
                               type="button"
                               onClick={() => openVehicleDetails(vh)}
@@ -566,12 +564,6 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
               itemLabel={isRtl ? "سيارة" : "vehicles"}
             />
           </div>
-          <DispatchMovementModal
-            isOpen={Boolean(movingVehicle)}
-            isRtl={isRtl}
-            initialVehicle={movingVehicle}
-            onClose={() => setMovingVehicle(null)}
-          />
         </>
       )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { useMemo, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
@@ -119,7 +120,7 @@ export function DispatchMovementModal({
             buttonClassName="h-9 rounded-lg text-xs"
             options={vehicles.map((v) => ({
               value: v.id,
-              label: `${v.variant ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}` : "Vehicle"} • ${v.licensePlate} (${v.branchName || v.companyName || (isRtl ? "مخزون الشركة" : "Company Stock")})`,
+              label: `${v.assetCode ? `[${v.assetCode}] ` : ""}${v.variant ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}` : "Vehicle"} • ${v.licensePlate} (${v.branchName || v.companyName || (isRtl ? "مخزون الشركة" : "Company Stock")})`,
             }))}
           />
         </div>
@@ -324,11 +325,15 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-revix-muted">
-                    {isRtl ? "لا توجد حركات مسجلة" : "No movements recorded."}
-                  </td>
-                </tr>
+                <TableEmptyRow
+                  colSpan={8}
+                  title={isRtl ? "لا توجد حركات مسجلة" : "No movements recorded"}
+                  description={
+                    isRtl
+                      ? "ستظهر هنا حركات تسليم واستلام ونقل المركبات بمجرد تسجيلها."
+                      : "Vehicle dispatch, handover, and transfer movements will appear here."
+                  }
+                />
               ) : (
                 filtered.map((m) => (
                   <tr key={m.id} className="hover:bg-revix-surface/35">

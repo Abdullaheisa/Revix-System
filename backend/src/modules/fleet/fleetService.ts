@@ -934,6 +934,103 @@ export class FleetService {
     return this.store.createVehicleModel(actor.company.id, makeId, name);
   }
 
+  async deleteVehicleMake(actor: TenantActor, makeId: string) {
+    return this.store.deleteVehicleMake(actor.company.id, makeId);
+  }
+
+  async deleteVehicleModel(actor: TenantActor, modelId: string) {
+    return this.store.deleteVehicleModel(actor.company.id, modelId);
+  }
+
+  // ============================================================================
+  // Master Catalogs: Colors, Body Styles, Spot Price Lists
+  // ============================================================================
+
+  async listVehicleColors(actor: TenantActor) {
+    return this.store.listVehicleColors(actor.company.id);
+  }
+
+  async createVehicleColor(
+    actor: TenantActor,
+    input: { colorType?: string; nameEn: string; nameAr: string },
+  ) {
+    return this.store.createVehicleColor({
+      companyId: actor.company.id,
+      colorType: input.colorType,
+      nameEn: input.nameEn,
+      nameAr: input.nameAr,
+    });
+  }
+
+  async deleteVehicleColor(actor: TenantActor, colorId: string) {
+    return this.store.deleteVehicleColor(actor.company.id, colorId);
+  }
+
+  async listVehicleBodyStyles(actor: TenantActor) {
+    return this.store.listVehicleBodyStyles(actor.company.id);
+  }
+
+  async createVehicleBodyStyle(
+    actor: TenantActor,
+    input: { code: string; nameEn: string; nameAr: string },
+  ) {
+    return this.store.createVehicleBodyStyle({
+      companyId: actor.company.id,
+      code: input.code,
+      nameEn: input.nameEn,
+      nameAr: input.nameAr,
+    });
+  }
+
+  async deleteVehicleBodyStyle(actor: TenantActor, styleId: string) {
+    return this.store.deleteVehicleBodyStyle(actor.company.id, styleId);
+  }
+
+  async listFleetPriceLists(actor: TenantActor) {
+    return this.store.listFleetPriceLists(actor.company.id);
+  }
+
+  async createFleetPriceList(
+    actor: TenantActor,
+    input: {
+      name: string;
+      priceListType?: string;
+      currencyCode: string;
+      effectiveFrom?: string | null;
+      effectiveTo?: string | null;
+      priceType?: string;
+    },
+  ) {
+    return this.store.createFleetPriceList({
+      companyId: actor.company.id,
+      ...input,
+    });
+  }
+
+  async updateFleetPriceList(
+    actor: TenantActor,
+    priceListId: string,
+    input: {
+      name?: string;
+      priceListType?: string;
+      currencyCode?: string;
+      effectiveFrom?: string | null;
+      effectiveTo?: string | null;
+      priceType?: string;
+      isActive?: boolean;
+    },
+  ) {
+    const updated = await this.store.updateFleetPriceList(actor.company.id, priceListId, input);
+    if (!updated) {
+      throw new FleetServiceError(404, "PRICE_LIST_NOT_FOUND", "Price list not found.");
+    }
+    return updated;
+  }
+
+  async deleteFleetPriceList(actor: TenantActor, priceListId: string) {
+    return this.store.deleteFleetPriceList(actor.company.id, priceListId);
+  }
+
   async listInsuranceCompanies(actor: TenantActor) {
     return this.store.listInsuranceCompanies(actor.company.id);
   }

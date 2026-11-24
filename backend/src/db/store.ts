@@ -2,7 +2,7 @@ import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord,
 import type { BranchRecord, CompanyOperatingMode, CompanyRecord, CreateBranchInput, CreateCompanyInput, InsuranceCompanyRecord, UpdateBranchInput, UpdateCompanyInput } from "./contracts/workspace.ts";
 import type { CompanyMembershipRecord, CompanyRoleRecord, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, EmployeeInvitationRecord, UpdateCompanyMembershipInput, UpdateCompanyRoleInput } from "./contracts/team.ts";
 import type { CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CreateNetworkInvitationInput, CreateNetworkLinkInput, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord } from "./contracts/network.ts";
-import type { CreateFleetVehicleInput, CreateRentalInclusionInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, DriverRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, RentalInclusionRecord, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, VehicleCategory, VehicleInspectionRecord, VehicleInsurancePolicyRecord, VehicleLifecycleProfile, VehicleMaintenanceLogRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord } from "./contracts/fleet.ts";
+import type { CreateFleetPriceListInput, CreateFleetVehicleInput, CreateRentalInclusionInput, CreateVehicleBodyStyleInput, CreateVehicleColorInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, DriverRecord, FleetPriceListRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, RentalInclusionRecord, UpdateFleetPriceListInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, VehicleBodyStyleRecord, VehicleCategory, VehicleColorRecord, VehicleInspectionRecord, VehicleInsurancePolicyRecord, VehicleLifecycleProfile, VehicleMaintenanceLogRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord } from "./contracts/fleet.ts";
 import type { CreatePurchaseOrderInput, CreateVendorInput, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, UpdateVendorInput, VendorCategory, VendorRecord } from "./contracts/purchasing.ts";
 import type { CustomerRecord, RentalContractRecord } from "./contracts/rentals.ts";
 
@@ -301,6 +301,26 @@ export interface AuthDataStore {
     makeId: string,
     name: string,
   ): Promise<{ id: string; makeId: string; name: string }>;
+  deleteVehicleMake(companyId: string, makeId: string): Promise<boolean>;
+  deleteVehicleModel(companyId: string, modelId: string): Promise<boolean>;
+
+  // Fleet Master Catalogs (Colors, Body Styles, Spot Price Lists)
+  listVehicleColors(companyId: string): Promise<VehicleColorRecord[]>;
+  createVehicleColor(input: CreateVehicleColorInput): Promise<VehicleColorRecord>;
+  deleteVehicleColor(companyId: string, colorId: string): Promise<boolean>;
+
+  listVehicleBodyStyles(companyId: string): Promise<VehicleBodyStyleRecord[]>;
+  createVehicleBodyStyle(input: CreateVehicleBodyStyleInput): Promise<VehicleBodyStyleRecord>;
+  deleteVehicleBodyStyle(companyId: string, styleId: string): Promise<boolean>;
+
+  listFleetPriceLists(companyId: string): Promise<FleetPriceListRecord[]>;
+  createFleetPriceList(input: CreateFleetPriceListInput): Promise<FleetPriceListRecord>;
+  updateFleetPriceList(
+    companyId: string,
+    priceListId: string,
+    input: UpdateFleetPriceListInput,
+  ): Promise<FleetPriceListRecord | null>;
+  deleteFleetPriceList(companyId: string, priceListId: string): Promise<boolean>;
 
   // Insurance Companies & Vehicle Lifecycle
   listInsuranceCompanies(companyId: string): Promise<InsuranceCompanyRecord[]>;

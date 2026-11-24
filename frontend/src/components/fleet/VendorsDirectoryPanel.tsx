@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 import { useMemo, useState } from "react";
@@ -404,11 +405,10 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
               </thead>
               <tbody className="divide-y divide-revix-border/60">
                 {paginatedVendors.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="h-48 text-center text-sm text-revix-secondary">
-                      {isRtl ? "لا يوجد موردون مسجلون" : "No vendors registered"}
-                    </td>
-                  </tr>
+                  <TableEmptyRow
+                    colSpan={6}
+                    title={isRtl ? "لا يوجد موردون مسجلون" : "No vendors registered"}
+                  />
                 ) : paginatedVendors.map((v) => (
                     <tr
                       key={v.id}

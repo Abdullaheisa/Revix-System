@@ -139,6 +139,7 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
     if (!q) return activeUnitList;
     return activeUnitList.filter(
       (v) =>
+        (v.assetCode ?? "").toLowerCase().includes(q) ||
         v.licensePlate.toLowerCase().includes(q) ||
         v.vin.toLowerCase().includes(q) ||
         (v.variant &&
@@ -441,9 +442,16 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                           )}
                         </td>
                         <td className="px-3 py-3">
-                          <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono font-bold text-revix-dark">
-                            {v.licensePlate}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {v.assetCode && (
+                              <span className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary" dir="ltr">
+                                {v.assetCode}
+                              </span>
+                            )}
+                            <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono font-bold text-revix-dark">
+                              {v.licensePlate}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-3 py-3 font-mono text-revix-dark">
                           {v.mileageOdometer.toLocaleString()} {isRtl ? "كم" : "km"}

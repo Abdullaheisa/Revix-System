@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 import { useMemo, useState } from "react";
@@ -208,11 +209,7 @@ export function InsuranceCompaniesPanel({ isRtl }: InsuranceCompaniesPanelProps)
             </thead>
             <tbody className="divide-y divide-revix-border/60">
               {companies.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="h-48 text-center text-sm text-revix-secondary">
-                    {t.empty}
-                  </td>
-                </tr>
+                <TableEmptyRow colSpan={6} title={t.empty} />
               ) : companies.map((c) => (
                 <tr
                   key={c.id}

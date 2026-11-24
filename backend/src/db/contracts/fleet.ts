@@ -16,7 +16,8 @@ export type VehicleCategory =
   | "coupe"
   | "van"
   | "pickup"
-  | "commercial";
+  | "commercial"
+  | (string & {});
 
 export type VehicleTransmission = "automatic" | "manual";
 
@@ -316,6 +317,7 @@ export interface VehicleLifecycleProfile {
 
 export interface CreateFleetVehicleInput {
   id?: string;
+  assetCode?: string;
   companyId: string;
   branchId: string;
   variantId: string;
@@ -387,4 +389,70 @@ export interface FleetVehicleFilterOptions {
   search?: string;
   includeNetwork?: boolean;
   isBookable?: boolean;
+}
+
+export interface VehicleColorRecord {
+  id: string;
+  companyId: string;
+  colorType: string;
+  nameEn: string;
+  nameAr: string;
+  createdAt: Date;
+}
+
+export interface CreateVehicleColorInput {
+  companyId: string;
+  colorType?: string;
+  nameEn: string;
+  nameAr: string;
+}
+
+export interface VehicleBodyStyleRecord {
+  id: string;
+  companyId: string;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  createdAt: Date;
+}
+
+export interface CreateVehicleBodyStyleInput {
+  companyId: string;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+}
+
+export interface FleetPriceListRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  priceListType: string;
+  currencyCode: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  priceType: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateFleetPriceListInput {
+  companyId: string;
+  name: string;
+  priceListType?: string;
+  currencyCode: string;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  priceType?: string;
+}
+
+export interface UpdateFleetPriceListInput {
+  name?: string;
+  priceListType?: string;
+  currencyCode?: string;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  priceType?: string;
+  isActive?: boolean;
 }

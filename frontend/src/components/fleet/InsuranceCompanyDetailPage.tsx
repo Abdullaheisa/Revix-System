@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { DataTable } from "@/components/ui/DataTable";
+import { DetailTileCard } from "@/components/shared/workspace";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { vehicleHref } from "@/lib/workspace/resourceRoutes";
 import {
@@ -123,68 +124,49 @@ export function InsuranceCompanyDetailPage({
         {activeTab === "overview" && (
           <div className="grid items-start gap-5 md:grid-cols-2">
             {/* Company Info */}
-            <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
-              <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold text-revix-dark">
-                {isRtl ? "بيانات شركة التأمين" : "Insurance Company Details"}
-              </h3>
-              <dl className="divide-y divide-revix-border px-4">
-                {[
-                  [isRtl ? "اسم الشركة" : "Company name", company.name],
-                  [isRtl ? "مسؤول التواصل" : "Contact person", company.contactPerson || "—"],
-                  [isRtl ? "الهاتف" : "Phone", company.phone || "—"],
-                  [isRtl ? "البريد الإلكتروني" : "Email", company.email || "—"],
-                  [isRtl ? "العنوان" : "Address", company.address || "—"],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                    <dt className="text-revix-secondary">{label}</dt>
-                    <dd className="text-end font-medium text-revix-dark tabular-nums">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
+            <DetailTileCard
+              title={isRtl ? "بيانات شركة التأمين" : "Insurance Company Details"}
+              items={[
+                { label: isRtl ? "اسم الشركة" : "Company name", value: company.name },
+                {
+                  label: isRtl ? "مسؤول التواصل" : "Contact person",
+                  value: company.contactPerson || "—",
+                },
+                { label: isRtl ? "الهاتف" : "Phone", value: company.phone || "—" },
+                { label: isRtl ? "البريد الإلكتروني" : "Email", value: company.email || "—" },
+                { label: isRtl ? "العنوان" : "Address", value: company.address || "—" },
+              ]}
+            />
 
             {/* Policies & Payments Summary */}
-            <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
-              <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold text-revix-dark">
-                {isRtl ? "ملخص التأمين والمدفوعات" : "Policies & Payments Summary"}
-              </h3>
-              <dl className="divide-y divide-revix-border px-4">
-                {[
-                  [
-                    isRtl ? "إجمالي الأقساط المدفوعة" : "Total premiums paid",
-                    isLoading ? "…" : `${summary.totalPaid.toLocaleString()} ${currency}`,
-                    "text-emerald-700",
-                  ],
-                  [
-                    isRtl ? "عدد السيارات المؤمّن عليها" : "Insured vehicles",
-                    isLoading ? "…" : String(summary.uniqueVehicles),
-                    "text-revix-dark",
-                  ],
-                  [
-                    isRtl ? "إجمالي البوالص" : "Total policies",
-                    isLoading ? "…" : String(policies.length),
-                    "text-revix-dark",
-                  ],
-                  [
-                    isRtl ? "بوالص سارية" : "Active policies",
-                    isLoading ? "…" : String(summary.activeCount),
-                    "text-emerald-700",
-                  ],
-                  [
-                    isRtl ? "بوالص منتهية" : "Expired policies",
-                    isLoading ? "…" : String(summary.expiredCount),
-                    summary.expiredCount > 0 ? "text-rose-600" : "text-revix-dark",
-                  ],
-                ].map(([label, value, tone]) => (
-                  <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                    <dt className="text-revix-secondary">{label}</dt>
-                    <dd className={`text-end font-semibold tabular-nums ${tone}`} dir="ltr">
-                      {value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
+            <DetailTileCard
+              title={isRtl ? "ملخص التأمين والمدفوعات" : "Policies & Payments Summary"}
+              items={[
+                {
+                  label: isRtl ? "إجمالي الأقساط المدفوعة" : "Total premiums paid",
+                  value: isLoading ? "…" : `${summary.totalPaid.toLocaleString()} ${currency}`,
+                  valueClassName: "text-emerald-700",
+                },
+                {
+                  label: isRtl ? "عدد السيارات المؤمّن عليها" : "Insured vehicles",
+                  value: isLoading ? "…" : String(summary.uniqueVehicles),
+                },
+                {
+                  label: isRtl ? "إجمالي البوالص" : "Total policies",
+                  value: isLoading ? "…" : String(policies.length),
+                },
+                {
+                  label: isRtl ? "بوالص سارية" : "Active policies",
+                  value: isLoading ? "…" : String(summary.activeCount),
+                  valueClassName: "text-emerald-700",
+                },
+                {
+                  label: isRtl ? "بوالص منتهية" : "Expired policies",
+                  value: isLoading ? "…" : String(summary.expiredCount),
+                  valueClassName: summary.expiredCount > 0 ? "text-rose-600" : "text-revix-dark",
+                },
+              ]}
+            />
           </div>
         )}
 

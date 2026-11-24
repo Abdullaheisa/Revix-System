@@ -79,6 +79,7 @@ export function WorkspaceStudioShell({
   const activeSubPage = pendingUrlPush ? storedSubPage : route.subPage;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [appLauncherOpen, setAppLauncherOpen] = useState(false);
   const gChordActiveRef = useRef(false);
   const gChordTimerRef = useRef<number | null>(null);
 
@@ -330,14 +331,17 @@ export function WorkspaceStudioShell({
         activeBranch={activeBranch}
         isLoggingOut={isLoggingOut}
         onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
-        onGoHome={() =>
+        isAppLauncherOpen={appLauncherOpen}
+        onToggleAppLauncher={() => setAppLauncherOpen((prev) => !prev)}
+        onGoHome={() => {
+          setAppLauncherOpen(false);
           dispatch(
             navigateToWorkspacePage({
               section: "overview",
               subPage: "summary",
             }),
-          )
-        }
+          );
+        }}
         onGoCompanySettings={() =>
           dispatch(
             navigateToWorkspacePage({
@@ -347,7 +351,10 @@ export function WorkspaceStudioShell({
           )
         }
         onSelectBranch={(id) => dispatch(setSelectedBranchId(id))}
-        onOpenCommandPalette={() => dispatch(setCommandPaletteOpen(true))}
+        onOpenCommandPalette={() => {
+          setAppLauncherOpen(false);
+          dispatch(setCommandPaletteOpen(true));
+        }}
         onGoSecurity={() =>
           dispatch(
             navigateToWorkspacePage({
@@ -362,19 +369,14 @@ export function WorkspaceStudioShell({
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <StudioSmartSidebar
           isRtl={isRtl}
+          isOpen={appLauncherOpen}
+          onClose={() => setAppLauncherOpen(false)}
           sections={availableSections}
           activeSection={activeSection}
           activeSubPage={activeSubPage}
-          isCollapsed={isIconRailPinned}
-          onSelectSection={(sec) => {
-            const target = availableSections.find((s) => s.id === sec);
-            const firstSubPage = target?.groups[0]?.items[0]?.id || "summary";
-            dispatch(navigateToWorkspacePage({ section: sec, subPage: firstSubPage }));
-          }}
           onSelectSubPage={(section, subPage) =>
             dispatch(navigateToWorkspacePage({ section, subPage }))
           }
-          onToggleCollapse={() => dispatch(toggleIconRailPinned())}
         />
 
         <StudioMobileDrawer

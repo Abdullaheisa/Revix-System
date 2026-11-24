@@ -1,5 +1,6 @@
 "use client";
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { parseFleetResourceRoute, purchaseOrderHref, vehicleHref } from "@/lib/workspace/resourceRoutes";
@@ -20,7 +21,7 @@ import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
 import { RevixPagination } from "@/components/ui/RevixPagination";
-import { RevixConfirmModal } from "@/components/shared/workspace";
+import { DetailTileCard, RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
 import { useCreatePurchaseOrderMutation, useLazyListPurchaseOrdersQuery, useListPurchaseOrdersQuery, useListVariantsQuery, useListVendorsQuery, useListVehiclesQuery, useReceiveVehicleMutation, useSignPurchaseOrderMutation, useUpdatePurchaseOrderStatusMutation, type CreatePurchaseOrderItemInput, type PurchaseOrderDto, type PurchaseOrderStatus, type PaymentTermsType } from "@/store/api/fleetApi";
 import { exportStyledExcel } from "@/lib/export/excelExport";
@@ -969,22 +970,28 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
         {detailSection === "terms" && (
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="grid items-start gap-5 md:grid-cols-2">
-              <section className="overflow-hidden rounded-lg border border-revix-border">
-                <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold">{isRtl ? "حساب الطلب" : "Payment summary"}</h3>
-                <dl className="divide-y divide-revix-border px-4">
-                  {[
-                    [isRtl ? "قيمة الطلب" : "Order value", `${Number(po.totalAmount).toLocaleString()} ${po.currency}`],
-                    [isRtl ? "المدفوع" : "Paid", `${Number(po.upfrontPaid).toLocaleString()} ${po.currency}`],
-                    [isRtl ? "المتبقي" : "Balance due", `${Number(po.remainingAmount).toLocaleString()} ${po.currency}`],
-                    ...(po.installmentsCount > 1 ? [[isRtl ? "عدد الأقساط" : "Installments", po.installmentsCount]] : []),
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                      <dt className="text-revix-secondary">{label}</dt>
-                      <dd className="text-end font-medium tabular-nums">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
+              <DetailTileCard
+                title={isRtl ? "حساب الطلب" : "Payment summary"}
+                items={[
+                  {
+                    label: isRtl ? "قيمة الطلب" : "Order value",
+                    value: `${Number(po.totalAmount).toLocaleString()} ${po.currency}`,
+                  },
+                  {
+                    label: isRtl ? "المدفوع" : "Paid",
+                    value: `${Number(po.upfrontPaid).toLocaleString()} ${po.currency}`,
+                    valueClassName: "text-emerald-700",
+                  },
+                  {
+                    label: isRtl ? "المتبقي" : "Balance due",
+                    value: `${Number(po.remainingAmount).toLocaleString()} ${po.currency}`,
+                    valueClassName: Number(po.remainingAmount) > 0 ? "text-amber-700" : "text-revix-dark",
+                  },
+                  ...(po.installmentsCount > 1
+                    ? [{ label: isRtl ? "عدد الأقساط" : "Installments", value: po.installmentsCount }]
+                    : []),
+                ]}
+              />
               <section className="overflow-hidden rounded-lg border border-revix-border">
                 <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold">{isRtl ? "شروط المورد" : "Vendor terms"}</h3>
                 <ol className="list-decimal space-y-2 py-3 ps-9 pe-4 text-sm">
@@ -1250,11 +1257,10 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                 </thead>
                 <tbody className="divide-y divide-revix-border/60">
                   {purchaseOrders.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="h-48 text-center text-sm text-revix-secondary">
-                        {isRtl ? "لا توجد أوامر شراء" : "No purchase orders"}
-                      </td>
-                    </tr>
+                    <TableEmptyRow
+                      colSpan={7}
+                      title={isRtl ? "لا توجد أوامر شراء" : "No purchase orders"}
+                    />
                   ) : purchaseOrders.map((po) => {
                     const statusConfig = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
                     const totalQty = po.items?.reduce((acc, it) => acc + it.quantity, 0) || 0;

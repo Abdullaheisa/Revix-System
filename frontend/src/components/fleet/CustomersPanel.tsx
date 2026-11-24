@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { useMemo, useState } from "react";
 import {
   useDeleteCustomerMutation,
@@ -106,7 +107,15 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
             {isLoading ? (
               <tr><td colSpan={6} className="h-48 text-center text-xs text-revix-secondary">{isRtl ? "جاري التحميل..." : "Loading..."}</td></tr>
             ) : paginated.length === 0 ? (
-              <tr><td colSpan={6} className="h-48 text-center text-sm text-revix-secondary">{isRtl ? "لا يوجد عملاء مسجلون" : "No customers registered"}</td></tr>
+              <TableEmptyRow
+                colSpan={6}
+                title={isRtl ? "لا يوجد عملاء مسجلون" : "No customers registered"}
+                description={
+                  isRtl
+                    ? "أضف بيانات العملاء لربطها بعقود الإيجار والفواتير."
+                    : "Register customer profiles to link them with rental contracts."
+                }
+              />
             ) : (
             paginated.map((c) => (
               <tr key={c.id} className="transition-colors hover:bg-revix-surface/60">

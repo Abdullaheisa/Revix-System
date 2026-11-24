@@ -19,15 +19,19 @@ import type {
   CreateCompanyMembershipInput,
   CreateCompanyRoleInput,
   CreateEmployeeInvitationInput,
+  CreateFleetPriceListInput,
   CreateFleetVehicleInput,
   CreateNetworkInvitationInput,
   CreateNetworkLinkInput,
   CreatePurchaseOrderInput,
   CreateRentalInclusionInput,
+  CreateVehicleBodyStyleInput,
+  CreateVehicleColorInput,
   CreateVehiclePhotoInput,
   CreateVehicleVariantInput,
   CreateVendorInput,
   EmployeeInvitationRecord,
+  FleetPriceListRecord,
   FleetVehicleFilterOptions,
   FleetVehicleRecord,
   FleetVehicleStatus,
@@ -44,13 +48,16 @@ import type {
   UpdateCompanyInput,
   UpdateCompanyMembershipInput,
   UpdateCompanyRoleInput,
+  UpdateFleetPriceListInput,
   UpdateFleetVehicleInput,
   UpdateRentalInclusionInput,
   UpdateVehicleVariantInput,
   UpdateVendorInput,
   UserRecord,
   UserStatus,
+  VehicleBodyStyleRecord,
   VehicleCategory,
+  VehicleColorRecord,
   VehiclePhotoRecord,
   VehicleVariantRecord,
   VendorCategory,
@@ -100,6 +107,9 @@ export class InMemoryAuthDataStore implements AuthDataStore {
   private readonly vehiclesById = new Map<string, FleetVehicleRecord>();
   private readonly vehiclePhotosById = new Map<string, VehiclePhotoRecord>();
   private readonly rentalInclusionsById = new Map<string, RentalInclusionRecord>();
+  private readonly vehicleColorsById = new Map<string, VehicleColorRecord>();
+  private readonly vehicleBodyStylesById = new Map<string, VehicleBodyStyleRecord>();
+  private readonly fleetPriceListsById = new Map<string, FleetPriceListRecord>();
   public readonly auditLogs: AuditLogRecord[] = [];
   private readonly persistFilePath: string | null;
 
@@ -1686,8 +1696,17 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       }
     }
 
+    let maxSeq = 0;
+    for (const existing of this.vehiclesById.values()) {
+      if (existing.companyId === input.companyId && existing.assetCode) {
+        const m = /^VEH-(\d+)$/.exec(existing.assetCode);
+        if (m) maxSeq = Math.max(maxSeq, Number(m[1]));
+      }
+    }
+
     const record: FleetVehicleRecord = {
       id: input.id ?? crypto.randomUUID(),
+      assetCode: input.assetCode?.trim() || `VEH-${String(maxSeq + 1).padStart(4, "0")}`,
       companyId: input.companyId,
       branchId: input.branchId,
       variantId: input.variantId,
@@ -2413,4 +2432,118 @@ export class InMemoryAuthDataStore implements AuthDataStore {
   async dispatchVehicleMovement(input: any) { return { ...input, id: crypto.randomUUID(), movementNumber: "MV-0001", status: "in_transit", dispatchedAt: new Date(), receivedAt: null, arrivalOdometerKm: null, createdAt: new Date(), updatedAt: new Date() }; }
   async receiveVehicleMovement() { return null; }
   async cancelVehicleMovement() { return null; }
+
+  async deleteVehicleMake(_companyId: string, _makeId: string) {
+    return true;
+  }
+
+  async deleteVehicleModel(_companyId: string, _modelId: string) {
+    return true;
+  }
+
+  async listVehicleColors(companyId: string): Promise<VehicleColorRecord[]> {
+    return Array.from(this.vehicleColorsById.values())
+      .filter((c) => c.companyId === companyId)
+      .sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+  }
+
+  async createVehicleColor(input: CreateVehicleColorInput): Promise<VehicleColorRecord> {
+    const rec: VehicleColorRecord = {
+      id: crypto.randomUUID(),
+      companyId: input.companyId,
+      colorType: input.colorType?.trim() || "exterior",
+      nameEn: input.nameEn.trim(),
+      nameAr: input.nameAr.trim(),
+      createdAt: new Date(),
+    };
+    this.vehicleColorsById.set(rec.id, rec);
+    return { ...rec };
+  }
+
+  async deleteVehicleColor(companyId: string, colorId: string): Promise<boolean> {
+    const ex = this.vehicleColorsById.get(colorId);
+    if (!ex || ex.companyId !== companyId) return false;
+    this.vehicleColorsById.delete(colorId);
+    return true;
+  }
+
+  async listVehicleBodyStyles(companyId: string): Promise<VehicleBodyStyleRecord[]> {
+    return Array.from(this.vehicleBodyStylesById.values())
+      .filter((s) => s.companyId === companyId)
+      .sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+  }
+
+  async createVehicleBodyStyle(input: CreateVehicleBodyStyleInput): Promise<VehicleBodyStyleRecord> {
+    const rec: VehicleBodyStyleRecord = {
+      id: crypto.randomUUID(),
+      companyId: input.companyId,
+      code: input.code.trim().toLowerCase(),
+      nameEn: input.nameEn.trim(),
+      nameAr: input.nameAr.trim(),
+      createdAt: new Date(),
+    };
+    this.vehicleBodyStylesById.set(rec.id, rec);
+    return { ...rec };
+  }
+
+  async deleteVehicleBodyStyle(companyId: string, styleId: string): Promise<boolean> {
+    const ex = this.vehicleBodyStylesById.get(styleId);
+    if (!ex || ex.companyId !== companyId) return false;
+    this.vehicleBodyStylesById.delete(styleId);
+    return true;
+  }
+
+  async listFleetPriceLists(companyId: string): Promise<FleetPriceListRecord[]> {
+    return Array.from(this.fleetPriceListsById.values())
+      .filter((p) => p.companyId === companyId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async createFleetPriceList(input: CreateFleetPriceListInput): Promise<FleetPriceListRecord> {
+    const now = new Date();
+    const rec: FleetPriceListRecord = {
+      id: crypto.randomUUID(),
+      companyId: input.companyId,
+      name: input.name.trim(),
+      priceListType: input.priceListType?.trim() || "spot",
+      currencyCode: input.currencyCode.trim().toUpperCase(),
+      effectiveFrom: input.effectiveFrom || null,
+      effectiveTo: input.effectiveTo || null,
+      priceType: input.priceType?.trim() || "daily_bands",
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.fleetPriceListsById.set(rec.id, rec);
+    return { ...rec };
+  }
+
+  async updateFleetPriceList(
+    companyId: string,
+    priceListId: string,
+    input: UpdateFleetPriceListInput,
+  ): Promise<FleetPriceListRecord | null> {
+    const ex = this.fleetPriceListsById.get(priceListId);
+    if (!ex || ex.companyId !== companyId) return null;
+    const updated: FleetPriceListRecord = {
+      ...ex,
+      name: input.name !== undefined ? input.name.trim() : ex.name,
+      priceListType: input.priceListType !== undefined ? input.priceListType.trim() : ex.priceListType,
+      currencyCode: input.currencyCode !== undefined ? input.currencyCode.trim().toUpperCase() : ex.currencyCode,
+      effectiveFrom: input.effectiveFrom !== undefined ? input.effectiveFrom : ex.effectiveFrom,
+      effectiveTo: input.effectiveTo !== undefined ? input.effectiveTo : ex.effectiveTo,
+      priceType: input.priceType !== undefined ? input.priceType.trim() : ex.priceType,
+      isActive: input.isActive !== undefined ? input.isActive : ex.isActive,
+      updatedAt: new Date(),
+    };
+    this.fleetPriceListsById.set(priceListId, updated);
+    return { ...updated };
+  }
+
+  async deleteFleetPriceList(companyId: string, priceListId: string): Promise<boolean> {
+    const ex = this.fleetPriceListsById.get(priceListId);
+    if (!ex || ex.companyId !== companyId) return false;
+    this.fleetPriceListsById.delete(priceListId);
+    return true;
+  }
 }

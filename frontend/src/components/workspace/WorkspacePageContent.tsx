@@ -26,6 +26,11 @@ const InsuranceCompaniesPanel = dynamic(() => import("@/components/fleet/Insuran
 const BookableFleetPanel = dynamic(() => import("@/components/fleet/BookableFleetPanel").then((module) => module.BookableFleetPanel), { loading: PanelLoading });
 const CustomersPanel = dynamic(() => import("@/components/fleet/CustomersPanel").then((module) => module.CustomersPanel), { loading: PanelLoading });
 const RentalContractsPanel = dynamic(() => import("@/components/fleet/RentalContractsPanel").then((module) => module.RentalContractsPanel), { loading: PanelLoading });
+const FleetMovementsPanel = dynamic(() => import("@/components/fleet/FleetMovementsPanel").then((module) => module.FleetMovementsPanel), { loading: PanelLoading });
+const DriversPanel = dynamic(() => import("@/components/fleet/DriversPanel").then((module) => module.DriversPanel), { loading: PanelLoading });
+const VehicleColorsMasterPanel = dynamic(() => import("@/components/fleet/VehicleColorsMasterPanel").then((module) => module.VehicleColorsMasterPanel), { loading: PanelLoading });
+const VehicleModelsMasterPanel = dynamic(() => import("@/components/fleet/VehicleModelsMasterPanel").then((module) => module.VehicleModelsMasterPanel), { loading: PanelLoading });
+const BodyStylesMasterPanel = dynamic(() => import("@/components/fleet/BodyStylesMasterPanel").then((module) => module.BodyStylesMasterPanel), { loading: PanelLoading });
 interface WorkspacePageContentProps {
  isRtl: boolean; activeSection: WorkspaceSectionId; activeSubPage: string;
  canAccessCurrentPage: boolean; canAccessTeam: boolean; company: CompanyDto;
@@ -79,6 +84,16 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
             <CustomersPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "rental-contracts" ? (
             <RentalContractsPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "movements" ? (
+            <FleetMovementsPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "drivers" ? (
+            <DriversPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "colors" ? (
+            <VehicleColorsMasterPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "models" ? (
+            <VehicleModelsMasterPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "body-styles" ? (
+            <BodyStylesMasterPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "purchase-orders" ? (
             <PurchaseOrdersPanel
               isRtl={isRtl}

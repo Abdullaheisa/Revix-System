@@ -10,6 +10,7 @@ import {
   useReceiveVehicleMutation,
   useListPurchaseOrdersQuery,
   useListInsuranceCompaniesQuery,
+  useListVehicleColorsQuery,
   type PurchaseOrderDto,
 } from "../../store/api/fleetApi";
 import { useGetWorkspaceContextQuery, type BranchDto } from "../../store/api/workspaceApi";
@@ -48,6 +49,7 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({ lang
   const { data: workspaceCtx } = useGetWorkspaceContextQuery();
   const { data: posRes } = useListPurchaseOrdersQuery();
   const { data: insuranceCompaniesRes } = useListInsuranceCompaniesQuery();
+  const { data: masterColorsRes } = useListVehicleColorsQuery();
   const insuranceCompanies = useMemo(
     () => insuranceCompaniesRes?.data ?? [],
     [insuranceCompaniesRes?.data],

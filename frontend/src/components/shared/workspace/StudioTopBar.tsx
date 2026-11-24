@@ -17,6 +17,8 @@ export interface StudioTopBarProps {
   activeBranch: BranchDto | null;
   isLoggingOut: boolean;
   onToggleMobileMenu: () => void;
+  isAppLauncherOpen?: boolean;
+  onToggleAppLauncher?: () => void;
   onGoHome: () => void;
   onGoCompanySettings: () => void;
   onSelectBranch: (branchId: string) => void;
@@ -25,7 +27,7 @@ export interface StudioTopBarProps {
   onLogout: () => void;
 }
 
-export function StudioTopBar({ isRtl, company, branches, activeBranch, isLoggingOut, onToggleMobileMenu, onGoHome, onSelectBranch, onOpenCommandPalette, onLogout }: StudioTopBarProps) {
+export function StudioTopBar({ isRtl, company, branches, activeBranch, isLoggingOut, onToggleMobileMenu, isAppLauncherOpen = false, onToggleAppLauncher, onGoHome, onSelectBranch, onOpenCommandPalette, onLogout }: StudioTopBarProps) {
   return (
     <header className="z-40 flex h-[48px] shrink-0 items-center justify-between border-b border-revix-border bg-revix-white px-3 sm:px-4">
       {/* =================================================== */}
@@ -74,7 +76,7 @@ export function StudioTopBar({ isRtl, company, branches, activeBranch, isLogging
       {/* =================================================== */}
       {/* DESKTOP HEADER (>= md)                              */}
       {/* =================================================== */}
-      <div className="hidden min-w-0 items-center gap-2.5 md:flex">
+      <div className="hidden min-w-0 items-center gap-3 md:flex">
         <button
           type="button"
           onClick={onGoHome}
@@ -88,6 +90,46 @@ export function StudioTopBar({ isRtl, company, branches, activeBranch, isLogging
             isRtl={isRtl}
           />
         </button>
+
+        {onToggleAppLauncher && (
+          <>
+            <span className="h-5 w-px bg-revix-border/80" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={onToggleAppLauncher}
+              aria-expanded={isAppLauncherOpen}
+              aria-label={isRtl ? "القائمة" : "Menu"}
+              title={isRtl ? "القائمة" : "Menu"}
+              className={`inline-flex size-[34px] cursor-pointer items-center justify-center rounded-lg transition-colors ${
+                isAppLauncherOpen
+                  ? "bg-emerald-50 text-revix-primary"
+                  : "bg-transparent text-revix-primary hover:bg-emerald-50/70"
+              }`}
+            >
+              {isAppLauncherOpen ? (
+                <RevixIcon name="x" size={20} />
+              ) : (
+                <svg
+                  width={22}
+                  height={22}
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <rect x="3.5" y="3.5" width="4.2" height="4.2" rx="1.2" />
+                  <rect x="9.9" y="3.5" width="4.2" height="4.2" rx="1.2" />
+                  <rect x="16.3" y="3.5" width="4.2" height="4.2" rx="1.2" />
+                  <rect x="3.5" y="9.9" width="4.2" height="4.2" rx="1.2" />
+                  <rect x="9.9" y="9.9" width="4.2" height="4.2" rx="1.2" />
+                  <rect x="16.3" y="9.9" width="4.2" height="4.2" rx="1.2" />
+                  <rect x="3.5" y="16.3" width="4.2" height="4.2" rx="1.2" />
+                  <rect x="9.9" y="16.3" width="4.2" height="4.2" rx="1.2" />
+                  <rect x="16.3" y="16.3" width="4.2" height="4.2" rx="1.2" />
+                </svg>
+              )}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Desktop End Controls */}

@@ -16,10 +16,43 @@ export type VehicleCategory =
   | "coupe"
   | "van"
   | "pickup"
-  | "commercial";
+  | "commercial"
+  | (string & {});
 export type VehicleTransmission = "automatic" | "manual";
 export type VehicleFuelType = "petrol" | "diesel" | "hybrid" | "electric";
 export type VehicleVariantStatus = "active" | "archived";
+
+export interface VehicleColorDto {
+  id: string;
+  companyId: string;
+  colorType: string;
+  nameEn: string;
+  nameAr: string;
+  createdAt: string;
+}
+
+export interface VehicleBodyStyleDto {
+  id: string;
+  companyId: string;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  createdAt: string;
+}
+
+export interface FleetPriceListDto {
+  id: string;
+  companyId: string;
+  name: string;
+  priceListType: string;
+  currencyCode: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  priceType: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface VehicleVariantDto {
   id: string;
@@ -910,7 +943,7 @@ export const fleetApi = baseApi.injectEndpoints({
       void
     >({
       query: () => "/fleet/makes",
-      providesTags: ["VehicleVariant"],
+      providesTags: ["Fleet", "VehicleVariant"],
     }),
 
     createVehicleMake: builder.mutation<
@@ -930,7 +963,7 @@ export const fleetApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["VehicleVariant"],
+      invalidatesTags: ["Fleet", "VehicleVariant"],
     }),
 
     createVehicleModel: builder.mutation<
@@ -942,7 +975,7 @@ export const fleetApi = baseApi.injectEndpoints({
         method: "POST",
         body: { name },
       }),
-      invalidatesTags: ["VehicleVariant"],
+      invalidatesTags: ["Fleet", "VehicleVariant"],
     }),
 
     listVariants: builder.query<
@@ -1481,6 +1514,128 @@ export const fleetApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Fleet"],
     }),
+
+    deleteVehicleMake: builder.mutation<{ ok: boolean }, string>({
+      query: (id) => ({
+        url: `/fleet/makes/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    deleteVehicleModel: builder.mutation<{ ok: boolean }, string>({
+      query: (id) => ({
+        url: `/fleet/models/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    // --- Master: Vehicle Colors ---
+    listVehicleColors: builder.query<ApiResponse<VehicleColorDto[]>, void>({
+      query: () => "/fleet/colors",
+      providesTags: ["Fleet"],
+    }),
+
+    createVehicleColor: builder.mutation<
+      ApiResponse<VehicleColorDto>,
+      { colorType?: string; nameEn: string; nameAr: string }
+    >({
+      query: (body) => ({
+        url: "/fleet/colors",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    deleteVehicleColor: builder.mutation<{ ok: boolean }, string>({
+      query: (id) => ({
+        url: `/fleet/colors/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    // --- Master: Vehicle Body Styles ---
+    listVehicleBodyStyles: builder.query<ApiResponse<VehicleBodyStyleDto[]>, void>({
+      query: () => "/fleet/body-styles",
+      providesTags: ["Fleet", "VehicleVariant"],
+    }),
+
+    createVehicleBodyStyle: builder.mutation<
+      ApiResponse<VehicleBodyStyleDto>,
+      { code?: string; nameEn: string; nameAr: string }
+    >({
+      query: (body) => ({
+        url: "/fleet/body-styles",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet", "VehicleVariant"],
+    }),
+
+    deleteVehicleBodyStyle: builder.mutation<{ ok: boolean }, string>({
+      query: (id) => ({
+        url: `/fleet/body-styles/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Fleet", "VehicleVariant"],
+    }),
+
+    // --- Master: Fleet Price Lists ---
+    listFleetPriceLists: builder.query<ApiResponse<FleetPriceListDto[]>, void>({
+      query: () => "/fleet/price-lists",
+      providesTags: ["Fleet"],
+    }),
+
+    createFleetPriceList: builder.mutation<
+      ApiResponse<FleetPriceListDto>,
+      {
+        name: string;
+        priceListType?: string;
+        currencyCode: string;
+        effectiveFrom?: string | null;
+        effectiveTo?: string | null;
+        priceType?: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/fleet/price-lists",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    updateFleetPriceList: builder.mutation<
+      ApiResponse<FleetPriceListDto>,
+      {
+        id: string;
+        name?: string;
+        priceListType?: string;
+        currencyCode?: string;
+        effectiveFrom?: string | null;
+        effectiveTo?: string | null;
+        priceType?: string;
+        isActive?: boolean;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/fleet/price-lists/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    deleteFleetPriceList: builder.mutation<{ ok: boolean }, string>({
+      query: (id) => ({
+        url: `/fleet/price-lists/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
   }),
 });
 
@@ -1511,6 +1666,18 @@ export const {
   useListVehicleMakesQuery,
   useCreateVehicleMakeMutation,
   useCreateVehicleModelMutation,
+  useDeleteVehicleMakeMutation,
+  useDeleteVehicleModelMutation,
+  useListVehicleColorsQuery,
+  useCreateVehicleColorMutation,
+  useDeleteVehicleColorMutation,
+  useListVehicleBodyStylesQuery,
+  useCreateVehicleBodyStyleMutation,
+  useDeleteVehicleBodyStyleMutation,
+  useListFleetPriceListsQuery,
+  useCreateFleetPriceListMutation,
+  useUpdateFleetPriceListMutation,
+  useDeleteFleetPriceListMutation,
   useListVariantsQuery,
   useCreateVariantMutation,
   useUpdateVariantMutation,

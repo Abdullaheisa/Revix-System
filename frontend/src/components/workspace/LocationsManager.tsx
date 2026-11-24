@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { useMemo, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -351,16 +352,10 @@ export function LocationsManager({
             </thead>
             <tbody className="divide-y divide-revix-border/80">
               {filteredBranches.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-10 text-center text-[13.5px] text-revix-secondary"
-                  >
-                    {isRtl
-                      ? "لا توجد فروع مطابقة حاليًا."
-                      : "No matching locations found."}
-                  </td>
-                </tr>
+                <TableEmptyRow
+                  colSpan={6}
+                  title={isRtl ? "لا توجد فروع مطابقة حاليًا" : "No matching locations found"}
+                />
               ) : (
                 paginatedBranches.map((branch) => {
                   const countryMeta = findCountryMetadata(branch.countryCode);

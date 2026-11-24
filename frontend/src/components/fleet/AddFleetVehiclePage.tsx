@@ -5,7 +5,7 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { navigateToWorkspacePage, clearPendingFleetReceiveContext, clearPendingVariantSetupContext } from "../../store/slices/workspaceSlice";
-import { useListVariantsQuery, useCreateVariantMutation, useListVehiclePhotosQuery, useListRentalInclusionsQuery, useCreateVehicleMutation, useReceiveVehicleMutation, useListPurchaseOrdersQuery, useListVehiclesQuery, useApplyVariantListingSetupMutation, type CreateVehicleVariantInput } from "../../store/api/fleetApi";
+import { useListVariantsQuery, useCreateVariantMutation, useListVehiclePhotosQuery, useListRentalInclusionsQuery, useCreateVehicleMutation, useReceiveVehicleMutation, useListPurchaseOrdersQuery, useListVehiclesQuery, useApplyVariantListingSetupMutation, useListVehicleColorsQuery, useListVehicleBodyStylesQuery, type CreateVehicleVariantInput } from "../../store/api/fleetApi";
 import { useGetWorkspaceContextQuery, type BranchDto } from "../../store/api/workspaceApi";
 import { resolveAssetUrl } from "../../store/api/baseApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
@@ -32,6 +32,8 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
   const { data: photosRes } = useListVehiclePhotosQuery();
   const { data: posRes } = useListPurchaseOrdersQuery();
   const { data: inclusionsRes } = useListRentalInclusionsQuery({ activeOnly: true });
+  const { data: masterColorsRes } = useListVehicleColorsQuery();
+  const { data: masterBodyStylesRes } = useListVehicleBodyStylesQuery();
   const { data: batchVehiclesRes } = useListVehiclesQuery(
     { variantId: pendingVariantSetup?.variantId, pageSize: 500 },
     { skip: !pendingVariantSetup },
@@ -391,18 +393,27 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
     }));
   }, [branches]);
 
-  const categoryOptions: SelectOption[] = useMemo(
-    () => [
+  const categoryOptions: SelectOption[] = useMemo(() => {
+    const defaults = [
       { value: "sedan", label: isAr ? "سيدان" : "Sedan" },
-      { value: "suv", label: isAr ? "دفع رباعي" : "SUV" },
+      { value: "suv", label: isAr ? "دفع رباعي / SUV" : "SUV" },
+      { value: "crossover", label: isAr ? "كروس أوفر" : "Crossover" },
       { value: "compact", label: isAr ? "مدمجة" : "Compact" },
       { value: "economy", label: isAr ? "اقتصادية" : "Economy" },
       { value: "luxury", label: isAr ? "فاخرة" : "Luxury" },
+      { value: "pickup", label: isAr ? "بيك أب" : "Pickup" },
       { value: "van", label: isAr ? "فان عائلي" : "Van" },
       { value: "commercial", label: isAr ? "تجارية" : "Commercial" },
-    ],
-    [isAr],
-  );
+    ];
+    const seen = new Set(defaults.map((d) => d.value.toLowerCase()));
+    const customs = (masterBodyStylesRes?.data ?? [])
+      .filter((s) => !seen.has(s.code.toLowerCase()))
+      .map((s) => ({
+        value: s.code,
+        label: isAr ? s.nameAr : s.nameEn,
+      }));
+    return [...customs, ...defaults];
+  }, [isAr, masterBodyStylesRes?.data]);
 
   const locationTypeOptions: SelectOption[] = useMemo(
     () => [
@@ -436,20 +447,33 @@ export const AddFleetVehiclePage: React.FC<AddFleetVehiclePageProps> = ({ lang =
     [isAr],
   );
 
-  const colorOptions: SelectOption[] = useMemo(
-    () => [
+  const colorOptions: SelectOption[] = useMemo(() => {
+    const defaults = [
       { value: "White", label: isAr ? "أبيض" : "White", description: "#FFFFFF" },
       { value: "Black", label: isAr ? "أسود" : "Black", description: "#111827" },
       { value: "Silver", label: isAr ? "فضي" : "Silver", description: "#E5E7EB" },
       { value: "Gray", label: isAr ? "رمادي" : "Gray", description: "#6B7280" },
       { value: "Blue", label: isAr ? "أزرق" : "Blue", description: "#1E40AF" },
       { value: "Red", label: isAr ? "أحمر" : "Red", description: "#DC2626" },
+      { value: "Green", label: isAr ? "أخضر" : "Green", description: "#0F5132" },
       { value: "Brown", label: isAr ? "بني" : "Brown", description: "#78350F" },
       { value: "Gold", label: isAr ? "ذهبي" : "Gold", description: "#D97706" },
+      { value: "Beige", label: isAr ? "بيج" : "Beige", description: "#E5D3B3" },
+    ];
+    const seen = new Set(defaults.map((d) => d.value.toLowerCase()));
+    const customs = (masterColorsRes?.data ?? [])
+      .filter((c) => !seen.has(c.nameEn.toLowerCase()))
+      .map((c) => ({
+        value: c.nameEn,
+        label: isAr ? c.nameAr : c.nameEn,
+        description: "#0F5132",
+      }));
+    return [
+      ...customs,
+      ...defaults,
       { value: "Custom", label: isAr ? "لون مخصص..." : "Custom Color..." },
-    ],
-    [isAr],
-  );
+    ];
+  }, [isAr, masterColorsRes?.data]);
 
   const seatsOptions: SelectOption[] = useMemo(
     () =>

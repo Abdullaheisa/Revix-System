@@ -1,7 +1,7 @@
 import { mapCompanyRoleRow, mapCompanyMembershipRow, mapEmployeeInvitationRow, mapNetworkLinkRow, mapPermittedBranchRow, mapNetworkInvitationRow, mapVehicleVariantRow, mapVendorRow, mapPurchaseOrderRow, mapPurchaseOrderItemRow, mapFleetVehicleRow, mapVehiclePhotoRow, mapRentalInclusionRow, mapUserRow, mapSessionRow, mapActionTokenRow, mapCompanyRow, mapBranchRow, type DbUserRow, type DbSessionRow, type DbActionTokenRow, type DbCompanyRow, type DbBranchRow, type DbCompanyRoleRow, type DbCompanyMembershipRow, type DbEmployeeInvitationRow, type DbNetworkLinkRow, type DbPermittedBranchRow, type DbNetworkInvitationRow, type DbVehicleVariantRow, type DbVendorRow, type DbPurchaseOrderRow, type DbPurchaseOrderItemRow, type DbFleetVehicleRow, type DbVehiclePhotoRow, type DbRentalInclusionRow } from "./postgres/rowMappers.ts";
 import crypto from "node:crypto";
 import pg from "pg";
-import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, AuthDataStore, BranchRecord, CompanyMembershipRecord, CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CompanyOperatingMode, CompanyRecord, CompanyRoleRecord, CreateBranchInput, CreateCompanyInput, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, CreateFleetVehicleInput, CreateNetworkInvitationInput, CreateNetworkLinkInput, CreatePurchaseOrderInput, CreateRentalInclusionInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, CreateVendorInput, CustomerRecord, DriverRecord, EmployeeInvitationRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord, PurchaseOrderItemRecord, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, RentalContractRecord, RentalContractStatus, RentalInclusionRecord, SessionRecord, UpdateBranchInput, UpdateCompanyInput, UpdateCompanyMembershipInput, UpdateCompanyRoleInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, UpdateVendorInput, UserRecord, UserStatus, VehicleCategory, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord, VendorCategory, VendorRecord } from "./store.ts";
+import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, AuthDataStore, BranchRecord, CompanyMembershipRecord, CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CompanyOperatingMode, CompanyRecord, CompanyRoleRecord, CreateBranchInput, CreateCompanyInput, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, CreateFleetPriceListInput, CreateFleetVehicleInput, CreateNetworkInvitationInput, CreateNetworkLinkInput, CreatePurchaseOrderInput, CreateRentalInclusionInput, CreateVehicleBodyStyleInput, CreateVehicleColorInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, CreateVendorInput, CustomerRecord, DriverRecord, EmployeeInvitationRecord, FleetPriceListRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord, PurchaseOrderItemRecord, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, RentalContractRecord, RentalContractStatus, RentalInclusionRecord, SessionRecord, UpdateBranchInput, UpdateCompanyInput, UpdateCompanyMembershipInput, UpdateCompanyRoleInput, UpdateFleetPriceListInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, UpdateVendorInput, UserRecord, UserStatus, VehicleBodyStyleRecord, VehicleCategory, VehicleColorRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord, VendorCategory, VendorRecord } from "./store.ts";
 
 
 
@@ -1616,21 +1616,29 @@ export class PostgresAuthDataStore implements AuthDataStore {
 
       // Create vehicle
       const vehicleId = crypto.randomUUID();
+      const seqRes = await client.query<{ max_seq: number }>(
+        `SELECT COALESCE(MAX((REGEXP_MATCH(asset_code, '^VEH-(\\d+)$'))[1]::int), 0) AS max_seq
+         FROM fleet_vehicles
+         WHERE company_id = $1`,
+        [poRow.company_id],
+      );
+      const assetCode = `VEH-${String(Number(seqRes.rows[0]?.max_seq ?? 0) + 1).padStart(4, "0")}`;
       const vehicleRes = await client.query<DbFleetVehicleRow>(
         `INSERT INTO fleet_vehicles
-          (id, company_id, branch_id, variant_id, purchase_order_id, vin, license_plate,
+          (id, asset_code, company_id, branch_id, variant_id, purchase_order_id, vin, license_plate,
            key_number, color, mileage_odometer, status, notes,
            photo_url, location_type, fuel_policy, instant_confirmation, description, delivery_policy,
            daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
            mileage_policy, daily_km_limit, extra_km_rate, inclusions,
          seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission,
          is_bookable, published_to_fleet_at, in_service_date, created_by_user_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'available', $11,
-                 $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31,
-                 $32, CASE WHEN $32 THEN NOW() ELSE NULL END, COALESCE($33::date, CURRENT_DATE), $34)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'available', $12,
+                 $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32,
+                 $33, CASE WHEN $33 THEN NOW() ELSE NULL END, COALESCE($34::date, CURRENT_DATE), $35)
          RETURNING *`,
         [
           vehicleId,
+          assetCode,
           poRow.company_id,
           input.branchId ?? null,
           itemRow.variant_id,
@@ -1731,21 +1739,31 @@ export class PostgresAuthDataStore implements AuthDataStore {
     input: CreateFleetVehicleInput,
   ): Promise<FleetVehicleRecord> {
     const id = input.id ?? crypto.randomUUID();
+    const seqRes = await this.pool.query<{ max_seq: number }>(
+      `SELECT COALESCE(MAX((REGEXP_MATCH(asset_code, '^VEH-(\\d+)$'))[1]::int), 0) AS max_seq
+       FROM fleet_vehicles
+       WHERE company_id = $1`,
+      [input.companyId],
+    );
+    const assetCode =
+      input.assetCode?.trim() ||
+      `VEH-${String(Number(seqRes.rows[0]?.max_seq ?? 0) + 1).padStart(4, "0")}`;
     const res = await this.pool.query<DbFleetVehicleRow>(
       `INSERT INTO fleet_vehicles
-        (id, company_id, branch_id, variant_id, purchase_order_id, vin, license_plate,
+        (id, asset_code, company_id, branch_id, variant_id, purchase_order_id, vin, license_plate,
          key_number, color, mileage_odometer, status, notes,
          photo_url, location_type, fuel_policy, instant_confirmation, description, delivery_policy,
          daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
          mileage_policy, daily_km_limit, extra_km_rate, inclusions,
          seats, doors, air_conditioning, fuel_type, luggage_capacity, transmission,
          is_bookable, published_to_fleet_at, created_by_user_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-               $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32,
-               $33, CASE WHEN $33 THEN NOW() ELSE NULL END, $34)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+               $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33,
+               $34, CASE WHEN $34 THEN NOW() ELSE NULL END, $35)
        RETURNING *`,
       [
         id,
+        assetCode,
         input.companyId,
         input.branchId,
         input.variantId,
@@ -1904,7 +1922,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
 
     if (filter?.search) {
       params.push(`%${filter.search.trim()}%`);
-      query += ` AND (v.vin ILIKE $${params.length} OR v.license_plate ILIKE $${params.length} OR var.make ILIKE $${params.length} OR var.model ILIKE $${params.length})`;
+      query += ` AND (v.asset_code ILIKE $${params.length} OR v.vin ILIKE $${params.length} OR v.license_plate ILIKE $${params.length} OR var.make ILIKE $${params.length} OR var.model ILIKE $${params.length})`;
     }
 
     query += ` ORDER BY v.created_at DESC`;
@@ -3764,6 +3782,304 @@ export class PostgresAuthDataStore implements AuthDataStore {
     if (!res.rows[0]) return null;
     const list = await this.listVehicleMovements(companyId, { vehicleId: res.rows[0].vehicle_id });
     return list.find((m) => m.id === movementId) ?? null;
+  }
+
+  private masterCatalogsEnsured = false;
+
+  private async ensureMasterCatalogTables(): Promise<void> {
+    if (this.masterCatalogsEnsured) return;
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS vehicle_colors (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        color_type VARCHAR(120) NOT NULL DEFAULT 'exterior',
+        name_en VARCHAR(120) NOT NULL,
+        name_ar VARCHAR(120) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE vehicle_colors DROP COLUMN IF EXISTS hex_code;
+      ALTER TABLE vehicle_colors ALTER COLUMN color_type TYPE VARCHAR(120);
+      CREATE INDEX IF NOT EXISTS idx_vehicle_colors_company ON vehicle_colors(company_id);
+
+      CREATE TABLE IF NOT EXISTS vehicle_body_styles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        code VARCHAR(64) NOT NULL,
+        name_en VARCHAR(120) NOT NULL,
+        name_ar VARCHAR(120) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE vehicle_body_styles DROP COLUMN IF EXISTS sipp_prefix;
+      CREATE INDEX IF NOT EXISTS idx_vehicle_body_styles_company ON vehicle_body_styles(company_id);
+
+      CREATE TABLE IF NOT EXISTS fleet_price_lists (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        name VARCHAR(160) NOT NULL,
+        price_list_type VARCHAR(64) NOT NULL DEFAULT 'spot',
+        currency_code VARCHAR(16) NOT NULL,
+        effective_from DATE,
+        effective_to DATE,
+        price_type VARCHAR(64) NOT NULL DEFAULT 'daily_bands',
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE fleet_price_lists DROP COLUMN IF EXISTS remarks;
+      CREATE INDEX IF NOT EXISTS idx_fleet_price_lists_company ON fleet_price_lists(company_id);
+    `);
+    this.masterCatalogsEnsured = true;
+  }
+
+  async deleteVehicleMake(companyId: string, makeId: string): Promise<boolean> {
+    await this.pool.query(`DELETE FROM vehicle_models WHERE company_id = $1 AND make_id = $2`, [
+      companyId,
+      makeId,
+    ]);
+    const res = await this.pool.query(
+      `DELETE FROM vehicle_makes WHERE company_id = $1 AND id = $2`,
+      [companyId, makeId],
+    );
+    return Boolean(res.rowCount && res.rowCount > 0);
+  }
+
+  async deleteVehicleModel(companyId: string, modelId: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `DELETE FROM vehicle_models WHERE company_id = $1 AND id = $2`,
+      [companyId, modelId],
+    );
+    return Boolean(res.rowCount && res.rowCount > 0);
+  }
+
+  async listVehicleColors(companyId: string): Promise<VehicleColorRecord[]> {
+    await this.ensureMasterCatalogTables();
+    const res = await this.pool.query<{
+      id: string;
+      company_id: string;
+      color_type: string;
+      name_en: string;
+      name_ar: string;
+      created_at: Date;
+    }>(
+      `SELECT id, company_id, color_type, name_en, name_ar, created_at FROM vehicle_colors WHERE company_id = $1 ORDER BY created_at DESC`,
+      [companyId],
+    );
+    return res.rows.map((r) => ({
+      id: r.id,
+      companyId: r.company_id,
+      colorType: r.color_type || "exterior",
+      nameEn: r.name_en,
+      nameAr: r.name_ar,
+      createdAt: new Date(r.created_at),
+    }));
+  }
+
+  async createVehicleColor(input: CreateVehicleColorInput): Promise<VehicleColorRecord> {
+    await this.ensureMasterCatalogTables();
+    const colorType = input.colorType?.trim() || "exterior";
+    const nameEn = (input.nameEn || input.nameAr).trim();
+    const nameAr = input.nameAr.trim();
+    const res = await this.pool.query<{
+      id: string;
+      company_id: string;
+      color_type: string;
+      name_en: string;
+      name_ar: string;
+      created_at: Date;
+    }>(
+      `INSERT INTO vehicle_colors (company_id, color_type, name_en, name_ar)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, company_id, color_type, name_en, name_ar, created_at`,
+      [input.companyId, colorType, nameEn, nameAr],
+    );
+    const r = res.rows[0]!;
+    return {
+      id: r.id,
+      companyId: r.company_id,
+      colorType: r.color_type || "exterior",
+      nameEn: r.name_en,
+      nameAr: r.name_ar,
+      createdAt: new Date(r.created_at),
+    };
+  }
+
+  async deleteVehicleColor(companyId: string, colorId: string): Promise<boolean> {
+    await this.ensureMasterCatalogTables();
+    const res = await this.pool.query(
+      `DELETE FROM vehicle_colors WHERE company_id = $1 AND id = $2`,
+      [companyId, colorId],
+    );
+    return Boolean(res.rowCount && res.rowCount > 0);
+  }
+
+  async listVehicleBodyStyles(companyId: string): Promise<VehicleBodyStyleRecord[]> {
+    await this.ensureMasterCatalogTables();
+    const res = await this.pool.query<{
+      id: string;
+      company_id: string;
+      code: string;
+      name_en: string;
+      name_ar: string;
+      created_at: Date;
+    }>(
+      `SELECT id, company_id, code, name_en, name_ar, created_at FROM vehicle_body_styles WHERE company_id = $1 ORDER BY created_at DESC`,
+      [companyId],
+    );
+    return res.rows.map((r) => ({
+      id: r.id,
+      companyId: r.company_id,
+      code: r.code,
+      nameEn: r.name_en,
+      nameAr: r.name_ar,
+      createdAt: new Date(r.created_at),
+    }));
+  }
+
+  async createVehicleBodyStyle(input: CreateVehicleBodyStyleInput): Promise<VehicleBodyStyleRecord> {
+    await this.ensureMasterCatalogTables();
+    const code = (input.code || input.nameEn || input.nameAr)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_");
+    const nameEn = (input.nameEn || input.nameAr).trim();
+    const nameAr = input.nameAr.trim();
+    const res = await this.pool.query<{
+      id: string;
+      company_id: string;
+      code: string;
+      name_en: string;
+      name_ar: string;
+      created_at: Date;
+    }>(
+      `INSERT INTO vehicle_body_styles (company_id, code, name_en, name_ar)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, company_id, code, name_en, name_ar, created_at`,
+      [input.companyId, code, nameEn, nameAr],
+    );
+    const r = res.rows[0]!;
+    return {
+      id: r.id,
+      companyId: r.company_id,
+      code: r.code,
+      nameEn: r.name_en,
+      nameAr: r.name_ar,
+      createdAt: new Date(r.created_at),
+    };
+  }
+
+  async deleteVehicleBodyStyle(companyId: string, styleId: string): Promise<boolean> {
+    await this.ensureMasterCatalogTables();
+    const res = await this.pool.query(
+      `DELETE FROM vehicle_body_styles WHERE company_id = $1 AND id = $2`,
+      [companyId, styleId],
+    );
+    return Boolean(res.rowCount && res.rowCount > 0);
+  }
+
+  private mapPriceListRow(r: {
+    id: string;
+    company_id: string;
+    name: string;
+    price_list_type: string;
+    currency_code: string;
+    effective_from: string | Date | null;
+    effective_to: string | Date | null;
+    price_type: string;
+    is_active: boolean;
+    created_at: Date;
+    updated_at: Date;
+  }): FleetPriceListRecord {
+    const fmtDate = (val: string | Date | null): string | null => {
+      if (!val) return null;
+      if (typeof val === "string") return val.slice(0, 10);
+      return val.toISOString().slice(0, 10);
+    };
+    return {
+      id: r.id,
+      companyId: r.company_id,
+      name: r.name,
+      priceListType: r.price_list_type,
+      currencyCode: r.currency_code,
+      effectiveFrom: fmtDate(r.effective_from),
+      effectiveTo: fmtDate(r.effective_to),
+      priceType: r.price_type,
+      isActive: Boolean(r.is_active),
+      createdAt: new Date(r.created_at),
+      updatedAt: new Date(r.updated_at),
+    };
+  }
+
+  async listFleetPriceLists(companyId: string): Promise<FleetPriceListRecord[]> {
+    await this.ensureMasterCatalogTables();
+    const res = await this.pool.query(
+      `SELECT * FROM fleet_price_lists WHERE company_id = $1 ORDER BY created_at DESC`,
+      [companyId],
+    );
+    return res.rows.map((r) => this.mapPriceListRow(r));
+  }
+
+  async createFleetPriceList(input: CreateFleetPriceListInput): Promise<FleetPriceListRecord> {
+    await this.ensureMasterCatalogTables();
+    const res = await this.pool.query(
+      `INSERT INTO fleet_price_lists
+        (company_id, name, price_list_type, currency_code, effective_from, effective_to, price_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        input.companyId,
+        input.name.trim(),
+        input.priceListType?.trim() || "spot",
+        input.currencyCode.trim().toUpperCase(),
+        input.effectiveFrom || null,
+        input.effectiveTo || null,
+        input.priceType?.trim() || "daily_bands",
+      ],
+    );
+    return this.mapPriceListRow(res.rows[0]!);
+  }
+
+  async updateFleetPriceList(
+    companyId: string,
+    priceListId: string,
+    input: UpdateFleetPriceListInput,
+  ): Promise<FleetPriceListRecord | null> {
+    await this.ensureMasterCatalogTables();
+    const res = await this.pool.query(
+      `UPDATE fleet_price_lists
+       SET name = COALESCE($3, name),
+           price_list_type = COALESCE($4, price_list_type),
+           currency_code = COALESCE($5, currency_code),
+           effective_from = CASE WHEN $6::boolean THEN $7::date ELSE effective_from END,
+           effective_to = CASE WHEN $8::boolean THEN $9::date ELSE effective_to END,
+           price_type = COALESCE($10, price_type),
+           is_active = COALESCE($11, is_active),
+           updated_at = NOW()
+       WHERE company_id = $1 AND id = $2
+       RETURNING *`,
+      [
+        companyId,
+        priceListId,
+        input.name !== undefined ? input.name.trim() : null,
+        input.priceListType !== undefined ? input.priceListType.trim() : null,
+        input.currencyCode !== undefined ? input.currencyCode.trim().toUpperCase() : null,
+        input.effectiveFrom !== undefined,
+        input.effectiveFrom || null,
+        input.effectiveTo !== undefined,
+        input.effectiveTo || null,
+        input.priceType !== undefined ? input.priceType.trim() : null,
+        input.isActive !== undefined ? input.isActive : null,
+      ],
+    );
+    return res.rows[0] ? this.mapPriceListRow(res.rows[0]) : null;
+  }
+
+  async deleteFleetPriceList(companyId: string, priceListId: string): Promise<boolean> {
+    await this.ensureMasterCatalogTables();
+    const res = await this.pool.query(
+      `DELETE FROM fleet_price_lists WHERE company_id = $1 AND id = $2`,
+      [companyId, priceListId],
+    );
+    return Boolean(res.rowCount && res.rowCount > 0);
   }
 }
 

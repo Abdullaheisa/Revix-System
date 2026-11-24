@@ -1,6 +1,19 @@
 export { StudioBadge, type StudioBadgeProps, type StudioBadgeVariant } from "./StudioBadge";
 export { StudioModal, type StudioModalProps } from "./StudioModal";
 export {
+  MasterFormModal,
+  MASTER_INPUT_CLASS,
+  MASTER_LABEL_CLASS,
+  type MasterFormModalProps,
+} from "./MasterFormModal";
+export {
+  DetailTileGrid,
+  DetailTileCard,
+  type DetailTileItem,
+  type DetailTileGridProps,
+  type DetailTileCardProps,
+} from "./DetailTileGrid";
+export {
   RevixConfirmModal,
   type RevixConfirmModalProps,
 } from "./RevixConfirmModal";

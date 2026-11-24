@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { DataTable } from "@/components/ui/DataTable";
+import { DetailTileCard } from "@/components/shared/workspace";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { useAppDispatch } from "@/store/hooks";
 import { setPendingFleetReceiveContext } from "@/store/slices/workspaceSlice";
@@ -318,69 +319,73 @@ export function VendorDetailPage({
         {activeTab === "overview" && (
           <div className="grid items-start gap-5 md:grid-cols-2">
             {/* Vendor Details */}
-            <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
-              <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold text-revix-dark">
-                {isRtl ? "بيانات المورد" : "Vendor Details"}
-              </h3>
-              <dl className="divide-y divide-revix-border px-4">
-                {[
-                  [isRtl ? "اسم المورد" : "Vendor name", vendor.name],
-                  ...(vendor.legalName ? [[isRtl ? "الاسم القانوني" : "Legal name", vendor.legalName]] : []),
-                  [isRtl ? "مسؤول التواصل" : "Contact person", vendor.contactPerson || "—"],
-                  [isRtl ? "الهاتف" : "Phone", vendor.phone || "—"],
-                  [isRtl ? "البريد الإلكتروني" : "Email", vendor.email || "—"],
-                  [isRtl ? "الموقع" : "Location", `${vendor.city}, ${vendor.countryCode}`],
-                  ...(vendor.commercialRegister
-                    ? [[isRtl ? "السجل التجاري" : "Commercial Reg (CR)", vendor.commercialRegister]]
-                    : []),
-                  ...(vendor.taxNumber ? [[isRtl ? "الرقم الضريبي" : "Tax ID", vendor.taxNumber]] : []),
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                    <dt className="text-revix-secondary">{label}</dt>
-                    <dd className="text-end font-medium text-revix-dark tabular-nums">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
+            <DetailTileCard
+              title={isRtl ? "بيانات المورد" : "Vendor Details"}
+              items={[
+                { label: isRtl ? "اسم المورد" : "Vendor name", value: vendor.name },
+                ...(vendor.legalName
+                  ? [{ label: isRtl ? "الاسم القانوني" : "Legal name", value: vendor.legalName }]
+                  : []),
+                {
+                  label: isRtl ? "مسؤول التواصل" : "Contact person",
+                  value: vendor.contactPerson || "—",
+                },
+                { label: isRtl ? "الهاتف" : "Phone", value: vendor.phone || "—" },
+                { label: isRtl ? "البريد الإلكتروني" : "Email", value: vendor.email || "—" },
+                {
+                  label: isRtl ? "الموقع" : "Location",
+                  value: `${vendor.city}, ${vendor.countryCode}`,
+                },
+                ...(vendor.commercialRegister
+                  ? [
+                      {
+                        label: isRtl ? "السجل التجاري" : "Commercial Reg (CR)",
+                        value: vendor.commercialRegister,
+                      },
+                    ]
+                  : []),
+                ...(vendor.taxNumber
+                  ? [{ label: isRtl ? "الرقم الضريبي" : "Tax ID", value: vendor.taxNumber }]
+                  : []),
+              ]}
+            />
 
             {/* Financial Summary */}
-            <section className="overflow-hidden rounded-lg border border-revix-border bg-revix-white">
-              <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold text-revix-dark">
-                {isRtl ? "ملخص التعاملات والمدفوعات" : "Purchases & Payments Summary"}
-              </h3>
-              <dl className="divide-y divide-revix-border px-4">
-                {[
-                  [
-                    isRtl ? "إجمالي المشتريات" : "Total purchased",
-                    isLoadingPos ? "…" : `${financials.totalAmount.toLocaleString()} ${financials.currency}`,
-                    "text-revix-dark",
-                  ],
-                  [
-                    isRtl ? "إجمالي المدفوع" : "Total paid",
-                    isLoadingPos ? "…" : `${financials.totalPaid.toLocaleString()} ${financials.currency}`,
-                    "text-emerald-700",
-                  ],
-                  [
-                    isRtl ? "المتبقي" : "Balance due",
-                    isLoadingPos ? "…" : `${financials.totalRemaining.toLocaleString()} ${financials.currency}`,
-                    financials.totalRemaining > 0 ? "text-amber-700" : "text-revix-dark",
-                  ],
-                  [isRtl ? "عدد أوامر الشراء" : "Purchase orders", isLoadingPos ? "…" : String(activePos.length), "text-revix-dark"],
-                  [
-                    isRtl ? "إجمالي السيارات" : "Vehicles purchased",
-                    isLoadingPos ? "…" : `${vendorVehicles.length} / ${financials.totalOrderedUnits}`,
-                    "text-revix-dark",
-                  ],
-                ].map(([label, value, tone]) => (
-                  <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                    <dt className="text-revix-secondary">{label}</dt>
-                    <dd className={`text-end font-semibold tabular-nums ${tone}`} dir="ltr">
-                      {value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
+            <DetailTileCard
+              title={isRtl ? "ملخص التعاملات والمدفوعات" : "Purchases & Payments Summary"}
+              items={[
+                {
+                  label: isRtl ? "إجمالي المشتريات" : "Total purchased",
+                  value: isLoadingPos
+                    ? "…"
+                    : `${financials.totalAmount.toLocaleString()} ${financials.currency}`,
+                },
+                {
+                  label: isRtl ? "إجمالي المدفوع" : "Total paid",
+                  value: isLoadingPos
+                    ? "…"
+                    : `${financials.totalPaid.toLocaleString()} ${financials.currency}`,
+                  valueClassName: "text-emerald-700",
+                },
+                {
+                  label: isRtl ? "المتبقي" : "Balance due",
+                  value: isLoadingPos
+                    ? "…"
+                    : `${financials.totalRemaining.toLocaleString()} ${financials.currency}`,
+                  valueClassName: financials.totalRemaining > 0 ? "text-amber-700" : "text-revix-dark",
+                },
+                {
+                  label: isRtl ? "عدد أوامر الشراء" : "Purchase orders",
+                  value: isLoadingPos ? "…" : String(activePos.length),
+                },
+                {
+                  label: isRtl ? "إجمالي السيارات" : "Vehicles purchased",
+                  value: isLoadingPos
+                    ? "…"
+                    : `${vendorVehicles.length} / ${financials.totalOrderedUnits}`,
+                },
+              ]}
+            />
           </div>
         )}
 

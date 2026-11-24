@@ -2,6 +2,7 @@
 
 import React from "react";
 import { RevixIcon, type RevixIconName } from "@/components/ui/RevixIcons";
+import { DetailTileGrid } from "@/components/shared/workspace";
 import { useListAuditLogsQuery, type AuditLogEntryDto } from "@/store/api/fleetApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import { formatCompanyDate, formatCompanyDateTime } from "@/lib/date/companyDate";
@@ -249,14 +250,11 @@ export function ActivityTimeline({
           <summary className="cursor-pointer font-medium text-revix-secondary">
             {participantsLabel || (isRtl ? "المسؤولون" : "Participants")}
           </summary>
-          <dl className="mt-3 grid gap-2 sm:grid-cols-3">
-            {participants.map((p) => (
-              <div key={p.label} className="flex gap-3">
-                <dt className="text-revix-secondary">{p.label}</dt>
-                <dd className="font-medium text-revix-dark">{p.value || "—"}</dd>
-              </div>
-            ))}
-          </dl>
+          <DetailTileGrid
+            className="mt-3"
+            columns={3}
+            items={participants.map((p) => ({ label: p.label, value: p.value || "—" }))}
+          />
         </details>
       )}
     </div>

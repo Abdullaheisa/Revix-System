@@ -1,15 +1,16 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { RevixConfirmModal } from "@/components/shared/workspace";
 import { usePersistedPage } from "@/lib/workspace/usePersistedPage";
-import { useCreateVehicleMakeMutation, useCreateVehicleModelMutation, useCreateVariantMutation, useDeleteVariantMutation, useListVehicleMakesQuery, useListVariantsQuery, useUpdateVariantMutation, type VehicleCategory, type VehicleVariantDto } from "@/store/api/fleetApi";
+import { useCreateVariantMutation, useDeleteVariantMutation, useListVehicleBodyStylesQuery, useListVehicleMakesQuery, useListVariantsQuery, useUpdateVariantMutation, type VehicleCategory, type VehicleVariantDto } from "@/store/api/fleetApi";
 
 interface VehicleVariantsPanelProps {
   isRtl: boolean;
@@ -36,136 +37,6 @@ const CATEGORY_LABELS: Record<VehicleCategory, { en: string; ar: string }> = {
   commercial: { en: "Commercial", ar: "تجاري" },
 };
 
-const DEFAULT_VEHICLE_CATALOG: Record<string, string[]> = {
-  Toyota: ["Camry", "Corolla", "RAV4", "Land Cruiser", "Hilux", "Yaris", "Prado"],
-  Hyundai: ["Elantra", "Sonata", "Tucson", "Santa Fe", "Accent", "Creta"],
-  Nissan: ["Sunny", "Altima", "Patrol", "X-Trail", "Kicks", "Sentra"],
-  Kia: ["Cerato", "K5", "Sportage", "Sorento", "Pegas", "Carnival"],
-  Chevrolet: ["Malibu", "Tahoe", "Suburban", "Captiva", "Spark"],
-  Ford: ["Taurus", "Explorer", "Expedition", "Territory", "F-150"],
-  Mercedes: ["C-Class", "E-Class", "S-Class", "GLC", "GLE"],
-  BMW: ["3 Series", "5 Series", "7 Series", "X3", "X5"],
-  Honda: ["Civic", "Accord", "CR-V", "HR-V", "Pilot"],
-  Mitsubishi: ["Attrage", "Lancer", "Outlander", "Pajero", "L200"],
-};
-
-interface CatalogComboboxProps {
-  value: string;
-  options: string[];
-  placeholder: string;
-  disabled?: boolean;
-  isRtl: boolean;
-  onChange: (val: string) => void;
-  onAddNew: (val: string) => void;
-  addNewLabel: (val: string) => string;
-}
-
-function CatalogCombobox({ value, options, placeholder, disabled = false, isRtl, onChange, onAddNew, addNewLabel }: CatalogComboboxProps) {
-  const [open, setOpen] = useState(false);
-  const [queryOverride, setQuery] = useState<string | null>(null);
-  const query = open ? (queryOverride ?? value) : value;
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((opt) => opt.toLowerCase().includes(q));
-  }, [options, query]);
-
-  const trimmedQuery = query.trim();
-  const exactMatch = options.some(
-    (opt) => opt.toLowerCase() === trimmedQuery.toLowerCase(),
-  );
-
-  return (
-    <div ref={containerRef} className="relative">
-      <div className="relative">
-        <input
-          type="text"
-          disabled={disabled}
-          value={query}
-          onFocus={() => !disabled && setOpen(true)}
-          onChange={(e) => {
-            const next = e.target.value;
-            setQuery(next);
-            onChange(next);
-            setOpen(true);
-          }}
-          placeholder={placeholder}
-          className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 pe-8 text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors disabled:bg-revix-surface/60 disabled:cursor-not-allowed"
-        />
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => setOpen((prev) => !prev)}
-          tabIndex={-1}
-          className="absolute inset-y-0 end-0 flex items-center px-2.5 text-revix-muted hover:text-revix-dark disabled:opacity-50"
-        >
-          <RevixIcon name="chevron-down" className="h-3.5 w-3.5" />
-        </button>
-      </div>
-
-      {open && !disabled && (
-        <div className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-revix-border bg-revix-white py-1 shadow-lg">
-          {filtered.map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => {
-                onChange(opt);
-                setQuery(opt);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center justify-between px-3 py-1.5 text-xs transition-colors ${
-                opt.toLowerCase() === value.toLowerCase()
-                  ? "bg-revix-primary/10 font-semibold text-revix-primary"
-                  : "text-revix-dark hover:bg-revix-surface"
-              }`}
-            >
-              <span>{opt}</span>
-              {opt.toLowerCase() === value.toLowerCase() && (
-                <RevixIcon name="check" className="h-3.5 w-3.5" />
-              )}
-            </button>
-          ))}
-
-          {trimmedQuery && !exactMatch && (
-            <button
-              type="button"
-              onClick={() => {
-                onAddNew(trimmedQuery);
-                onChange(trimmedQuery);
-                setQuery(trimmedQuery);
-                setOpen(false);
-              }}
-              className="flex w-full items-center gap-1.5 border-t border-revix-border/60 px-3 py-2 text-xs font-semibold text-revix-primary hover:bg-revix-primary/10 transition-colors"
-            >
-              <RevixIcon name="plus" className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{addNewLabel(trimmedQuery)}</span>
-            </button>
-          )}
-
-          {filtered.length === 0 && !trimmedQuery && (
-            <div className="px-3 py-2 text-xs text-revix-muted">
-              {isRtl ? "اكتب اسم للبحث أو الإضافة" : "Type to search or add new"}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
   const [search, setSearch] = useState("");
   const [selectedCategory] = useState<string>("all");
@@ -187,77 +58,47 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
   // Form State - Pure Catalog Specs (Zero Pricing & Zero Physical Specs)
   const [formMake, setFormMake] = useState("");
   const [formModel, setFormModel] = useState("");
-  const [formYear, setFormYear] = useState(new Date().getFullYear());
-  const [formTrim, setFormTrim] = useState("Standard");
+  const [formYear, setFormYear] = useState("");
+  const [formTrim, setFormTrim] = useState("");
   const [customDisplayName, setFormDisplayName] = useState("");
   const [isDisplayNameCustom, setIsDisplayNameCustom] = useState(false);
-  const [formCategory, setFormCategory] = useState<VehicleCategory>("sedan");
-  const [formSipp, setFormSipp] = useState("ICAR");
+  const [formCategory, setFormCategory] = useState("");
+  const [formSipp, setFormSipp] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Database-backed Manufacturers & Models Catalog
-  const { data: makesResponse } = useListVehicleMakesQuery();
-  const [createVehicleMake] = useCreateVehicleMakeMutation();
-  const [createVehicleModel] = useCreateVehicleModelMutation();
+  // Database-backed Manufacturers, Models & Body Styles Catalog (Company-Owned Master)
+  const { data: makesResponse } = useListVehicleMakesQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+  const { data: bodyStylesResponse } = useListVehicleBodyStylesQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const dbMakes = useMemo(() => makesResponse?.data ?? [], [makesResponse?.data]);
-
-  const handleStoreManufacturer = async (make: string) => {
-    const clean = make.trim();
-    if (!clean) return;
-    try {
-      await createVehicleMake({ name: clean }).unwrap();
-    } catch {
-      // Handled by RTK Query
-    }
-  };
-
-  const handleStoreModel = async (make: string, model: string) => {
-    const cleanMake = make.trim();
-    const cleanModel = model.trim();
-    if (!cleanMake || !cleanModel) return;
-    try {
-      let makeRecord = dbMakes.find(
-        (m) => m.name.toLowerCase() === cleanMake.toLowerCase(),
-      );
-      if (!makeRecord) {
-        const res = await createVehicleMake({ name: cleanMake }).unwrap();
-        makeRecord = res.data;
-      }
-      await createVehicleModel({ makeId: makeRecord.id, name: cleanModel }).unwrap();
-    } catch {
-      // Handled by RTK Query
-    }
-  };
+  const bodyStyleOptions = useMemo(
+    () =>
+      (bodyStylesResponse?.data ?? []).map((s) => ({
+        value: s.code,
+        label: isRtl ? s.nameAr : s.nameEn,
+      })),
+    [isRtl, bodyStylesResponse?.data],
+  );
 
   const variants = useMemo(() => data?.data ?? [], [data?.data]);
 
   const catalogMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
-    const addPair = (make: string, model?: string) => {
-      const m = make.trim();
-      if (!m) return;
-      const existingKey = Array.from(map.keys()).find(
-        (k) => k.toLowerCase() === m.toLowerCase(),
-      );
-      const key = existingKey ?? m;
-      if (!map.has(key)) map.set(key, new Set());
-      if (model?.trim()) {
-        map.get(key)!.add(model.trim());
-      }
-    };
-
-    Object.entries(DEFAULT_VEHICLE_CATALOG).forEach(([make, models]) => {
-      addPair(make);
-      models.forEach((model) => addPair(make, model));
-    });
     dbMakes.forEach((make) => {
-      addPair(make.name);
-      make.models.forEach((model) => addPair(make.name, model.name));
+      const m = make.name.trim();
+      if (!m || make.models.length === 0) return;
+      make.models.forEach((model) => {
+        const modName = model.name.trim();
+        if (!modName) return;
+        if (!map.has(m)) map.set(m, new Set());
+        map.get(m)!.add(modName);
+      });
     });
-    variants.forEach((v) => addPair(v.make, v.model));
-
     return map;
-  }, [dbMakes, variants]);
+  }, [dbMakes]);
 
   const availableMakes = useMemo(
     () => Array.from(catalogMap.keys()).sort((a, b) => a.localeCompare(b)),
@@ -301,12 +142,12 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
     setEditingVariant(null);
     setFormMake("");
     setFormModel("");
-    setFormYear(new Date().getFullYear());
-    setFormTrim("Standard");
+    setFormYear("");
+    setFormTrim("");
     setFormDisplayName("");
     setIsDisplayNameCustom(false);
-    setFormCategory("sedan");
-    setFormSipp("ICAR");
+    setFormCategory("");
+    setFormSipp("");
     setFormError(null);
     setIsModalOpen(true);
   }
@@ -315,7 +156,7 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
     setEditingVariant(variant);
     setFormMake(variant.make);
     setFormModel(variant.model);
-    setFormYear(variant.modelYear);
+    setFormYear(String(variant.modelYear));
     setFormTrim(variant.trim);
     setFormDisplayName(
       [variant.modelYear, variant.make, variant.model, variant.trim]
@@ -342,9 +183,20 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
       return;
     }
 
+    const parsedYear = Number(formYear);
+    if (!formYear.trim() || Number.isNaN(parsedYear) || parsedYear < 1990 || parsedYear > 2040) {
+      setFormError(
+        isRtl
+          ? "برجاء إدخال سنة صنع صحيحة (1990 - 2040)."
+          : "Please enter a valid model year (1990 - 2040).",
+      );
+      return;
+    }
+
     const normMake = formMake.trim().toLowerCase();
     const normModel = formModel.trim().toLowerCase();
     const normTrim = (formTrim.trim() || "Standard").toLowerCase();
+    const normCategory = (formCategory.trim() || "sedan") as VehicleCategory;
     const normSipp = (formSipp.trim() || "ICAR").toLowerCase();
 
     const duplicate = variants.find(
@@ -352,9 +204,9 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
         v.id !== editingVariant?.id &&
         v.make.trim().toLowerCase() === normMake &&
         v.model.trim().toLowerCase() === normModel &&
-        v.modelYear === formYear &&
+        v.modelYear === parsedYear &&
         v.trim.trim().toLowerCase() === normTrim &&
-        v.category === formCategory &&
+        v.category === normCategory &&
         v.sippCode.trim().toLowerCase() === normSipp,
     );
 
@@ -376,26 +228,26 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
           data: {
             make: formMake.trim(),
             model: formModel.trim(),
-            modelYear: formYear,
-            trim: formTrim.trim(),
-            category: formCategory,
+            modelYear: parsedYear,
+            trim: formTrim.trim() || "Standard",
+            category: normCategory,
             transmission: "automatic",
             fuelType: "petrol",
             seatingCapacity: 5,
-            sippCode: formSipp.trim().toUpperCase(),
+            sippCode: (formSipp.trim() || "ICAR").toUpperCase(),
           },
         }).unwrap();
       } else {
         await createVariant({
           make: formMake.trim(),
           model: formModel.trim(),
-          modelYear: formYear,
-          trim: formTrim.trim(),
-          category: formCategory,
+          modelYear: parsedYear,
+          trim: formTrim.trim() || "Standard",
+          category: normCategory,
           transmission: "automatic",
           fuelType: "petrol",
           seatingCapacity: 5,
-          sippCode: formSipp.trim().toUpperCase(),
+          sippCode: (formSipp.trim() || "ICAR").toUpperCase(),
         }).unwrap();
       }
       setIsModalOpen(false);
@@ -493,11 +345,15 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
               </thead>
               <tbody className="divide-y divide-revix-border/60">
                 {paginatedVariants.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="h-48 text-center text-sm text-revix-secondary">
-                      {isRtl ? "لا توجد موديلات سيارات مطابقة" : "No vehicle models found"}
-                    </td>
-                  </tr>
+                  <TableEmptyRow
+                    colSpan={8}
+                    title={isRtl ? "لا توجد موديلات سيارات مطابقة" : "No vehicle models found"}
+                    description={
+                      isRtl
+                        ? "أضف فئة جديدة في الكتالوج أو عدّل شروط البحث الحالية."
+                        : "Add a new variant to the catalog or adjust your search filter."
+                    }
+                  />
                 ) : paginatedVariants.map((v) => (
                   <tr
                     key={v.id}
@@ -612,46 +468,57 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
                       {isRtl ? "الشركة المصنعة" : "Manufacturer (Make)"} *
                     </label>
-                    <CatalogCombobox
-                      value={formMake}
-                      options={availableMakes}
+                    <RevixSelect
+                      size="sm"
+                      searchable
                       isRtl={isRtl}
-                      placeholder={isRtl ? "اختر أو أضف شركة..." : "Select or add make..."}
-                      onChange={(val) => {
+                      value={formMake}
+                      onChange={(e) => {
+                        const val = e.target.value;
                         setFormMake(val);
                         if (val.trim().toLowerCase() !== formMake.trim().toLowerCase()) {
                           setFormModel("");
                         }
                       }}
-                      onAddNew={(val) => handleStoreManufacturer(val)}
-                      addNewLabel={(val) =>
-                        isRtl ? `حفظ شركة "${val}"` : `Store "${val}"`
+                      placeholder={
+                        availableMakes.length === 0
+                          ? isRtl
+                            ? "أضف شركة من صفحة Model أولاً"
+                            : "Add makes in Model page first"
+                          : isRtl
+                            ? "اختر الشركة المصنعة..."
+                            : "Select manufacturer..."
                       }
+                      buttonClassName="h-9 rounded-lg text-xs"
+                      options={availableMakes.map((m) => ({ value: m, label: m }))}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1">
                       {isRtl ? "الموديل" : "Model"} *
                     </label>
-                    <CatalogCombobox
-                      value={formModel}
-                      options={availableModels}
+                    <RevixSelect
+                      size="sm"
+                      searchable
                       disabled={!formMake.trim()}
                       isRtl={isRtl}
+                      value={formModel}
+                      onChange={(e) => setFormModel(e.target.value)}
                       placeholder={
                         !formMake.trim()
                           ? isRtl
                             ? "اختر الشركة أولاً"
                             : "Select make first"
-                          : isRtl
-                            ? "اختر أو أضف موديل..."
-                            : "Select or add model..."
+                          : availableModels.length === 0
+                            ? isRtl
+                              ? "أضف موديل من صفحة Model"
+                              : "Add models in Model page"
+                            : isRtl
+                              ? "اختر الموديل..."
+                              : "Select model..."
                       }
-                      onChange={(val) => setFormModel(val)}
-                      onAddNew={(val) => handleStoreModel(formMake, val)}
-                      addNewLabel={(val) =>
-                        isRtl ? `حفظ موديل "${val}"` : `Store "${val}"`
-                      }
+                      buttonClassName="h-9 rounded-lg text-xs"
+                      options={availableModels.map((m) => ({ value: m, label: m }))}
                     />
                   </div>
                   <div>
@@ -664,7 +531,8 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
                       min={1990}
                       max={2040}
                       value={formYear}
-                      onChange={(e) => setFormYear(Number(e.target.value))}
+                      onChange={(e) => setFormYear(e.target.value)}
+                      placeholder={String(new Date().getFullYear())}
                       className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-3 text-xs text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden transition-colors font-mono"
                     />
                   </div>
@@ -689,17 +557,21 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
                     </label>
                     <RevixSelect
                       size="sm"
+                      searchable
                       isRtl={isRtl}
                       value={formCategory}
                       onChange={(e) => setFormCategory(e.target.value as VehicleCategory)}
+                      placeholder={
+                        bodyStyleOptions.length === 0
+                          ? isRtl
+                            ? "أضف هيكل من صفحة Body Style"
+                            : "Add in Body Style page"
+                          : isRtl
+                            ? "اختر نوع الهيكل..."
+                            : "Select body style..."
+                      }
                       buttonClassName="h-9 rounded-lg text-xs"
-                      options={[
-                        { value: "sedan", label: isRtl ? "سيدان (Sedan)" : "Sedan" },
-                        { value: "suv", label: isRtl ? "SUV" : "SUV" },
-                        { value: "commercial", label: isRtl ? "بيك أب (Pickup)" : "Pickup" },
-                        { value: "van", label: isRtl ? "فان (Van)" : "Van" },
-                        { value: "luxury", label: isRtl ? "باص (Bus)" : "Bus" },
-                      ]}
+                      options={bodyStyleOptions}
                     />
                   </div>
                   <div>

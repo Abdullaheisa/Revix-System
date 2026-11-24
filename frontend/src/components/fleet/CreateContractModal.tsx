@@ -247,7 +247,7 @@ function CreateContractForm({
               buttonClassName="h-9 rounded-lg text-xs"
               options={vehiclesInVariant.map((v) => ({
                 value: v.id,
-                label: `${activeVariantGroup?.label || (v.variant ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}` : "Vehicle")} • ${isRtl ? "لوحة:" : "Plate:"} ${v.licensePlate}${v.color ? ` (${v.color})` : ""}`,
+                label: `${v.assetCode ? `[${v.assetCode}] ` : ""}${activeVariantGroup?.label || (v.variant ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}` : "Vehicle")} • ${isRtl ? "لوحة:" : "Plate:"} ${v.licensePlate}${v.color ? ` (${v.color})` : ""}`,
               }))}
             />
           </div>

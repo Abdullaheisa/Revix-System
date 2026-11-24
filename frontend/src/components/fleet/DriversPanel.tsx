@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -458,11 +459,15 @@ export function DriversPanel({ isRtl, embedded = false }: DriversPanelProps) {
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-revix-muted">
-                    {isRtl ? "لا يوجد سواقين مسجلين" : "No drivers registered."}
-                  </td>
-                </tr>
+                <TableEmptyRow
+                  colSpan={8}
+                  title={isRtl ? "لا يوجد سواقون مسجلون" : "No drivers registered"}
+                  description={
+                    isRtl
+                      ? "أضف بيانات السائقين ورخص القيادة لتسهيل تسليم واستلام السيارات."
+                      : "Register drivers and license details to streamline vehicle handovers."
+                  }
+                />
               ) : (
                 filtered.map((d) => (
                   <tr

@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
 import React, { useState, useMemo } from "react";
@@ -230,11 +231,10 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
                 </td>
               </tr>
             ) : filteredInclusions.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="h-48 text-center text-sm text-revix-secondary">
-                  {isAr ? "لا توجد مزايا مسجلة" : "No inclusions found"}
-                </td>
-              </tr>
+              <TableEmptyRow
+                colSpan={3}
+                title={isAr ? "لا توجد مزايا مسجلة" : "No inclusions found"}
+              />
             ) : (
               paginatedInclusions.map((item) => (
                 <tr key={item.id} className="transition-colors hover:bg-revix-surface/60">

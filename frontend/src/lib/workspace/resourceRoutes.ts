@@ -1,8 +1,18 @@
-export const VEHICLE_PROFILE_TABS = ["overview", "insurance", "pricing", "maintenance", "inspections", "timeline"] as const;
+export const VEHICLE_PROFILE_TABS = [
+  "overview",
+  "insurance",
+  "contracts",
+  "history",
+  "movement",
+  "pricing",
+  "maintenance",
+  "inspections",
+  "timeline",
+] as const;
 export type VehicleProfileTab = (typeof VEHICLE_PROFILE_TABS)[number];
 
 export interface FleetResourceRoute {
-  resource: "vehicles" | "purchase-orders" | "vendors" | "insurance-companies";
+  resource: "vehicles" | "purchase-orders" | "vendors" | "insurance-companies" | "price-list";
   id: string | null;
   action: "list" | "detail" | "create" | "receive";
   tab: VehicleProfileTab;
@@ -18,7 +28,8 @@ export function parseFleetResourceRoute(pathname: string): FleetResourceRoute | 
     (resource !== "vehicles" &&
       resource !== "purchase-orders" &&
       resource !== "vendors" &&
-      resource !== "insurance-companies")
+      resource !== "insurance-companies" &&
+      resource !== "price-list")
   ) {
     return null;
   }
@@ -47,4 +58,9 @@ export function vendorHref(id?: string | null): string {
 export function insuranceCompanyHref(id?: string | null): string {
   if (!id) return "/workspace/fleet/insurance-companies";
   return `/workspace/fleet/insurance-companies/${encodeURIComponent(id)}`;
+}
+
+export function priceListVariantHref(variantId?: string | null): string {
+  if (!variantId) return "/workspace/fleet/price-list";
+  return `/workspace/fleet/price-list/${encodeURIComponent(variantId)}`;
 }

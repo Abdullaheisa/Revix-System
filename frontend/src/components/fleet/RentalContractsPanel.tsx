@@ -9,7 +9,7 @@ import {
   type RentalContractStatus,
 } from "@/store/api/fleetApi";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { CreateContractModal } from "./CreateContractModal";
@@ -148,7 +148,10 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
             {isLoading ? (
               <tr><td colSpan={7} className="h-48 text-center text-xs text-revix-secondary">{isRtl ? "جاري التحميل..." : "Loading..."}</td></tr>
             ) : paginated.length === 0 ? (
-              <tr><td colSpan={7} className="h-48 text-center text-sm text-revix-secondary">{isRtl ? "لا توجد عقود تأجير مطابقة" : "No matching rental contracts"}</td></tr>
+              <TableEmptyRow
+                colSpan={7}
+                title={isRtl ? "لا توجد عقود تأجير مطابقة" : "No matching rental contracts"}
+              />
             ) : paginated.map((c) => {
               const st = STATUS_BADGE[c.status] || STATUS_BADGE.active;
               return (
