@@ -1633,7 +1633,9 @@ export class FleetService {
           ? Number(vehicle.dailyRate3to7 || vehicle.dailyRate1to2 || 0)
           : Number(vehicle.dailyRate1to2 || 0);
 
-    const dailyRate = input.dailyRate !== undefined && input.dailyRate > 0 ? input.dailyRate : autoRate;
+    const dailyRate = autoRate;
+    const pickupOdometer = Number(vehicle.mileageOdometer ?? 0);
+    const depositAmount = Number(vehicle.securityDeposit ?? 0);
     const subtotal = dailyRate * diffDays;
     const discount = Number(input.discount ?? 0);
     const insuranceFee = Number(input.insuranceFee ?? 0);
@@ -1662,7 +1664,7 @@ export class FleetService {
       customerId: input.customerId,
       startDate: input.startDate,
       endDate: input.endDate,
-      pickupOdometer: input.pickupOdometer ?? vehicle.mileageOdometer,
+      pickupOdometer,
       dailyRate,
       totalDays: diffDays,
       subtotal,
@@ -1671,7 +1673,7 @@ export class FleetService {
       extraCharges,
       totalAmount,
       paidAmount: Number(input.paidAmount ?? 0),
-      depositAmount: Number(input.depositAmount ?? 0),
+      depositAmount,
       notes: input.notes ?? null,
       customerSignatureDataUrl: input.customerSignatureDataUrl ?? null,
       createdByUserId: actor.user.id,
