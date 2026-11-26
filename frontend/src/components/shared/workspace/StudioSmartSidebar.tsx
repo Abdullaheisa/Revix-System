@@ -55,6 +55,8 @@ function getSubPageIcon(subPageId: string, fallback: RevixIconName): RevixIconNa
     case "purchase-orders":
     case "rental-contracts":
       return "file-text";
+    case "rental-calendar":
+      return "calendar";
     case "rental-inclusions":
       return "check-circle-2";
     case "customers":

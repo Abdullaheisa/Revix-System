@@ -1964,6 +1964,30 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
+  async getVehiclePhotoById(id: string): Promise<VehiclePhotoRecord | null> {
+    const record = this.vehiclePhotosById.get(id);
+    return record ? { ...record } : null;
+  }
+
+  async updateVehiclePhoto(
+    id: string,
+    input: { vehicleName?: string; photoUrl?: string; category?: string },
+  ): Promise<VehiclePhotoRecord | null> {
+    const existing = this.vehiclePhotosById.get(id);
+    if (!existing) return null;
+    const updated: VehiclePhotoRecord = {
+      ...existing,
+      vehicleName:
+        input.vehicleName !== undefined ? input.vehicleName.trim() : existing.vehicleName,
+      photoUrl: input.photoUrl !== undefined ? input.photoUrl.trim() : existing.photoUrl,
+      category:
+        input.category !== undefined ? input.category.trim() || "General" : existing.category,
+    };
+    this.vehiclePhotosById.set(id, updated);
+    this.saveToDisk();
+    return { ...updated };
+  }
+
   async deleteVehiclePhoto(id: string): Promise<boolean> {
     const exists = this.vehiclePhotosById.has(id);
     if (exists) {
@@ -2260,7 +2284,20 @@ export class InMemoryAuthDataStore implements AuthDataStore {
   }
 
   async createCustomer(input: any) {
-    const rec = { ...input, id: crypto.randomUUID(), createdAt: new Date(), updatedAt: new Date() };
+    let maxSeq = 0;
+    for (const c of this.customersById.values()) {
+      if (c.companyId === input.companyId && c.customerCode) {
+        const m = /^CUS-(\d+)$/.exec(c.customerCode);
+        if (m) maxSeq = Math.max(maxSeq, Number(m[1]));
+      }
+    }
+    const rec = {
+      ...input,
+      id: crypto.randomUUID(),
+      customerCode: `CUS-${String(maxSeq + 1).padStart(4, "0")}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     this.customersById.set(rec.id, rec);
     return rec;
   }
@@ -2295,11 +2332,26 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       extraCharges: input.extraCharges ?? 0,
       paidAmount: input.paidAmount ?? 0,
       depositAmount: input.depositAmount ?? 0,
+      customerSignatureDataUrl: input.customerSignatureDataUrl ?? null,
+      signedAt: input.customerSignatureDataUrl ? new Date() : null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     this.contractsById.set(rec.id, rec);
     return rec;
+  }
+
+  async signRentalContract(companyId: string, contractId: string, signatureDataUrl: string) {
+    const existing = this.contractsById.get(contractId);
+    if (!existing || existing.companyId !== companyId) return null;
+    const updated = {
+      ...existing,
+      customerSignatureDataUrl: signatureDataUrl,
+      signedAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.contractsById.set(contractId, updated);
+    return updated;
   }
 
   async completeRentalContract(companyId: string, contractId: string, input: any) {

@@ -108,7 +108,7 @@ export const RentalInclusionsPage: React.FC<RentalInclusionsPageProps> = ({ lang
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-bold text-revix-dark tracking-tight sm:text-2xl">
-            {isAr ? "مزايا وتغطيات العقود" : "Rental Inclusions"}
+            {"What's Included"}
           </h1>
           <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
             {totalCount}

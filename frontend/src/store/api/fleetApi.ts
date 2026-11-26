@@ -330,6 +330,7 @@ export interface FleetVehicleDto {
 
 export interface CustomerDto {
   id: string;
+  customerCode?: string;
   companyId: string;
   fullName: string;
   phone: string;
@@ -370,8 +371,12 @@ export interface RentalContractDto {
   paidAmount: number;
   depositAmount: number;
   notes: string | null;
+  returnCondition?: string | null;
+  customerSignatureDataUrl?: string | null;
+  signedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  vehicleAssetCode?: string;
   vehiclePlate?: string;
   vehicleName?: string;
   customerName?: string;
@@ -1200,6 +1205,33 @@ export const fleetApi = baseApi.injectEndpoints({
       invalidatesTags: ["VehiclePhoto"],
     }),
 
+    updateVehiclePhoto: builder.mutation<
+      ApiResponse<VehiclePhotoDto>,
+      { id: string; vehicleName: string; category?: string }
+    >({
+      query: ({ id, vehicleName, category }) => ({
+        url: `/fleet/photos/${id}`,
+        method: "PATCH",
+        body: { vehicleName, category },
+      }),
+      invalidatesTags: ["VehiclePhoto"],
+    }),
+
+    replaceVehiclePhoto: builder.mutation<
+      ApiResponse<VehiclePhotoDto>,
+      { id: string; vehicleName: string; file: File }
+    >({
+      query: ({ id, vehicleName, file }) => ({
+        url: `/fleet/photos/${id}/upload?vehicleName=${encodeURIComponent(vehicleName)}`,
+        method: "POST",
+        body: file,
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
+      }),
+      invalidatesTags: ["VehiclePhoto"],
+    }),
+
     deleteVehiclePhoto: builder.mutation<
       ApiResponse<{ deleted: boolean }>,
       string
@@ -1360,6 +1392,7 @@ export const fleetApi = baseApi.injectEndpoints({
         paidAmount?: number;
         depositAmount?: number;
         notes?: string | null;
+        customerSignatureDataUrl?: string | null;
       }
     >({
       query: (body) => ({
@@ -1370,6 +1403,18 @@ export const fleetApi = baseApi.injectEndpoints({
       invalidatesTags: ["RentalContract", "Fleet"],
     }),
 
+    signRentalContract: builder.mutation<
+      { ok: boolean; data: RentalContractDto },
+      { id: string; signatureDataUrl: string }
+    >({
+      query: ({ id, signatureDataUrl }) => ({
+        url: `/fleet/contracts/${id}/sign`,
+        method: "POST",
+        body: { signatureDataUrl },
+      }),
+      invalidatesTags: ["RentalContract"],
+    }),
+
     completeRentalContract: builder.mutation<
       { ok: boolean; data: RentalContractDto },
       {
@@ -1377,6 +1422,7 @@ export const fleetApi = baseApi.injectEndpoints({
         returnOdometer: number;
         extraCharges?: number;
         paidAmount?: number;
+        returnCondition?: string | null;
         notes?: string | null;
       }
     >({
@@ -1660,6 +1706,7 @@ export const {
   useDeleteCustomerMutation,
   useListRentalContractsQuery,
   useCreateRentalContractMutation,
+  useSignRentalContractMutation,
   useCompleteRentalContractMutation,
   useCancelRentalContractMutation,
   useSignPurchaseOrderMutation,
@@ -1700,6 +1747,8 @@ export const {
   useListVehiclePhotosQuery,
   useCreateVehiclePhotoMutation,
   useUploadVehiclePhotoMutation,
+  useUpdateVehiclePhotoMutation,
+  useReplaceVehiclePhotoMutation,
   useDeleteVehiclePhotoMutation,
   useListRentalInclusionsQuery,
   useCreateRentalInclusionMutation,

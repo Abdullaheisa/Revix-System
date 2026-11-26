@@ -12,7 +12,14 @@ export const VEHICLE_PROFILE_TABS = [
 export type VehicleProfileTab = (typeof VEHICLE_PROFILE_TABS)[number];
 
 export interface FleetResourceRoute {
-  resource: "vehicles" | "purchase-orders" | "vendors" | "insurance-companies" | "price-list";
+  resource:
+    | "vehicles"
+    | "purchase-orders"
+    | "vendors"
+    | "insurance-companies"
+    | "price-list"
+    | "customers"
+    | "rental-contracts";
   id: string | null;
   action: "list" | "detail" | "create" | "receive";
   tab: VehicleProfileTab;
@@ -29,7 +36,9 @@ export function parseFleetResourceRoute(pathname: string): FleetResourceRoute | 
       resource !== "purchase-orders" &&
       resource !== "vendors" &&
       resource !== "insurance-companies" &&
-      resource !== "price-list")
+      resource !== "price-list" &&
+      resource !== "customers" &&
+      resource !== "rental-contracts")
   ) {
     return null;
   }
@@ -63,4 +72,22 @@ export function insuranceCompanyHref(id?: string | null): string {
 export function priceListVariantHref(variantId?: string | null): string {
   if (!variantId) return "/workspace/fleet/price-list";
   return `/workspace/fleet/price-list/${encodeURIComponent(variantId)}`;
+}
+
+export function customerHref(id?: string | null): string {
+  if (!id) return "/workspace/fleet/customers";
+  return `/workspace/fleet/customers/${encodeURIComponent(id)}`;
+}
+
+export function rentalContractNewHref(params?: {
+  vehicleId?: string | null;
+  customerId?: string | null;
+  startDate?: string | null;
+}): string {
+  const qs = new URLSearchParams();
+  if (params?.vehicleId) qs.set("vehicleId", params.vehicleId);
+  if (params?.customerId) qs.set("customerId", params.customerId);
+  if (params?.startDate) qs.set("startDate", params.startDate);
+  const query = qs.toString();
+  return `/workspace/fleet/rental-contracts/new${query ? `?${query}` : ""}`;
 }

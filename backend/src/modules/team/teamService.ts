@@ -157,6 +157,38 @@ export class TeamService {
             throw err;
           }
         }
+      } else {
+        const existing = roles.find((r) => r.code.toLowerCase() === def.code);
+        if (existing && existing.isSystem) {
+          const currentPerms = existing.permissions ?? {};
+          let needsSync = false;
+          const mergedPerms = { ...currentPerms };
+
+          for (const [resKey, defaultActions] of Object.entries(def.permissions)) {
+            const key = resKey as keyof typeof def.permissions;
+            const currentActions = currentPerms[key];
+            if (!Array.isArray(currentActions)) {
+              mergedPerms[key] = defaultActions;
+              needsSync = true;
+            } else if (def.code === "owner") {
+              const missing = defaultActions.filter((a) => !currentActions.includes(a));
+              if (missing.length > 0) {
+                mergedPerms[key] = [...currentActions, ...missing];
+                needsSync = true;
+              }
+            }
+          }
+
+          if (needsSync) {
+            const updated = await this.store.updateCompanyRole(existing.id, company.id, {
+              scopeType: existing.scopeType,
+              permissions: mergedPerms,
+            });
+            if (updated) {
+              roles = roles.map((r) => (r.id === existing.id ? updated : r));
+            }
+          }
+        }
       }
     }
 

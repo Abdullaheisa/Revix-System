@@ -24,6 +24,7 @@ import {
   useListVariantsQuery,
   useListVehiclesQuery,
   useUpdateVariantPricingMutation,
+  useUpdateVehiclePricingMutation,
   type FleetPriceListDto,
 } from "@/store/api/fleetApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
@@ -73,6 +74,7 @@ interface VariantPriceRow {
 
 interface EditingTarget {
   variantId: string;
+  vehicleId?: string;
   title: string;
   totalCount: number;
   branchKey?: string;
@@ -82,6 +84,9 @@ interface EditingTarget {
   dailyRate3to7: number;
   dailyRate8Plus: number;
   damageExcess: number;
+  mileagePolicy?: "unlimited" | "limited";
+  dailyKmLimit?: number;
+  extraKmRate?: number;
 }
 
 function formatPriceOrRange(minVal: number, maxVal: number, curr: string) {
@@ -146,8 +151,11 @@ export function PriceListPanel({
     branchId ? { branchId, pageSize: 500 } : { pageSize: 500 },
   );
   const { data: variantsResp, isLoading: isLoadingVariants } = useListVariantsQuery();
-  const [updateVariantPricing, { isLoading: isUpdating }] =
+  const [updateVariantPricing, { isLoading: isUpdatingVariant }] =
     useUpdateVariantPricingMutation();
+  const [updateVehiclePricing, { isLoading: isUpdatingVehicle }] =
+    useUpdateVehiclePricingMutation();
+  const isUpdating = isUpdatingVariant || isUpdatingVehicle;
 
   const router = useRouter();
   const pathname = usePathname();
@@ -350,6 +358,14 @@ export function PriceListPanel({
     [variantRows, selectedVariantId],
   );
 
+  const selectedVariantVehicles = useMemo(
+    () =>
+      selectedVariantId
+        ? vehicles.filter((v) => v.variantId === selectedVariantId)
+        : [],
+    [vehicles, selectedVariantId],
+  );
+
   function openEditModal(target: EditingTarget) {
     setEditingTarget(target);
     setDailyRate1to2(target.dailyRate1to2);
@@ -364,14 +380,27 @@ export function PriceListPanel({
     if (!editingTarget) return;
     setFormError(undefined);
     try {
-      await updateVariantPricing({
-        variantId: editingTarget.variantId,
-        dailyRate1to2: Number(dailyRate1to2) || 0,
-        dailyRate3to7: Number(dailyRate3to7) || 0,
-        dailyRate8Plus: Number(dailyRate8to30) || 0,
-        damageExcess: Number(damageExcess) || 0,
-        branchId: editingTarget.branchKey,
-      }).unwrap();
+      if (editingTarget.vehicleId) {
+        await updateVehiclePricing({
+          vehicleId: editingTarget.vehicleId,
+          dailyRate1to2: Number(dailyRate1to2) || 0,
+          dailyRate3to7: Number(dailyRate3to7) || 0,
+          dailyRate8Plus: Number(dailyRate8to30) || 0,
+          damageExcess: Number(damageExcess) || 0,
+          mileagePolicy: editingTarget.mileagePolicy ?? "unlimited",
+          dailyKmLimit: editingTarget.dailyKmLimit ?? 0,
+          extraKmRate: editingTarget.extraKmRate ?? 0,
+        }).unwrap();
+      } else {
+        await updateVariantPricing({
+          variantId: editingTarget.variantId,
+          dailyRate1to2: Number(dailyRate1to2) || 0,
+          dailyRate3to7: Number(dailyRate3to7) || 0,
+          dailyRate8Plus: Number(dailyRate8to30) || 0,
+          damageExcess: Number(damageExcess) || 0,
+          branchId: editingTarget.branchKey,
+        }).unwrap();
+      }
       setEditingTarget(null);
     } catch (err) {
       setFormError(
@@ -676,7 +705,7 @@ export function PriceListPanel({
                 title: selectedVariantRow.title,
                 totalCount: selectedVariantRow.totalCount,
                 branchKey: undefined,
-                branchLabel: isRtl ? "جميع الفروع" : "All Branches",
+                branchLabel: isRtl ? "جميع سيارات الفريانت" : "All Variant Vehicles",
                 currency: openedList?.currencyCode || defaultCurrency,
                 dailyRate1to2: selectedVariantRow.dailyRate1to2,
                 dailyRate3to7: selectedVariantRow.dailyRate3to7,
@@ -686,7 +715,7 @@ export function PriceListPanel({
             }
             className="inline-flex h-9 cursor-pointer items-center rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
           >
-            {isRtl ? "توحيد السعر لكل الفروع" : "Set Price for All Branches"}
+            {isRtl ? "توحيد السعر لكل الفريانت" : "Set Price for All Variant Vehicles"}
           </button>
         </div>
 
@@ -694,88 +723,98 @@ export function PriceListPanel({
           <DataTable fitAvailableHeight className="text-xs">
             <thead>
               <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
-                <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-start">Vehicle ID</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "رقم اللوحة" : "Plate"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "اللون" : "Color"}</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "الفرع / الموقع" : "Branch / Location"}</th>
-                <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "عدد السيارات" : "Units"}</th>
-                <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "1 - 2 يوم" : "1 - 2 Days"}</th>
-                <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "3 - 7 أيام" : "3 - 7 Days"}</th>
-                <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "8+ أيام" : "8+ Days"}</th>
-                <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "تحمل الأضرار" : "Damage Excess"}</th>
-                <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-end">{isRtl ? "إجراء" : "Action"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "1 - 2 يوم" : "1 - 2 Days"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "3 - 7 أيام" : "3 - 7 Days"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "8+ أيام" : "8+ Days"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "تحمل الأضرار" : "Damage Excess"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-end">{isRtl ? "إجراء" : "Action"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-revix-border/80">
-              {selectedVariantRow.branches.map((br) => (
-                <tr key={br.branchKey} className="transition-colors hover:bg-revix-accent-soft/40">
-                  <td className="whitespace-nowrap px-4 py-3 text-start">
-                    {br.vehicleCodes.length > 0 ? (
-                      <div className="flex flex-wrap items-center gap-1" dir="ltr">
-                        {br.vehicleCodes.map((code) => (
-                          <span
-                            key={code}
-                            className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10.5px] font-bold text-revix-primary"
-                          >
-                            {code}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-revix-muted">—</span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-start font-semibold text-revix-dark">
-                    {br.branchName}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-center">
-                    <span className="font-mono font-bold text-revix-dark">{br.totalCount}</span>
-                    <span className="ms-1.5 text-[11px] text-emerald-700">
-                      ({isRtl ? `متاح ${br.availableCount}` : `${br.availableCount} avail`})
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-center font-mono font-semibold text-revix-dark">
-                    <span dir="ltr" className="inline-block">
-                      {br.dailyRate1to2.toLocaleString()} {br.branchCurrency}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-dark">
-                    <span dir="ltr" className="inline-block">
-                      {br.dailyRate3to7.toLocaleString()} {br.branchCurrency}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-dark">
-                    <span dir="ltr" className="inline-block">
-                      {br.dailyRate8Plus.toLocaleString()} {br.branchCurrency}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-secondary">
-                    <span dir="ltr" className="inline-block">
-                      {br.damageExcess.toLocaleString()} {br.branchCurrency}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-end">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        openEditModal({
-                          variantId: selectedVariantRow.variantId,
-                          title: selectedVariantRow.title,
-                          totalCount: br.totalCount,
-                          branchKey: br.branchKey,
-                          branchLabel: br.branchName,
-                          currency: br.branchCurrency,
-                          dailyRate1to2: br.dailyRate1to2,
-                          dailyRate3to7: br.dailyRate3to7,
-                          dailyRate8Plus: br.dailyRate8Plus,
-                          damageExcess: br.damageExcess,
-                        })
-                      }
-                      className="cursor-pointer rounded-[6px] border border-revix-border bg-revix-white px-2.5 py-1 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft hover:text-revix-primary"
-                    >
-                      {isRtl ? "تعديل سعر الفرع" : "Edit Branch Price"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {selectedVariantVehicles.length === 0 ? (
+                <TableEmptyRow
+                  colSpan={8}
+                  title={isRtl ? "لا توجد سيارات مسجلة لهذه الفئة" : "No vehicles in this variant"}
+                  description={
+                    isRtl
+                      ? "يمكنك توحيد السعر أعلاه أو إضافة سيارات لهذه الفئة أولاً."
+                      : "Set a unified variant price above or add vehicles to this variant."
+                  }
+                />
+              ) : (
+                selectedVariantVehicles.map((v) => {
+                  const curr =
+                    (v.branchId && branchCurrencyById.get(v.branchId)) ||
+                    openedList?.currencyCode ||
+                    defaultCurrency;
+                  return (
+                    <tr key={v.id} className="transition-colors hover:bg-revix-accent-soft/40">
+                      <td className="whitespace-nowrap px-4 py-3 text-start">
+                        <span
+                          dir="ltr"
+                          className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-xs font-bold text-revix-dark"
+                        >
+                          {v.licensePlate}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-start text-revix-secondary">
+                        {v.color || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-start font-semibold text-revix-dark">
+                        {v.branchName || (isRtl ? "مخزون الشركة (غير منقول)" : "Company Stock")}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center font-mono font-semibold text-revix-dark">
+                        <span dir="ltr" className="inline-block">
+                          {Number(v.dailyRate1to2 || 0).toLocaleString()} {curr}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-dark">
+                        <span dir="ltr" className="inline-block">
+                          {Number(v.dailyRate3to7 || 0).toLocaleString()} {curr}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-dark">
+                        <span dir="ltr" className="inline-block">
+                          {Number(v.dailyRate8Plus || 0).toLocaleString()} {curr}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-secondary">
+                        <span dir="ltr" className="inline-block">
+                          {Number(v.damageExcess || 0).toLocaleString()} {curr}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-end">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openEditModal({
+                              variantId: selectedVariantRow.variantId,
+                              vehicleId: v.id,
+                              title: `${selectedVariantRow.title} — ${v.licensePlate}`,
+                              totalCount: 1,
+                              branchLabel: v.branchName || (isRtl ? "مخزون الشركة" : "Company Stock"),
+                              currency: curr,
+                              dailyRate1to2: Number(v.dailyRate1to2 || 0),
+                              dailyRate3to7: Number(v.dailyRate3to7 || 0),
+                              dailyRate8Plus: Number(v.dailyRate8Plus || 0),
+                              damageExcess: Number(v.damageExcess || 0),
+                              mileagePolicy: v.mileagePolicy ?? "unlimited",
+                              dailyKmLimit: Number(v.dailyKmLimit || 0),
+                              extraKmRate: Number(v.extraKmRate || 0),
+                            })
+                          }
+                          className="cursor-pointer whitespace-nowrap rounded-[6px] border border-revix-border bg-revix-white px-3 py-1.5 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft hover:text-revix-primary"
+                        >
+                          {isRtl ? "تعديل سعر العربية" : "Edit Vehicle Price"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </DataTable>
         </div>
@@ -881,110 +920,54 @@ export function PriceListPanel({
           <thead>
             <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
               <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "الفريانت / الفئة" : "Model Variant"}</th>
-              <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "إجمالي السيارات" : "Total Units"}</th>
-              <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "1 - 2 يوم" : "1 - 2 Days"}</th>
-              <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "3 - 7 أيام" : "3 - 7 Days"}</th>
-              <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "8+ أيام" : "8+ Days"}</th>
-              <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "تحمل الأضرار" : "Damage Excess"}</th>
-              <th className="w-[1%] whitespace-nowrap px-4 py-2.5 text-end">{isRtl ? "إجراء" : "Action"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "إجمالي السيارات" : "Total Units"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-end">{isRtl ? "إجراء" : "Action"}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-revix-border/80">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-[13px] text-revix-secondary">
+                <td colSpan={3} className="px-4 py-8 text-center text-[13px] text-revix-secondary">
                   {isRtl ? "جاري التحميل..." : "Loading..."}
                 </td>
               </tr>
             ) : filteredRows.length === 0 ? (
               <TableEmptyRow
-                colSpan={7}
+                colSpan={3}
                 title={isRtl ? "لا توجد فئات سيارات مسجلة بعد" : "No variants found"}
                 description={
                   isRtl
-                    ? "ستظهر فئات السيارات هنا لتحديد أسعارها اليومية حسب المدة والفرع."
-                    : "Vehicle variants will appear here to configure daily rates by tier and branch."
+                    ? "ستظهر فئات السيارات هنا للدخول وتحديد أسعارها."
+                    : "Vehicle variants will appear here to view and configure prices."
                 }
               />
             ) : (
-              filteredRows.map((row) => {
-                const hasMultipleBranches = isAllBranchesViewer && row.branches.length > 1;
-                const rowCurrency =
-                  openedList?.currencyCode || row.branches[0]?.branchCurrency || defaultCurrency;
-                return (
-                  <tr
-                    key={row.variantId}
-                    onClick={() => {
-                      if (isAllBranchesViewer) setSelectedVariantId(row.variantId);
-                    }}
-                    className={`transition-colors hover:bg-revix-accent-soft/40 ${
-                      isAllBranchesViewer ? "cursor-pointer" : ""
-                    }`}
-                  >
-                    <td className="whitespace-nowrap px-3.5 py-3 text-start">
-                      <span className="font-semibold text-revix-dark">{row.title}</span>
-                    </td>
-                    <td className="whitespace-nowrap px-3.5 py-3 text-center">
-                      <span className="font-mono font-bold text-revix-dark">{row.totalCount}</span>
-                      <span className="ms-1.5 text-[11px] text-emerald-700">
-                        ({isRtl ? `متاح ${row.availableCount}` : `${row.availableCount} avail`})
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3.5 py-3 text-center font-mono font-semibold text-revix-dark">
-                      <span dir="ltr" className="inline-block">
-                        {formatPriceOrRange(row.minRate1to2, row.maxRate1to2, rowCurrency)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3.5 py-3 text-center font-mono text-revix-dark">
-                      <span dir="ltr" className="inline-block">
-                        {formatPriceOrRange(row.minRate3to7, row.maxRate3to7, rowCurrency)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3.5 py-3 text-center font-mono text-revix-dark">
-                      <span dir="ltr" className="inline-block">
-                        {formatPriceOrRange(row.minRate8Plus, row.maxRate8Plus, rowCurrency)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3.5 py-3 text-center font-mono text-revix-secondary">
-                      <span dir="ltr" className="inline-block">
-                        {formatPriceOrRange(row.minDamageExcess, row.maxDamageExcess, rowCurrency)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3.5 py-3 text-end" onClick={(e) => e.stopPropagation()}>
-                      {hasMultipleBranches || isAllBranchesViewer ? (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedVariantId(row.variantId)}
-                          className="cursor-pointer whitespace-nowrap rounded-[6px] border border-revix-border bg-revix-white px-2.5 py-1 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft hover:text-revix-primary"
-                        >
-                          {isRtl ? "أسعار الفروع" : "Branch Prices"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openEditModal({
-                              variantId: row.variantId,
-                              title: row.title,
-                              totalCount: row.totalCount,
-                              branchKey: undefined,
-                              branchLabel: row.branches[0]?.branchName,
-                              currency: rowCurrency,
-                              dailyRate1to2: row.dailyRate1to2,
-                              dailyRate3to7: row.dailyRate3to7,
-                              dailyRate8Plus: row.dailyRate8Plus,
-                              damageExcess: row.damageExcess,
-                            })
-                          }
-                          className="cursor-pointer whitespace-nowrap rounded-[6px] border border-revix-border bg-revix-white px-2.5 py-1 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft hover:text-revix-primary"
-                        >
-                          {isRtl ? "تعديل السعر" : "Edit Price"}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
+              filteredRows.map((row) => (
+                <tr
+                  key={row.variantId}
+                  onClick={() => setSelectedVariantId(row.variantId)}
+                  className="cursor-pointer transition-colors hover:bg-revix-accent-soft/40"
+                >
+                  <td className="whitespace-nowrap px-4 py-3 text-start">
+                    <span className="font-semibold text-revix-dark">{row.title}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-center">
+                    <span className="font-mono font-bold text-revix-dark">{row.totalCount}</span>
+                    <span className="ms-1.5 text-[11px] text-emerald-700">
+                      ({isRtl ? `متاح ${row.availableCount}` : `${row.availableCount} avail`})
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedVariantId(row.variantId)}
+                      className="cursor-pointer whitespace-nowrap rounded-[6px] border border-revix-border bg-revix-white px-3 py-1.5 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft hover:text-revix-primary"
+                    >
+                      {isRtl ? "عرض وتعديل الأسعار" : "View & Edit Prices"}
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </DataTable>

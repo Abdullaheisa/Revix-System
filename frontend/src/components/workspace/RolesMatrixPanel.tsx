@@ -99,8 +99,8 @@ const RESOURCE_ROWS = [
   },
   {
     key: "rental_inclusions",
-    en: "Rental Inclusions",
-    ar: "مزايا وتغطيات العقود",
+    en: "What's Included",
+    ar: "What's Included",
     actions: [
       { key: "read", en: "View", ar: "عرض" },
       { key: "create", en: "Create", ar: "إنشاء" },

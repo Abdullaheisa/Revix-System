@@ -3,21 +3,29 @@
 import { DataTable } from "@/components/ui/DataTable";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { customerHref, parseFleetResourceRoute } from "@/lib/workspace/resourceRoutes";
 import {
   useDeleteCustomerMutation,
   useListCustomersQuery,
   type CustomerDto,
 } from "@/store/api/fleetApi";
-import { SectionCard } from "@/components/ui/SectionCard";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { CustomerFormModal } from "./CustomerFormModal";
+import { CustomerDetailPage } from "./CustomerDetailPage";
 
 interface CustomersPanelProps {
   isRtl: boolean;
 }
 
 export function CustomersPanel({ isRtl }: CustomersPanelProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const resourceRoute = parseFleetResourceRoute(pathname);
+  const detailCustomerId =
+    resourceRoute?.resource === "customers" ? resourceRoute.id : null;
+
   const { data: customersData, isLoading } = useListCustomersQuery();
   const [deleteCustomer] = useDeleteCustomerMutation();
 
@@ -29,11 +37,20 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
 
   const customers = useMemo(() => customersData?.data ?? [], [customersData?.data]);
 
+  const detailCustomer = useMemo(
+    () =>
+      detailCustomerId
+        ? customers.find((c) => c.id === detailCustomerId) ?? null
+        : null,
+    [customers, detailCustomerId],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return customers;
     return customers.filter(
       (c) =>
+        (c.customerCode && c.customerCode.toLowerCase().includes(q)) ||
         c.fullName.toLowerCase().includes(q) ||
         c.phone.toLowerCase().includes(q) ||
         (c.secondaryPhone && c.secondaryPhone.toLowerCase().includes(q)) ||
@@ -46,6 +63,16 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
     const start = (page - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, page]);
+
+  if (detailCustomerId && detailCustomer) {
+    return (
+      <CustomerDetailPage
+        customer={detailCustomer}
+        isRtl={isRtl}
+        onBack={() => router.push(customerHref())}
+      />
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
@@ -72,7 +99,7 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder={isRtl ? "بحث بالاسم، الهاتف، الهوية..." : "Search name, phone, ID..."}
+              placeholder={isRtl ? "بحث بالكود، الاسم، الهاتف، الهوية..." : "Search ID, name, phone..."}
               className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
             />
           </div>
@@ -95,12 +122,12 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
         <DataTable fitAvailableHeight className="text-xs">
           <thead>
             <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+              <th scope="col" className="sticky top-0 z-10 w-[1%] select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">Customer ID</th>
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "العميل" : "Customer"}</th>
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الهاتف" : "Phone"}</th>
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الهوية / الجواز" : "National ID"}</th>
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "رخصة القيادة" : "Driver License"}</th>
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "انتهاء الرخصة" : "License Expiry"}</th>
-              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold">{isRtl ? "إجراءات" : "Actions"}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-revix-border/60">
@@ -118,7 +145,16 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
               />
             ) : (
             paginated.map((c) => (
-              <tr key={c.id} className="transition-colors hover:bg-revix-surface/60">
+              <tr
+                key={c.id}
+                onClick={() => router.push(customerHref(c.id))}
+                className="cursor-pointer transition-colors hover:bg-revix-surface/60"
+              >
+                <td className="py-2.5 px-3 whitespace-nowrap">
+                  <span dir="ltr" className="rounded bg-revix-accent-soft px-2 py-0.5 font-mono text-[11px] font-bold text-revix-primary">
+                    {c.customerCode || "—"}
+                  </span>
+                </td>
                 <td className="py-2.5 px-3">
                   <div className="font-bold text-revix-dark">{c.fullName}</div>
                   {c.email && <div className="text-[11px] text-revix-secondary">{c.email}</div>}
@@ -132,28 +168,6 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
                 <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">{c.nationalId || "—"}</td>
                 <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">{c.driverLicenseNo || "—"}</td>
                 <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">{c.licenseExpiry || "—"}</td>
-                <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                  <div className="inline-flex items-center justify-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingCustomer(c);
-                        setIsModalOpen(true);
-                      }}
-                      className="h-8 cursor-pointer rounded-md border border-revix-border bg-white px-2.5 text-[11px] font-semibold text-revix-dark hover:bg-revix-surface"
-                    >
-                      {isRtl ? "تعديل" : "Edit"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteCustomer(c.id)}
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50"
-                      title={isRtl ? "حذف" : "Delete"}
-                    >
-                      <RevixIcon name="trash-2" size={14} />
-                    </button>
-                  </div>
-                </td>
               </tr>
             ))
             )}

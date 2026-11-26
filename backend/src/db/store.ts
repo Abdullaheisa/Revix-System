@@ -263,7 +263,12 @@ export interface AuthDataStore {
 
   // Vehicle Photos Library
   createVehiclePhoto(input: CreateVehiclePhotoInput): Promise<VehiclePhotoRecord>;
+  getVehiclePhotoById(id: string): Promise<VehiclePhotoRecord | null>;
   listVehiclePhotos(companyId: string, search?: string): Promise<VehiclePhotoRecord[]>;
+  updateVehiclePhoto(
+    id: string,
+    input: { vehicleName?: string; photoUrl?: string; category?: string },
+  ): Promise<VehiclePhotoRecord | null>;
   deleteVehiclePhoto(id: string): Promise<boolean>;
 
   // Rental Inclusions (What is Included)
@@ -517,8 +522,14 @@ export interface AuthDataStore {
     paidAmount?: number;
     depositAmount?: number;
     notes?: string | null;
+    customerSignatureDataUrl?: string | null;
     createdByUserId?: string | null;
   }): Promise<RentalContractRecord>;
+  signRentalContract(
+    companyId: string,
+    contractId: string,
+    signatureDataUrl: string,
+  ): Promise<RentalContractRecord | null>;
   completeRentalContract(
     companyId: string,
     contractId: string,
@@ -526,6 +537,7 @@ export interface AuthDataStore {
       returnOdometer: number;
       extraCharges?: number;
       paidAmount?: number;
+      returnCondition?: string | null;
       notes?: string | null;
     },
   ): Promise<RentalContractRecord | null>;

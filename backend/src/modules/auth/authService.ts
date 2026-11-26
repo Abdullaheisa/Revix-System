@@ -367,6 +367,15 @@ export class AuthService {
       );
     }
 
+    const membership = await this.store.findMembershipByUserId(user.id);
+    if (membership?.status === "suspended") {
+      throw new AuthServiceError(
+        "USER_DISABLED",
+        "Your account has been suspended by the company administrator.",
+        403,
+      );
+    }
+
     const rawSessionToken = generateSecureToken(32);
     const sessionTokenHash = hashOpaqueToken(rawSessionToken);
     const sessionExpiresAt = new Date(Date.now() + this.sessionTtlMs);
@@ -397,7 +406,6 @@ export class AuthService {
       entityId: user.id,
     });
 
-    const membership = await this.store.findMembershipByUserId(user.id);
     const company = membership
       ? null
       : await this.store.findCompanyByOwnerUserId(user.id);
@@ -433,6 +441,10 @@ export class AuthService {
     }
 
     const membership = await this.store.findMembershipByUserId(user.id);
+    if (membership?.status === "suspended") {
+      return null;
+    }
+
     const company = membership
       ? null
       : await this.store.findCompanyByOwnerUserId(user.id);

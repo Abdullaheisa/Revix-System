@@ -802,6 +802,30 @@ export class FleetService {
     return this.store.listVehiclePhotos(actor.company.id, search);
   }
 
+  async updateVehiclePhoto(
+    actor: TenantActor,
+    photoId: string,
+    input: { vehicleName?: string; photoUrl?: string; category?: string },
+  ): Promise<VehiclePhotoRecord> {
+    const existing = await this.store.getVehiclePhotoById(photoId);
+    if (!existing || existing.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "PHOTO_NOT_FOUND", "Vehicle photo not found.");
+    }
+    const updated = await this.store.updateVehiclePhoto(photoId, input);
+    if (!updated) {
+      throw new FleetServiceError(404, "PHOTO_NOT_FOUND", "Vehicle photo not found.");
+    }
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      actorUserId: actor.user.id,
+      action: "fleet.photo_updated",
+      entityType: "vehicle_photo",
+      entityId: photoId,
+      metadata: { vehicleName: updated.vehicleName },
+    });
+    return updated;
+  }
+
   async deleteVehiclePhoto(
     actor: TenantActor,
     photoId: string,
@@ -1363,10 +1387,23 @@ export class FleetService {
   // ============================================================================
 
   async toggleVehicleBookable(actor: TenantActor, vehicleId: string, isBookable: boolean) {
-    this.assertVehicleScope(
+    const vehicle = this.assertVehicleScope(
       actor,
       await this.store.findFleetVehicleById(vehicleId),
     );
+    if (isBookable) {
+      const hasPricing =
+        Number(vehicle.dailyRate1to2 || 0) > 0 ||
+        Number(vehicle.dailyRate3to7 || 0) > 0 ||
+        Number(vehicle.dailyRate8Plus || 0) > 0;
+      if (!hasPricing) {
+        throw new FleetServiceError(
+          400,
+          "VEHICLE_PRICING_REQUIRED",
+          "Vehicle must have a price configured in Price List before publishing to Fleet.",
+        );
+      }
+    }
     const updated = await this.store.toggleFleetVehicleBookable(actor.company.id, vehicleId, isBookable);
     if (!updated) {
       throw new FleetServiceError(404, "VEHICLE_NOT_FOUND", "Vehicle not found.");
@@ -1451,13 +1488,14 @@ export class FleetService {
       paidAmount?: number;
       depositAmount?: number;
       notes?: string | null;
+      customerSignatureDataUrl?: string | null;
     },
   ) {
     const vehicle = this.assertVehicleScope(
       actor,
       await this.store.findFleetVehicleById(input.vehicleId),
     );
-    if (vehicle.status !== "available") {
+    if (vehicle.status === "maintenance" || vehicle.status === "out_of_service") {
       throw new FleetServiceError(409, "VEHICLE_UNAVAILABLE", "Vehicle is not available for rental.");
     }
     if (!vehicle.branchId) {
@@ -1467,9 +1505,40 @@ export class FleetService {
         "Vehicle is still in company central stock. Dispatch and receive it at a branch before creating a rental contract.",
       );
     }
+    const hasPricing =
+      Number(vehicle.dailyRate1to2 || 0) > 0 ||
+      Number(vehicle.dailyRate3to7 || 0) > 0 ||
+      Number(vehicle.dailyRate8Plus || 0) > 0;
+    if (!hasPricing) {
+      throw new FleetServiceError(
+        400,
+        "VEHICLE_PRICING_REQUIRED",
+        "Vehicle must have a price configured in Price List before creating a rental contract.",
+      );
+    }
 
     const start = new Date(input.startDate);
     const end = new Date(input.endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+      throw new FleetServiceError(400, "INVALID_DATES", "End date must be on or after start date.");
+    }
+
+    const existingContracts = await this.store.listRentalContracts(actor.company.id);
+    const conflict = existingContracts.find(
+      (c) =>
+        c.vehicleId === vehicle.id &&
+        c.status === "active" &&
+        c.startDate <= input.endDate &&
+        c.endDate >= input.startDate,
+    );
+    if (conflict) {
+      throw new FleetServiceError(
+        409,
+        "VEHICLE_ALREADY_BOOKED",
+        `Vehicle is already booked during these dates (${conflict.contractNumber}: ${conflict.startDate} → ${conflict.endDate}).`,
+      );
+    }
+
     const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
 
     const autoRate =
@@ -1504,6 +1573,7 @@ export class FleetService {
       paidAmount: Number(input.paidAmount ?? 0),
       depositAmount: Number(input.depositAmount ?? 0),
       notes: input.notes ?? null,
+      customerSignatureDataUrl: input.customerSignatureDataUrl ?? null,
       createdByUserId: actor.user.id,
     });
 
@@ -1541,10 +1611,26 @@ export class FleetService {
     return contract;
   }
 
+  async signRentalContract(
+    actor: TenantActor,
+    contractId: string,
+    signatureDataUrl: string,
+  ) {
+    const updated = await this.store.signRentalContract(
+      actor.company.id,
+      contractId,
+      signatureDataUrl,
+    );
+    if (!updated) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    return updated;
+  }
+
   async completeRentalContract(
     actor: TenantActor,
     contractId: string,
-    input: { returnOdometer: number; extraCharges?: number; paidAmount?: number; notes?: string | null },
+    input: { returnOdometer: number; extraCharges?: number; paidAmount?: number; returnCondition?: string | null; notes?: string | null },
   ) {
     const updated = await this.store.completeRentalContract(actor.company.id, contractId, input);
     if (!updated) {

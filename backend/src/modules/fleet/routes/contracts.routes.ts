@@ -35,8 +35,31 @@ router.post(
           paidAmount: req.body?.paidAmount != null ? Number(req.body.paidAmount) : 0,
           depositAmount: req.body?.depositAmount != null ? Number(req.body.depositAmount) : 0,
           notes: req.body?.notes ?? null,
+          customerSignatureDataUrl:
+            typeof req.body?.customerSignatureDataUrl === "string" && req.body.customerSignatureDataUrl.trim()
+              ? req.body.customerSignatureDataUrl.trim()
+              : null,
         });
         res.status(201).json({ ok: true, data: created });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
+router.post(
+    "/contracts/:id/sign",
+    guards.requirePermission("fleet", "update"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const sig = typeof req.body?.signatureDataUrl === "string" ? req.body.signatureDataUrl.trim() : "";
+      if (!sig) {
+        res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "Signature is required." } });
+        return;
+      }
+      try {
+        const updated = await fleetService.signRentalContract(req.tenantActor!, id!, sig);
+        res.status(200).json({ ok: true, data: updated });
       } catch (err) {
         handleFleetError(res, err);
       }
@@ -53,6 +76,7 @@ router.post(
           returnOdometer: Number(req.body?.returnOdometer ?? 0),
           extraCharges: req.body?.extraCharges != null ? Number(req.body.extraCharges) : undefined,
           paidAmount: req.body?.paidAmount != null ? Number(req.body.paidAmount) : undefined,
+          returnCondition: typeof req.body?.returnCondition === "string" ? req.body.returnCondition.trim() : null,
           notes: req.body?.notes ?? null,
         });
         res.status(200).json({ ok: true, data: updated });

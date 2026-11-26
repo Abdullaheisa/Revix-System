@@ -269,13 +269,18 @@ export function WorkspaceStudioShell({
     );
     if ((!matchedSection || !hasSubPage) && availableSections[0]) {
       const targetSec = matchedSection ?? availableSections[0];
-      const fallbackSub = targetSec.groups[0]?.items[0]?.id || "summary";
-      dispatch(
-        navigateToWorkspacePage({
-          section: targetSec.id,
-          subPage: fallbackSub,
-        }),
-      );
+      const fallbackSub = targetSec.groups[0]?.items[0]?.id;
+      if (
+        fallbackSub &&
+        (targetSec.id !== activeSection || fallbackSub !== activeSubPage)
+      ) {
+        dispatch(
+          navigateToWorkspacePage({
+            section: targetSec.id,
+            subPage: fallbackSub,
+          }),
+        );
+      }
     }
   }, [activeSection, activeSubPage, availableSections, company, user, dispatch]);
 

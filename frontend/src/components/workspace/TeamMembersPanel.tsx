@@ -244,6 +244,8 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
     }
   }
 
+  const [activeTab, setActiveTab] = useState<"members" | "invitations">("members");
+
   if (error) {
     const code = extractApiErrorCode(error);
     return (
@@ -278,7 +280,26 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-56">
+            <RevixIcon
+              name="search"
+              className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
+            />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setMemberPage(1);
+              }}
+              placeholder={
+                isRtl ? "بحث بالاسم أو البريد أو الدور..." : "Search name, email, or role..."
+              }
+              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
+            />
+          </div>
+
           <button
             type="button"
             onClick={() => refetch()}
@@ -335,55 +356,35 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
         </div>
       ) : null}
 
-      {/* KPI Summary Strip */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-[8px] border border-revix-border bg-revix-white p-4">
-          <p className="text-[12px] font-medium text-revix-secondary">
-            {isRtl ? "الموظفون النشطون" : "Active members"}
-          </p>
-          <p className="mt-1 text-[22px] font-bold text-revix-dark">
-            {members.filter((m) => m.status === "active").length}
-          </p>
-        </div>
-        <div className="rounded-[8px] border border-revix-border bg-revix-white p-4">
-          <p className="text-[12px] font-medium text-revix-secondary">
-            {isRtl ? "دعوات قيد الانتظار" : "Pending invitations"}
-          </p>
-          <p className="mt-1 text-[22px] font-bold text-revix-dark">
-            {pendingInvitations.length}
-          </p>
-        </div>
-        <div className="rounded-[8px] border border-revix-border bg-revix-white p-4">
-          <p className="text-[12px] font-medium text-revix-secondary">
-            {isRtl ? "الأدوار المهيأة" : "Configured roles"}
-          </p>
-          <p className="mt-1 text-[22px] font-bold text-revix-dark">
-            {roles.length}
-          </p>
-        </div>
-      </div>
+      {/* Underline Tabs */}
+      <nav className="flex gap-1 border-b border-revix-border">
+        <button
+          type="button"
+          onClick={() => setActiveTab("members")}
+          className={`cursor-pointer border-b-2 px-3 py-2 text-xs font-semibold transition-colors ${
+            activeTab === "members"
+              ? "border-revix-primary text-revix-primary"
+              : "border-transparent text-revix-secondary hover:text-revix-dark"
+          }`}
+        >
+          {isRtl ? `أعضاء الفريق (${members.length})` : `Team Members (${members.length})`}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("invitations")}
+          className={`cursor-pointer border-b-2 px-3 py-2 text-xs font-semibold transition-colors ${
+            activeTab === "invitations"
+              ? "border-revix-primary text-revix-primary"
+              : "border-transparent text-revix-secondary hover:text-revix-dark"
+          }`}
+        >
+          {isRtl ? `الدعوات المرسلة (${invitations.length})` : `Invitations (${invitations.length})`}
+        </button>
+      </nav>
 
       {/* Employees Table */}
-      <section className="rounded-[8px] border border-revix-border bg-revix-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border px-4 py-3">
-          <h2 className="text-[14px] font-semibold text-revix-dark">
-            {isRtl ? "أعضاء الفريق" : "Team directory"}
-          </h2>
-          <div className="relative w-full sm:w-[260px]">
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setMemberPage(1);
-              }}
-              placeholder={
-                isRtl ? "بحث بالاسم أو البريد أو الدور..." : "Search name, email, or role..."
-              }
-              className="h-[34px] w-full rounded-[6px] border border-revix-border bg-revix-surface px-3 text-[12.5px] text-revix-dark placeholder:text-revix-disabled focus:border-revix-primary focus:bg-revix-white focus:outline-none"
-            />
-          </div>
-        </div>
+      {activeTab === "members" ? (
+      <section className="overflow-hidden rounded-xl border border-revix-border bg-revix-white">
 
         {isLoading ? (
           <div className="p-8 text-center text-[13px] text-revix-secondary">
@@ -419,18 +420,20 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
                     key={member.id}
                     className="transition-colors hover:bg-revix-surface/60"
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-start">
                       <div className="font-semibold text-revix-dark">
                         {member.fullName}
                       </div>
-                      <div dir="ltr" className="text-[12px] text-revix-secondary">
-                        {member.email}
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-revix-secondary">
+                        <span dir="ltr" className="inline-block">
+                          {member.email}
+                        </span>
+                        {member.phone ? (
+                          <span dir="ltr" className="inline-block text-revix-disabled">
+                            • {member.phone}
+                          </span>
+                        ) : null}
                       </div>
-                      {member.phone ? (
-                        <div dir="ltr" className="text-[11.5px] text-revix-disabled">
-                          {member.phone}
-                        </div>
-                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       <StudioBadge
@@ -509,14 +512,9 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
           itemLabel={isRtl ? "موظف" : "employees"}
         />
       </section>
-
-      {/* Invitations History */}
-      <section className="rounded-[8px] border border-revix-border bg-revix-white">
-        <div className="border-b border-revix-border px-4 py-3">
-          <h2 className="text-[14px] font-semibold text-revix-dark">
-            {isRtl ? "الدعوات المرسلة" : "Employee invitations"}
-          </h2>
-        </div>
+      ) : (
+      /* Invitations History */
+      <section className="overflow-hidden rounded-xl border border-revix-border bg-revix-white">
 
         {invitations.length === 0 ? (
           <div className="p-6 text-center text-[13px] text-revix-secondary">
@@ -548,13 +546,13 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
               <tbody className="divide-y divide-revix-border">
                 {invitations.map((inv) => (
                   <tr key={inv.id}>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-start">
                       <div className="font-semibold text-revix-dark">
                         {inv.fullName}
                       </div>
-                      <div dir="ltr" className="text-[12px] text-revix-secondary">
+                      <span dir="ltr" className="inline-block text-[11.5px] text-revix-secondary">
                         {inv.email}
-                      </div>
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -615,6 +613,7 @@ export function TeamMembersPanel({ isRtl, membership }: TeamMembersPanelProps) {
           </div>
         )}
       </section>
+      )}
 
       {/* Invite Employee Modal */}
       <StudioModal

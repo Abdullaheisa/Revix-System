@@ -6,6 +6,7 @@ import {
   type RentalContractDto,
 } from "@/store/api/fleetApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { RevixSelect } from "@/components/ui/RevixSelect";
 import { Alert } from "@/components/ui/Alert";
 
 interface CompleteContractModalProps {
@@ -28,6 +29,7 @@ function CompleteContractForm({
   const [returnOdometer, setReturnOdometer] = useState(contract.pickupOdometer);
   const [extraCharges, setExtraCharges] = useState(contract.extraCharges || 0);
   const [paidAmount, setPaidAmount] = useState(contract.totalAmount);
+  const [returnCondition, setReturnCondition] = useState(contract.returnCondition || "good");
   const [notes, setNotes] = useState(contract.notes || "");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -45,6 +47,7 @@ function CompleteContractForm({
         returnOdometer: Number(returnOdometer) || contract.pickupOdometer,
         extraCharges: Number(extraCharges) || 0,
         paidAmount: Number(paidAmount) || 0,
+        returnCondition,
         notes: notes.trim() || null,
       }).unwrap();
       onClose();
@@ -123,6 +126,24 @@ function CompleteContractForm({
               value={paidAmount}
               onChange={(e) => setPaidAmount(Number(e.target.value))}
               className="h-9 w-full rounded-lg border border-revix-border px-3 font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-revix-dark mb-1">
+              {isRtl ? "حالة السيارة عند التسليم *" : "Return Condition *"}
+            </label>
+            <RevixSelect
+              size="sm"
+              isRtl={isRtl}
+              value={returnCondition}
+              onChange={(e) => setReturnCondition(e.target.value)}
+              buttonClassName="h-9 rounded-lg text-xs"
+              options={[
+                { value: "good", label: isRtl ? "سليمة — بحالة ممتازة" : "Good — Clean & Intact" },
+                { value: "minor_damage", label: isRtl ? "خدوش / ملاحظات بسيطة" : "Minor Scratches / Issues" },
+                { value: "needs_maintenance", label: isRtl ? "بها ضرر / تحتاج صيانة" : "Damaged / Needs Maintenance" },
+              ]}
             />
           </div>
 

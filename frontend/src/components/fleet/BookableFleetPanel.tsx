@@ -2,6 +2,8 @@
 
 import { DataTable } from "@/components/ui/DataTable";
 import { useMemo, useState } from "react";
+import { Link } from "@/i18n/navigation";
+import { priceListVariantHref, rentalContractNewHref } from "@/lib/workspace/resourceRoutes";
 import { useAppDispatch } from "@/store/hooks";
 import {
   navigateToWorkspacePage,
@@ -65,12 +67,21 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
     return raw;
   }, [vehiclesData?.data, isNetworkMain, ownerFilter]);
 
+  const hasVehiclePricing = (v: {
+    dailyRate1to2?: number;
+    dailyRate3to7?: number;
+    dailyRate8Plus?: number;
+  }) =>
+    Number(v.dailyRate1to2 || 0) > 0 ||
+    Number(v.dailyRate3to7 || 0) > 0 ||
+    Number(v.dailyRate8Plus || 0) > 0;
+
   const bookableVehicles = useMemo(
-    () => allVehicles.filter((v) => Boolean(v.isBookable)),
+    () => allVehicles.filter((v) => Boolean(v.isBookable) && hasVehiclePricing(v)),
     [allVehicles],
   );
   const unpublishedVehicles = useMemo(
-    () => allVehicles.filter((v) => !v.isBookable),
+    () => allVehicles.filter((v) => !v.isBookable || !hasVehiclePricing(v)),
     [allVehicles],
   );
 
@@ -175,7 +186,7 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
             <div className="flex items-center gap-1 rounded-lg border border-revix-border bg-revix-surface/50 p-0.5 text-[11px]">
               {[
                 { id: "all" as const, ar: "الكل", en: "All" },
-                { id: "own" as const, ar: "الشركة الأم", en: "Main Co." },
+                { id: "own" as const, ar: "سيارات الشركة", en: "Our Fleet" },
                 { id: "partners" as const, ar: "الشركات المحلية", en: "Local Partners" },
               ].map((opt) => (
                 <button
@@ -431,27 +442,15 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                               </div>
                             </div>
                           ) : (
-                            <div className="space-y-0.5">
-                              <span className="inline-flex items-center rounded bg-revix-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-revix-primary">
-                                {isRtl ? "الشركة الأم" : "Main Company"}
-                              </span>
-                              <div className="text-[11px] text-revix-dark font-semibold">
-                                {v.branchName || (isRtl ? "مخزون الشركة" : "Company Stock")}
-                              </div>
-                            </div>
+                            <span className="text-xs font-semibold text-revix-dark">
+                              {v.branchName || (isRtl ? "مخزون الشركة" : "Company Stock")}
+                            </span>
                           )}
                         </td>
                         <td className="px-3 py-3">
-                          <div className="flex items-center gap-1.5">
-                            {v.assetCode && (
-                              <span className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary" dir="ltr">
-                                {v.assetCode}
-                              </span>
-                            )}
-                            <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono font-bold text-revix-dark">
-                              {v.licensePlate}
-                            </span>
-                          </div>
+                          <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono font-bold text-revix-dark">
+                            {v.licensePlate}
+                          </span>
                         </td>
                         <td className="px-3 py-3 font-mono text-revix-dark">
                           {v.mileageOdometer.toLocaleString()} {isRtl ? "كم" : "km"}
@@ -460,35 +459,52 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                           {(v.dailyRate1to2 ?? 0) > 0 ? `${v.dailyRate1to2?.toLocaleString()} / d` : "—"}
                         </td>
                         <td className="px-3 py-3">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
-                              v.status === "available"
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : v.status === "on_rent"
-                                  ? "border-blue-200 bg-blue-50 text-blue-700"
+                          {viewMode === "ready_to_publish" ? (
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                                hasVehiclePricing(v)
+                                  ? "border-slate-200 bg-slate-50 text-slate-600"
                                   : "border-amber-200 bg-amber-50 text-amber-700"
-                            }`}
-                          >
-                            {v.status === "available"
-                              ? isRtl ? "متاحة" : "Available"
-                              : v.status === "on_rent"
-                                ? isRtl ? "مؤجرة" : "On Rent"
-                                : v.status}
-                          </span>
+                              }`}
+                            >
+                              {hasVehiclePricing(v)
+                                ? isRtl
+                                  ? "غير منشورة"
+                                  : "Unpublished"
+                                : isRtl
+                                  ? "بانتظار التسعير"
+                                  : "Pending Price"}
+                            </span>
+                          ) : (
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                                v.status === "available"
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  : v.status === "on_rent"
+                                    ? "border-blue-200 bg-blue-50 text-blue-700"
+                                    : "border-amber-200 bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              {v.status === "available"
+                                ? isRtl ? "متاحة" : "Available"
+                                : v.status === "on_rent"
+                                  ? isRtl ? "مؤجرة" : "On Rent"
+                                  : v.status}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-end">
                           <div className="inline-flex items-center gap-1.5">
                             {viewMode === "bookable" ? (
                               <>
                                 {v.status === "available" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setBookingVehicleId(v.id)}
+                                  <Link
+                                    href={rentalContractNewHref({ vehicleId: v.id })}
                                     className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-revix-primary px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-revix-primary-hover"
                                   >
                                     <RevixIcon name="plus" size={12} />
                                     <span>{isRtl ? "حجز / عقد" : "Book"}</span>
-                                  </button>
+                                  </Link>
                                 )}
                                 <button
                                   type="button"
@@ -498,7 +514,7 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                                   {isRtl ? "إخفاء" : "Unpublish"}
                                 </button>
                               </>
-                            ) : (
+                            ) : hasVehiclePricing(v) ? (
                               <button
                                 type="button"
                                 onClick={() => toggleBookable({ id: v.id, isBookable: true })}
@@ -506,6 +522,13 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                               >
                                 {isRtl ? "تحويل للأسطول (حجز)" : "Publish to Fleet"}
                               </button>
+                            ) : (
+                              <Link
+                                href={priceListVariantHref(v.variantId)}
+                                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+                              >
+                                <span>{isRtl ? "تحديد السعر" : "Set Price"}</span>
+                              </Link>
                             )}
                           </div>
                         </td>

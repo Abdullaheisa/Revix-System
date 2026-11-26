@@ -2,6 +2,7 @@
 
 export interface CustomerRecord {
   id: string;
+  customerCode?: string;
   companyId: string;
   fullName: string;
   phone: string;
@@ -42,11 +43,15 @@ export interface RentalContractRecord {
   paidAmount: number;
   depositAmount: number;
   notes: string | null;
+  returnCondition?: string | null;
+  customerSignatureDataUrl?: string | null;
+  signedAt?: Date | null;
   createdByUserId: string | null;
   createdByUserName?: string | null;
   createdAt: Date;
   updatedAt: Date;
   // Enriched presentation fields
+  vehicleAssetCode?: string;
   vehiclePlate?: string;
   vehicleName?: string;
   customerName?: string;

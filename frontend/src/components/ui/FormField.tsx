@@ -85,6 +85,10 @@ export function FormInput({ label, labelEnd, helperText, error, rightElement, id
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const hasError = Boolean(error);
+  const normalizedProps =
+    props.type === "number" && props.value === 0
+      ? { ...props, value: "", placeholder: props.placeholder ?? "0" }
+      : props;
 
   return (
     <FieldShell
@@ -104,7 +108,7 @@ export function FormInput({ label, labelEnd, helperText, error, rightElement, id
           className={`h-[44px] sm:h-[46px] px-3.5 py-2.5 leading-[1.45] ${baseControlClasses} ${
             rightElement ? "pe-12" : ""
           } ${getControlStateClasses(hasError)}`}
-          {...props}
+          {...normalizedProps}
         />
         {rightElement ? (
           <div className="absolute end-1 flex items-center justify-center">

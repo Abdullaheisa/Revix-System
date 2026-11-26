@@ -1,66 +1,258 @@
 "use client";
 
-import { Link } from "@/i18n/navigation";
-import { ButtonLink } from "@/components/ui/Button";
-import type { AuthUserDto } from "@/store/api/authApi";
+import { useState, type FormEvent } from "react";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { FormInput } from "@/components/ui/FormField";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { StudioBadge } from "@/components/shared/workspace";
+import {
+  useChangePasswordMutation,
+  type AuthUserDto,
+} from "@/store/api/authApi";
+import type {
+  BranchDto,
+  CompanyDto,
+  WorkspaceMembershipDto,
+} from "@/store/api/workspaceApi";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export interface AccountSecurityPanelProps {
   isRtl: boolean;
   user: AuthUserDto;
+  membership?: WorkspaceMembershipDto | null;
+  company?: CompanyDto | null;
+  branches?: BranchDto[];
 }
 
 export function AccountSecurityPanel({
   isRtl,
   user,
+  membership,
+  company,
+  branches = [],
 }: AccountSecurityPanelProps) {
+  const [changePassword, { isLoading: isChangingPassword }] =
+    useChangePasswordMutation();
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwSuccess, setPwSuccess] = useState<string | null>(null);
+  const [pwError, setPwError] = useState<string | null>(null);
+
+  const initials = user.fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
+  const branchNames =
+    membership?.scopeType === "company_wide"
+      ? isRtl
+        ? "جميع فروع الشركة"
+        : "All company branches"
+      : membership?.branchIds?.length
+        ? membership.branchIds
+            .map((id) => branches.find((b) => b.id === id)?.name || id.slice(0, 8))
+            .join("، ")
+        : "—";
+
+  const roleLabel = membership
+    ? isRtl
+      ? membership.roleNameAr
+      : membership.roleNameEn
+    : isRtl
+      ? "مالك الشركة"
+      : "Owner";
+
+  const isSuspended = membership?.status === "suspended";
+
+  async function handlePasswordSubmit(e: FormEvent) {
+    e.preventDefault();
+    setPwSuccess(null);
+    setPwError(null);
+
+    if (newPassword.length < 8) {
+      setPwError(
+        isRtl
+          ? "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل."
+          : "New password must be at least 8 characters.",
+      );
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError(
+        isRtl
+          ? "كلمة المرور الجديدة وتأكيدها غير متطابقين."
+          : "New password and confirmation do not match.",
+      );
+      return;
+    }
+
+    try {
+      await changePassword({ currentPassword, newPassword }).unwrap();
+      setPwSuccess(
+        isRtl ? "تم تحديث كلمة المرور بنجاح." : "Password updated successfully.",
+      );
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setPwError(
+        getApiErrorMessage(err) ??
+          (isRtl
+            ? "تعذر تغيير كلمة المرور. تأكد من كلمة المرور الحالية."
+            : "Failed to change password. Verify your current password."),
+      );
+    }
+  }
+
   return (
-    <div className="max-w-[640px] space-y-5">
-      <div>
-        <h1 className="text-[20px] font-semibold text-revix-dark">
-          {isRtl ? "الأمان وكلمة المرور" : "Account & Password"}
-        </h1>
-        <p className="mt-0.5 text-[13px] text-revix-secondary">
-          {isRtl
-            ? "إدارة حسابك الشخصي المسجل على منصة ريفيكس سيستم."
-            : "Manage your signed-in Revix System account credentials."}
-        </p>
-      </div>
-      <div className="space-y-4 rounded-[8px] border border-revix-border bg-revix-white p-5">
+    <div className="space-y-4 pb-8" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border pb-4">
         <div>
-          <p className="text-[12px] font-medium text-revix-secondary">
-            {isRtl ? "الاسم الكامل" : "Full name"}
-          </p>
-          <p className="mt-0.5 text-[15px] font-semibold text-revix-dark">
-            {user.fullName}
+          <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
+            {isRtl ? "الملف الشخصي والأمان" : "My Profile & Security"}
+          </h1>
+          <p className="mt-0.5 text-xs text-revix-secondary">
+            {isRtl
+              ? "بيانات حسابك الشخصي، الدور الوظيفي، وإدارة كلمة المرور."
+              : "Your personal account details, role permissions, and password security."}
           </p>
         </div>
-        <div>
-          <p className="text-[12px] font-medium text-revix-secondary">
-            {isRtl ? "البريد الإلكتروني" : "Email address"}
-          </p>
-          <p
-            dir="ltr"
-            className="mt-0.5 text-start text-[15px] font-semibold text-revix-dark"
-          >
-            {user.email}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3 border-t border-revix-border pt-4">
-          <ButtonLink
-            href="/account/security"
-            variant="primary"
-            className="rounded-[8px]"
-          >
-            {isRtl ? "تغيير كلمة المرور" : "Change password"}
-          </ButtonLink>
-          <Link
-            href="/account"
-            className="inline-flex h-[44px] items-center justify-center rounded-[8px] border border-revix-border px-4 text-[13.5px] font-semibold text-revix-dark hover:bg-revix-surface"
-          >
-            {isRtl ? "صفحة الحساب" : "Account page"}
-          </Link>
+
+        <div className="flex items-center gap-2">
+          <StudioBadge variant={isSuspended ? "amber" : "success"}>
+            {isSuspended
+              ? isRtl
+                ? "موقوف"
+                : "Suspended"
+              : isRtl
+                ? "نشط"
+                : "Active"}
+          </StudioBadge>
+          <StudioBadge variant={user.emailVerified ? "success" : "amber"}>
+            {user.emailVerified
+              ? isRtl
+                ? "البريد مؤكد"
+                : "Email Verified"
+              : isRtl
+                ? "البريد غير مؤكد"
+                : "Unverified"}
+          </StudioBadge>
         </div>
       </div>
+
+      <SectionCard title={isRtl ? "١. البيانات الشخصية والوظيفية" : "1. Personal & Role Details"}>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            {
+              label: isRtl ? "الاسم الكامل" : "Full Name",
+              value: user.fullName,
+            },
+            {
+              label: isRtl ? "البريد الإلكتروني" : "Email Address",
+              value: (
+                <span dir="ltr" className="inline-block truncate max-w-full font-mono text-[11px]">
+                  {user.email}
+                </span>
+              ),
+            },
+            {
+              label: isRtl ? "هاتف الشركة" : "Company Phone",
+              value: (
+                <span dir="ltr" className="inline-block font-mono text-xs">
+                  {company?.phone || "—"}
+                </span>
+              ),
+            },
+            {
+              label: isRtl ? "الشركة" : "Company",
+              value: company?.name || "—",
+            },
+            {
+              label: isRtl ? "الدور الوظيفي" : "Role",
+              value: <StudioBadge variant="primary">{roleLabel}</StudioBadge>,
+            },
+            {
+              label: isRtl ? "نطاق الفروع" : "Branch Scope",
+              value: branchNames,
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2.5"
+            >
+              <div className="text-[10.5px] text-revix-secondary">{item.label}</div>
+              <div className="mt-1 truncate text-xs font-bold text-revix-dark">
+                {item.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title={isRtl ? "٢. تغيير كلمة المرور" : "2. Change Password"}>
+        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+          {pwSuccess && (
+            <Alert
+              variant="success"
+              message={pwSuccess}
+              onClose={() => setPwSuccess(null)}
+            />
+          )}
+          {pwError && (
+            <Alert
+              variant="error"
+              message={pwError}
+              onClose={() => setPwError(null)}
+            />
+          )}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <FormInput
+              label={isRtl ? "كلمة المرور الحالية" : "Current password"}
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+            />
+            <FormInput
+              label={isRtl ? "كلمة المرور الجديدة" : "New password"}
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+            <FormInput
+              label={isRtl ? "تأكيد كلمة المرور الجديدة" : "Confirm new password"}
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isChangingPassword}
+              className="rounded-xl px-5"
+            >
+              {isChangingPassword
+                ? isRtl
+                  ? "جاري التحديث..."
+                  : "Updating..."
+                : isRtl
+                  ? "تحديث كلمة المرور"
+                  : "Update Password"}
+            </Button>
+          </div>
+        </form>
+      </SectionCard>
     </div>
   );
 }

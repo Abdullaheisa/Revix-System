@@ -2,6 +2,8 @@
 
 import { DataTable } from "@/components/ui/DataTable";
 import { useMemo, useState } from "react";
+import { Link, usePathname } from "@/i18n/navigation";
+import { parseFleetResourceRoute, rentalContractNewHref } from "@/lib/workspace/resourceRoutes";
 import {
   useCancelRentalContractMutation,
   useListRentalContractsQuery,
@@ -12,8 +14,9 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
-import { CreateContractModal } from "./CreateContractModal";
+import { CreateRentalContractPage } from "./CreateRentalContractPage";
 import { CompleteContractModal } from "./CompleteContractModal";
+import { RentalContractPrintModal } from "./RentalContractPrintModal";
 
 interface RentalContractsPanelProps {
   isRtl: boolean;
@@ -27,6 +30,8 @@ const STATUS_BADGE: Record<RentalContractStatus, { ar: string; en: string; cls: 
 };
 
 export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
+  const pathname = usePathname();
+  const resourceRoute = parseFleetResourceRoute(pathname);
   const { data: contractsData, isLoading } = useListRentalContractsQuery();
   const [cancelContract] = useCancelRentalContractMutation();
 
@@ -34,8 +39,8 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 15;
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [completingContract, setCompletingContract] = useState<RentalContractDto | null>(null);
+  const [printingContract, setPrintingContract] = useState<RentalContractDto | null>(null);
 
   const contracts = useMemo(() => contractsData?.data ?? [], [contractsData?.data]);
 
@@ -63,6 +68,10 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
   const totalRevenue = contracts
     .filter((c) => c.status !== "cancelled")
     .reduce((acc, c) => acc + (c.totalAmount || 0), 0);
+
+  if (resourceRoute?.resource === "rental-contracts" && resourceRoute.action === "create") {
+    return <CreateRentalContractPage isRtl={isRtl} />;
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
@@ -94,14 +103,13 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
+          <Link
+            href={rentalContractNewHref()}
             className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-colors"
           >
             <RevixIcon name="plus" size={14} />
             <span>{isRtl ? "إنشاء عقد جديد" : "New Contract"}</span>
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -172,9 +180,16 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                   </td>
                   <td className="py-2.5 px-3">
                     <div className="font-semibold text-revix-dark">{c.vehicleName || "—"}</div>
-                    <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
-                      {c.vehiclePlate}
-                    </span>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                      {c.vehicleAssetCode && (
+                        <span className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary" dir="ltr">
+                          {c.vehicleAssetCode}
+                        </span>
+                      )}
+                      <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
+                        {c.vehiclePlate}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">
                     <div>{c.startDate} → {c.endDate}</div>
@@ -189,28 +204,33 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                     </span>
                   </td>
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                    {c.status === "active" ? (
-                      <div className="inline-flex items-center justify-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setCompletingContract(c)}
-                          className="h-8 cursor-pointer rounded-md bg-revix-primary px-2.5 text-[11px] font-semibold text-white hover:bg-revix-primary-hover"
-                        >
-                          {isRtl ? "استلام وإغلاق" : "Return"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => cancelContract(c.id)}
-                          className="h-8 cursor-pointer rounded-md border border-red-200 bg-white px-2.5 text-[11px] font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          {isRtl ? "إلغاء" : "Cancel"}
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="font-mono text-[11px] text-revix-muted">
-                        {c.returnOdometer != null ? `${c.returnOdometer.toLocaleString()} km` : "—"}
-                      </span>
-                    )}
+                    <div className="inline-flex items-center justify-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPrintingContract(c)}
+                        className="h-8 cursor-pointer rounded-md border border-revix-border bg-white px-2.5 text-[11px] font-semibold text-revix-dark hover:bg-revix-surface"
+                      >
+                        {isRtl ? "طباعة / توقيع" : "Print / Sign"}
+                      </button>
+                      {c.status === "active" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setCompletingContract(c)}
+                            className="h-8 cursor-pointer rounded-md bg-revix-primary px-2.5 text-[11px] font-semibold text-white hover:bg-revix-primary-hover"
+                          >
+                            {isRtl ? "استلام وإغلاق" : "Return"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => cancelContract(c.id)}
+                            className="h-8 cursor-pointer rounded-md border border-red-200 bg-white px-2.5 text-[11px] font-semibold text-red-600 hover:bg-red-50"
+                          >
+                            {isRtl ? "إلغاء" : "Cancel"}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -230,16 +250,17 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
         />
       </div>
 
-      <CreateContractModal
-        isOpen={isCreateOpen}
-        isRtl={isRtl}
-        onClose={() => setIsCreateOpen(false)}
-      />
-
       <CompleteContractModal
         contract={completingContract}
         isRtl={isRtl}
         onClose={() => setCompletingContract(null)}
+      />
+
+      <RentalContractPrintModal
+        contract={printingContract}
+        isRtl={isRtl}
+        onClose={() => setPrintingContract(null)}
+        onSigned={(updated) => setPrintingContract(updated)}
       />
     </div>
   );

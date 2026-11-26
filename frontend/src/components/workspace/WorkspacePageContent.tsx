@@ -14,7 +14,7 @@ const LocationsManager = dynamic(() => import("@/components/workspace/LocationsM
 const RolesMatrixPanel = dynamic(() => import("@/components/workspace/RolesMatrixPanel").then((module) => module.RolesMatrixPanel), { loading: PanelLoading });
 const TeamMembersPanel = dynamic(() => import("@/components/workspace/TeamMembersPanel").then((module) => module.TeamMembersPanel), { loading: PanelLoading });
 const UpcomingModuleBlueprint = dynamic(() => import("@/components/workspace/UpcomingModuleBlueprint").then((module) => module.UpcomingModuleBlueprint), { loading: PanelLoading });
-const WorkspaceOverviewPanel = dynamic(() => import("@/components/workspace/WorkspaceOverviewPanel").then((module) => module.WorkspaceOverviewPanel), { loading: PanelLoading });
+const WorkspaceWelcomePanel = dynamic(() => import("@/components/workspace/WorkspaceWelcomePanel").then((module) => module.WorkspaceWelcomePanel), { loading: PanelLoading });
 const FleetVehiclesPanel = dynamic(() => import("@/components/fleet/FleetVehiclesPanel").then((module) => module.FleetVehiclesPanel), { loading: PanelLoading });
 const AddFleetVehiclePage = dynamic(() => import("@/components/fleet/AddFleetVehiclePage").then((module) => module.AddFleetVehiclePage), { loading: PanelLoading });
 const VehiclePhotosPage = dynamic(() => import("@/components/fleet/VehiclePhotosPage").then((module) => module.VehiclePhotosPage), { loading: PanelLoading });
@@ -26,6 +26,7 @@ const InsuranceCompaniesPanel = dynamic(() => import("@/components/fleet/Insuran
 const BookableFleetPanel = dynamic(() => import("@/components/fleet/BookableFleetPanel").then((module) => module.BookableFleetPanel), { loading: PanelLoading });
 const CustomersPanel = dynamic(() => import("@/components/fleet/CustomersPanel").then((module) => module.CustomersPanel), { loading: PanelLoading });
 const RentalContractsPanel = dynamic(() => import("@/components/fleet/RentalContractsPanel").then((module) => module.RentalContractsPanel), { loading: PanelLoading });
+const RentalCalendarPanel = dynamic(() => import("@/components/fleet/RentalCalendarPanel").then((module) => module.RentalCalendarPanel), { loading: PanelLoading });
 const FleetMovementsPanel = dynamic(() => import("@/components/fleet/FleetMovementsPanel").then((module) => module.FleetMovementsPanel), { loading: PanelLoading });
 const DriversPanel = dynamic(() => import("@/components/fleet/DriversPanel").then((module) => module.DriversPanel), { loading: PanelLoading });
 const VehicleColorsMasterPanel = dynamic(() => import("@/components/fleet/VehicleColorsMasterPanel").then((module) => module.VehicleColorsMasterPanel), { loading: PanelLoading });
@@ -52,7 +53,13 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
             activeSubPage === "company-profile" ? (
             <CompanySettingsPanel isRtl={isRtl} company={company} />
           ) : activeSection === "settings" && activeSubPage === "security" ? (
-            <AccountSecurityPanel isRtl={isRtl} user={user} />
+            <AccountSecurityPanel
+              isRtl={isRtl}
+              user={user}
+              membership={membership}
+              company={company}
+              branches={branches}
+            />
           ) : activeSection === "team" && activeSubPage === "members" && canAccessTeam ? (
             <TeamMembersPanel isRtl={isRtl} membership={membership} />
           ) : activeSection === "team" && activeSubPage === "roles" && canAccessTeam ? (
@@ -84,6 +91,8 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
             <CustomersPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "rental-contracts" ? (
             <RentalContractsPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "rental-calendar" ? (
+            <RentalCalendarPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "movements" ? (
             <FleetMovementsPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "drivers" ? (
@@ -135,18 +144,15 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
               }
             />
           ) : activeSection === "overview" && activeSubPage === "summary" ? (
-            <WorkspaceOverviewPanel
+            <WorkspaceWelcomePanel
               isRtl={isRtl}
               company={company}
-              branches={branches}
+              activeBranch={activeBranch}
               user={user}
               membership={membership}
-              activeBranch={activeBranch}
-              onSelectBranch={(id) => dispatch(setSelectedBranchId(id))}
               onNavigate={(section, subPage) =>
                 dispatch(navigateToWorkspacePage({ section, subPage }))
               }
-              onOpenCommandPalette={() => dispatch(setCommandPaletteOpen(true))}
             />
           ) : (
             <UpcomingModuleBlueprint

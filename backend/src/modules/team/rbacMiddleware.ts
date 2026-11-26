@@ -97,7 +97,10 @@ export function createRbacGuards(options: {
       const actor = await resolveActorOrRespond(req, res);
       if (!actor) return;
 
-      if (!hasPermission(actor.role.permissions, resource, action)) {
+      if (
+        actor.role.code !== "owner" &&
+        !hasPermission(actor.role.permissions, resource, action)
+      ) {
         res.status(403).json({
           ok: false,
           error: {
