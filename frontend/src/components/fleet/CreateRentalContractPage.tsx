@@ -13,7 +13,6 @@ import {
 import { Alert } from "@/components/ui/Alert";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
-import { SignaturePadModal } from "@/components/shared/SignaturePadModal";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { RentalContractPrintModal } from "./RentalContractPrintModal";
 import { getApiErrorMessage } from "@/lib/api/errors";
@@ -116,20 +115,10 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
-  const [odometerOverride, setOdometerOverride] = useState<{
-    vehicleId: string;
-    value: number;
-  } | null>(null);
-  const [rateOverride, setRateOverride] = useState<{ key: string; value: number } | null>(
-    null,
-  );
   const [discount, setDiscount] = useState(0);
   const [insuranceFee, setInsuranceFee] = useState(0);
-  const [depositAmount, setDepositAmount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState("");
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
-  const [isSignPadOpen, setIsSignPadOpen] = useState(false);
   const [createdContract, setCreatedContract] = useState<RentalContractDto | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -226,7 +215,6 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
     return diff > 0 ? diff : 1;
   }, [startDate, endDate]);
 
-  const rateKey = `${vehicleId}:${totalDays}`;
   const activeTierLabel =
     totalDays >= 8
       ? isRtl
@@ -252,14 +240,9 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         ? Number(selectedVehicle?.dailyRate3to7 || selectedVehicle?.dailyRate1to2 || 0)
         : Number(selectedVehicle?.dailyRate1to2 || 0);
 
-  const dailyRate = rateOverride?.key === rateKey ? rateOverride.value : tierRate;
-  const pickupOdometer =
-    odometerOverride?.vehicleId === vehicleId
-      ? odometerOverride.value
-      : selectedVehicle?.mileageOdometer || 0;
-
-  const setDailyRate = (value: number) => setRateOverride({ key: rateKey, value });
-  const setPickupOdometer = (value: number) => setOdometerOverride({ vehicleId, value });
+  const dailyRate = tierRate;
+  const pickupOdometer = Number(selectedVehicle?.mileageOdometer || 0);
+  const depositAmount = Number(selectedVehicle?.securityDeposit || 0);
 
   const subtotal = dailyRate * totalDays;
   const totalAmount = Math.max(0, subtotal - discount + insuranceFee);
@@ -300,7 +283,6 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         depositAmount: Number(depositAmount) || 0,
         paidAmount: Number(paidAmount) || 0,
         notes: notes.trim() || null,
-        customerSignatureDataUrl: signatureDataUrl,
       }).unwrap();
       setCreatedContract(res.data);
     } catch (err: unknown) {
@@ -885,7 +867,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
             )}
           </div>
 
-          {/* STEP 4: Pricing, Odometer, Payments & Signature */}
+          {/* STEP 4: Pricing, Odometer & Payments */}
           <div className="rounded-xl border border-revix-border bg-revix-white overflow-hidden">
             <button
               type="button"
@@ -897,7 +879,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                   4
                 </span>
                 <span className="text-sm font-bold text-revix-dark">
-                  {isRtl ? "التسعير والمدفوعات والتوقيع" : "Pricing, Payments & Signature"}
+                  {isRtl ? "التسعير والمدفوعات" : "Pricing & Payments"}
                 </span>
               </div>
               <RevixIcon
@@ -909,36 +891,39 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
 
             {openSections.pricing && (
               <div className="border-t border-revix-border/70 p-4 space-y-4">
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-revix-dark mb-1.5">
+                {/* Auto-populated read-only vehicle & tier pricing */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/55 px-3.5 py-2.5">
+                    <div className="text-[11px] font-medium text-revix-secondary">
                       {isRtl ? "عداد الخروج (كم)" : "Pickup Odometer (km)"}
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      placeholder="0"
-                      value={pickupOdometer === 0 ? "" : pickupOdometer}
-                      onChange={(e) => setPickupOdometer(Math.max(0, Number(e.target.value) || 0))}
-                      className="h-10 w-full rounded-lg border border-revix-border px-3 font-mono text-xs"
-                    />
+                    </div>
+                    <div className="mt-0.5 font-mono text-sm font-bold text-revix-dark" dir="ltr">
+                      {pickupOdometer.toLocaleString()} km
+                    </div>
                   </div>
-                  <div>
-                    <label className="flex items-center justify-between gap-1 text-xs font-semibold text-revix-dark mb-1.5">
+                  <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/55 px-3.5 py-2.5">
+                    <div className="flex items-center justify-between gap-1 text-[11px] font-medium text-revix-secondary">
                       <span>{isRtl ? "السعر اليومي" : "Daily Rate"}</span>
-                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
                         {activeTierLabel}
                       </span>
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      placeholder="0"
-                      value={dailyRate === 0 ? "" : dailyRate}
-                      onChange={(e) => setDailyRate(Math.max(0, Number(e.target.value) || 0))}
-                      className="h-10 w-full rounded-lg border border-revix-border px-3 font-mono text-xs"
-                    />
+                    </div>
+                    <div className="mt-0.5 font-mono text-sm font-bold text-revix-primary" dir="ltr">
+                      {dailyRate.toLocaleString()}
+                    </div>
                   </div>
+                  <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/55 px-3.5 py-2.5">
+                    <div className="text-[11px] font-medium text-revix-secondary">
+                      {isRtl ? "التأمين المسترد (الديبوزت)" : "Security Deposit"}
+                    </div>
+                    <div className="mt-0.5 font-mono text-sm font-bold text-revix-dark" dir="ltr">
+                      {depositAmount.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Editable contract fields */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 pt-2 border-t border-revix-border/60">
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1.5">
                       {isRtl ? "الخصم" : "Discount"}
@@ -967,19 +952,6 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1.5">
-                      {isRtl ? "التأمين المسترد (وديعة)" : "Deposit"}
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      placeholder="0"
-                      value={depositAmount === 0 ? "" : depositAmount}
-                      onChange={(e) => setDepositAmount(Math.max(0, Number(e.target.value) || 0))}
-                      className="h-10 w-full rounded-lg border border-revix-border px-3 font-mono text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-revix-dark mb-1.5">
                       {isRtl ? "المدفوع مقدماً" : "Paid Amount"}
                     </label>
                     <input
@@ -993,47 +965,17 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 items-end pt-2 border-t border-revix-border/60">
-                  <div>
-                    <label className="block text-xs font-semibold text-revix-dark mb-1.5">
-                      {isRtl ? "ملاحظات العقد" : "Contract Notes"}
-                    </label>
-                    <input
-                      type="text"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder={isRtl ? "ملاحظات التسليم أو الشروط..." : "Pickup notes or terms..."}
-                      className="h-10 w-full rounded-lg border border-revix-border px-3 text-xs"
-                    />
-                  </div>
-                  <div className="flex h-10 items-center justify-between gap-2 rounded-lg border border-revix-border px-3">
-                    {signatureDataUrl ? (
-                      <div className="flex items-center gap-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={signatureDataUrl} alt="Signature" className="h-7 object-contain" />
-                        <span className="text-[11px] font-semibold text-emerald-700">
-                          {isRtl ? "تم التوقيع" : "Signed"}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-revix-secondary">
-                        {isRtl ? "توقيع العميل (اختياري الآن)" : "Customer signature"}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setIsSignPadOpen(true)}
-                      className="cursor-pointer rounded-md border border-revix-primary/30 bg-emerald-50 px-3 py-1 text-xs font-semibold text-revix-primary hover:bg-emerald-100"
-                    >
-                      {signatureDataUrl
-                        ? isRtl
-                          ? "تغيير"
-                          : "Edit"
-                        : isRtl
-                          ? "توقيع العميل"
-                          : "Sign"}
-                    </button>
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-revix-dark mb-1.5">
+                    {isRtl ? "ملاحظات العقد" : "Contract Notes"}
+                  </label>
+                  <input
+                    type="text"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder={isRtl ? "ملاحظات التسليم أو الشروط..." : "Pickup notes or terms..."}
+                    className="h-10 w-full rounded-lg border border-revix-border px-3 text-xs"
+                  />
                 </div>
               </div>
             )}
@@ -1157,13 +1099,6 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         editingCustomer={null}
         onClose={() => setIsAddCustomerOpen(false)}
         onCreated={(created) => setSelectedCustomerId(created.id)}
-      />
-
-      <SignaturePadModal
-        isOpen={isSignPadOpen}
-        isRtl={isRtl}
-        onClose={() => setIsSignPadOpen(false)}
-        onSave={(dataUrl: string) => setSignatureDataUrl(dataUrl)}
       />
 
       <RentalContractPrintModal
