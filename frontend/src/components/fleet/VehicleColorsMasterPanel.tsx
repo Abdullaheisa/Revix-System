@@ -36,7 +36,6 @@ export function VehicleColorsMasterPanel({ isRtl }: { isRtl: boolean }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [colorType, setColorType] = useState("");
   const [nameEn, setNameEn] = useState("");
-  const [nameAr, setNameAr] = useState("");
   const [search, setSearch] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -72,20 +71,20 @@ export function VehicleColorsMasterPanel({ isRtl }: { isRtl: boolean }) {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (!nameAr.trim()) {
-      setErrorMsg(isRtl ? "الوصف بالعربية مطلوب." : "Arabic description is required.");
+    const desc = nameEn.trim();
+    if (!desc) {
+      setErrorMsg(isRtl ? "وصف اللون مطلوب." : "Color description is required.");
       return;
     }
     try {
       await createColor({
         colorType: colorType.trim() || "exterior",
-        nameEn: nameEn.trim() || nameAr.trim(),
-        nameAr: nameAr.trim(),
+        nameEn: desc,
+        nameAr: desc,
       }).unwrap();
 
       setColorType("");
       setNameEn("");
-      setNameAr("");
       setIsModalOpen(false);
     } catch (err) {
       setErrorMsg(getApiErrorMessage(err) || (isRtl ? "تعذر حفظ اللون." : "Failed to create color."));
@@ -142,13 +141,12 @@ export function VehicleColorsMasterPanel({ isRtl }: { isRtl: boolean }) {
               <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
                 <th className="px-4 py-2.5 text-start">{isRtl ? "نوع اللون" : "Color Type"}</th>
                 <th className="px-4 py-2.5 text-start">{isRtl ? "الوصف" : "Description"}</th>
-                <th className="px-4 py-2.5 text-start">{isRtl ? "الوصف بالعربية" : "Description Arabic"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-revix-border/70">
               {filteredColors.length === 0 ? (
                 <TableEmptyRow
-                  colSpan={3}
+                  colSpan={2}
                   title={isRtl ? "لا توجد ألوان مسجلة بعد" : "No colors added yet"}
                   description={
                     isRtl
@@ -174,8 +172,7 @@ export function VehicleColorsMasterPanel({ isRtl }: { isRtl: boolean }) {
                             : c.colorType}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-revix-secondary">{c.nameEn}</td>
-                    <td className="px-4 py-2.5 font-bold text-revix-dark">{c.nameAr}</td>
+                    <td className="px-4 py-2.5 font-bold text-revix-dark">{c.nameEn || c.nameAr}</td>
                   </tr>
                 ))
               )}
@@ -210,27 +207,14 @@ export function VehicleColorsMasterPanel({ isRtl }: { isRtl: boolean }) {
 
         <div>
           <label className={MASTER_LABEL_CLASS}>
-            {isRtl ? "الوصف" : "Description"}
-          </label>
-          <input
-            type="text"
-            value={nameEn}
-            onChange={(e) => setNameEn(e.target.value)}
-            placeholder={isRtl ? "مثال: Pearl White" : "e.g. Pearl White"}
-            className={MASTER_INPUT_CLASS}
-          />
-        </div>
-
-        <div>
-          <label className={MASTER_LABEL_CLASS}>
-            {isRtl ? "الوصف بالعربية (مطلوب) *" : "Description Arabic (Required) *"}
+            {isRtl ? "الوصف *" : "Description *"}
           </label>
           <input
             type="text"
             required
-            value={nameAr}
-            onChange={(e) => setNameAr(e.target.value)}
-            placeholder={isRtl ? "مثال: أبيض لؤلؤي" : "e.g. أبيض لؤلؤي"}
+            value={nameEn}
+            onChange={(e) => setNameEn(e.target.value)}
+            placeholder={isRtl ? "مثال: Pearl White" : "e.g. Pearl White"}
             className={MASTER_INPUT_CLASS}
           />
         </div>

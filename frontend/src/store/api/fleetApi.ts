@@ -251,6 +251,7 @@ export interface ReceiveVehicleInput {
   dailyRate3to7?: number;
   dailyRate8Plus?: number;
   damageExcess?: number;
+  securityDeposit?: number;
   mileagePolicy?: "unlimited" | "limited";
   dailyKmLimit?: number | null;
   extraKmRate?: number | null;
@@ -294,6 +295,7 @@ export interface FleetVehicleDto {
   dailyRate3to7?: number;
   dailyRate8Plus?: number;
   damageExcess?: number;
+  securityDeposit?: number;
   mileagePolicy?: "unlimited" | "limited";
   dailyKmLimit?: number | null;
   extraKmRate?: number | null;
@@ -337,6 +339,7 @@ export interface CustomerDto {
   secondaryPhone: string | null;
   email: string | null;
   nationalId: string | null;
+  nationalIdExpiry?: string | null;
   driverLicenseNo: string | null;
   licenseExpiry: string | null;
   nationality: string | null;
@@ -591,6 +594,7 @@ export interface CreateFleetVehicleInput {
   dailyRate3to7?: number;
   dailyRate8Plus?: number;
   damageExcess?: number;
+  securityDeposit?: number;
   mileagePolicy?: "unlimited" | "limited";
   dailyKmLimit?: number | null;
   extraKmRate?: number | null;
@@ -627,6 +631,7 @@ export interface UpdateFleetVehicleInput {
   dailyRate3to7?: number;
   dailyRate8Plus?: number;
   damageExcess?: number;
+  securityDeposit?: number;
   mileagePolicy?: "unlimited" | "limited";
   dailyKmLimit?: number | null;
   extraKmRate?: number | null;
@@ -816,6 +821,7 @@ export const fleetApi = baseApi.injectEndpoints({
         dailyRate3to7: number;
         dailyRate8Plus: number;
         damageExcess: number;
+        securityDeposit?: number;
         mileagePolicy: "unlimited" | "limited";
         dailyKmLimit: number;
         extraKmRate: number;
@@ -837,6 +843,7 @@ export const fleetApi = baseApi.injectEndpoints({
         dailyRate3to7: number;
         dailyRate8Plus: number;
         damageExcess: number;
+        securityDeposit?: number;
         mileagePolicy?: "unlimited" | "limited";
         dailyKmLimit?: number;
         extraKmRate?: number;
@@ -1323,6 +1330,7 @@ export const fleetApi = baseApi.injectEndpoints({
         secondaryPhone?: string | null;
         email?: string | null;
         nationalId?: string | null;
+        nationalIdExpiry?: string | null;
         driverLicenseNo?: string | null;
         licenseExpiry?: string | null;
         nationality?: string | null;
@@ -1348,6 +1356,7 @@ export const fleetApi = baseApi.injectEndpoints({
         secondaryPhone?: string | null;
         email?: string | null;
         nationalId?: string | null;
+        nationalIdExpiry?: string | null;
         driverLicenseNo?: string | null;
         licenseExpiry?: string | null;
         nationality?: string | null;

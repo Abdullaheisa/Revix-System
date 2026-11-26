@@ -228,8 +228,11 @@ router.delete(
     "/colors",
     guards.requirePermission("fleet", "create"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
-      const nameAr = typeof req.body?.nameAr === "string" ? req.body.nameAr.trim() : "";
-      const nameEn = typeof req.body?.nameEn === "string" ? req.body.nameEn.trim() : nameAr;
+      const rawName = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+      const rawAr = typeof req.body?.nameAr === "string" ? req.body.nameAr.trim() : "";
+      const rawEn = typeof req.body?.nameEn === "string" ? req.body.nameEn.trim() : "";
+      const nameAr = rawAr || rawEn || rawName;
+      const nameEn = rawEn || rawAr || rawName;
       const colorType =
         typeof req.body?.colorType === "string" && req.body.colorType.trim()
           ? req.body.colorType.trim()
@@ -237,7 +240,7 @@ router.delete(
       if (!nameAr) {
         res.status(400).json({
           ok: false,
-          error: { code: "VALIDATION_ERROR", message: "Arabic color description is required." },
+          error: { code: "VALIDATION_ERROR", message: "Color name is required." },
         });
         return;
       }
@@ -290,16 +293,19 @@ router.delete(
     "/body-styles",
     guards.requirePermission("fleet", "create"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
-      const nameAr = typeof req.body?.nameAr === "string" ? req.body.nameAr.trim() : "";
-      const nameEn = typeof req.body?.nameEn === "string" ? req.body.nameEn.trim() : nameAr;
+      const rawName = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+      const rawAr = typeof req.body?.nameAr === "string" ? req.body.nameAr.trim() : "";
+      const rawEn = typeof req.body?.nameEn === "string" ? req.body.nameEn.trim() : "";
+      const nameAr = rawAr || rawEn || rawName;
+      const nameEn = rawEn || rawAr || rawName;
       const code =
         typeof req.body?.code === "string" && req.body.code.trim()
           ? req.body.code.trim()
-          : (nameEn || nameAr).toLowerCase().replace(/\s+/g, "_");
+          : nameEn.toLowerCase().replace(/\s+/g, "_");
       if (!nameAr) {
         res.status(400).json({
           ok: false,
-          error: { code: "VALIDATION_ERROR", message: "Arabic body style name is required." },
+          error: { code: "VALIDATION_ERROR", message: "Body style name is required." },
         });
         return;
       }

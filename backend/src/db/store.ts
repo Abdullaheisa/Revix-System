@@ -384,6 +384,7 @@ export interface AuthDataStore {
       dailyRate3to7: number;
       dailyRate8Plus: number;
       damageExcess: number;
+      securityDeposit?: number;
       mileagePolicy: "unlimited" | "limited";
       dailyKmLimit: number;
       extraKmRate: number;
@@ -397,6 +398,7 @@ export interface AuthDataStore {
       dailyRate3to7: number;
       dailyRate8Plus: number;
       damageExcess: number;
+      securityDeposit?: number;
       mileagePolicy?: "unlimited" | "limited";
       dailyKmLimit?: number;
       extraKmRate?: number;
@@ -478,6 +480,7 @@ export interface AuthDataStore {
     secondaryPhone?: string | null;
     email?: string | null;
     nationalId?: string | null;
+    nationalIdExpiry?: string | null;
     driverLicenseNo?: string | null;
     licenseExpiry?: string | null;
     nationality?: string | null;
@@ -494,6 +497,7 @@ export interface AuthDataStore {
       secondaryPhone?: string | null;
       email?: string | null;
       nationalId?: string | null;
+      nationalIdExpiry?: string | null;
       driverLicenseNo?: string | null;
       licenseExpiry?: string | null;
       nationality?: string | null;

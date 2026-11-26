@@ -199,8 +199,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
             },
             {
               id: "add-vehicle",
-              titleEn: "Vehicle",
-              titleAr: "إضافة سيارة (Vehicle)",
+              titleEn: "Add Vehicle",
+              titleAr: "إضافة سيارة (Add Vehicle)",
               descEn: "Register a vehicle into fleet assets.",
               descAr: "تسجيل وإضافة سيارة للأصول.",
               shortcut: "G A",
@@ -209,8 +209,8 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
             },
             {
               id: "vehicles",
-              titleEn: "Vehicle All",
-              titleAr: "سجل كل السيارات (Vehicle All)",
+              titleEn: "Vehicle Assets",
+              titleAr: "أصول السيارات (Vehicle Assets)",
               descEn: "Browse all fleet vehicles, status, and profiles.",
               descAr: "استعراض كافة سيارات الأسطول وحالتها وملفاتها.",
               shortcut: "G F",

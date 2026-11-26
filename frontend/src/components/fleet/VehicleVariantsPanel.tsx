@@ -1,5 +1,6 @@
 "use client";
 
+import { Link } from "@/i18n/navigation";
 import { DataTable } from "@/components/ui/DataTable";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { getApiErrorMessage } from "@/lib/api/errors";
@@ -74,14 +75,19 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
     refetchOnMountOrArgChange: true,
   });
   const dbMakes = useMemo(() => makesResponse?.data ?? [], [makesResponse?.data]);
-  const bodyStyleOptions = useMemo(
-    () =>
-      (bodyStylesResponse?.data ?? []).map((s) => ({
-        value: s.code,
-        label: isRtl ? s.nameAr : s.nameEn,
-      })),
-    [isRtl, bodyStylesResponse?.data],
-  );
+  const bodyStyleOptions = useMemo(() => {
+    const base = (bodyStylesResponse?.data ?? []).map((s) => ({
+      value: s.code,
+      label: (isRtl ? s.nameAr : s.nameEn) || s.nameEn || s.nameAr || s.code,
+    }));
+    if (
+      formCategory &&
+      !base.some((o) => o.value.toLowerCase() === formCategory.toLowerCase())
+    ) {
+      base.unshift({ value: formCategory, label: formCategory });
+    }
+    return base;
+  }, [isRtl, bodyStylesResponse?.data, formCategory]);
 
   const variants = useMemo(() => data?.data ?? [], [data?.data]);
 
@@ -386,6 +392,13 @@ export function VehicleVariantsPanel({ isRtl }: VehicleVariantsPanelProps) {
                     </td>
                     <td className="py-2.5 px-3 text-center whitespace-nowrap">
                       <div className="inline-flex items-center justify-center gap-1.5">
+                        <Link
+                          href={`/workspace/fleet/vehicles?variant=${encodeURIComponent(v.id)}&setup=1`}
+                          className="inline-flex h-8 items-center gap-1 rounded-md border border-revix-primary/40 bg-emerald-50 px-2.5 text-[11px] font-semibold text-revix-primary transition hover:bg-emerald-100"
+                        >
+                          <RevixIcon name="settings" size={12} />
+                          <span>{isRtl ? "تجهيز الفئة" : "Setup"}</span>
+                        </Link>
                         <button
                           type="button"
                           onClick={() => handleOpenEditModal(v)}

@@ -66,12 +66,54 @@ export function handleFleetError(res: Response, err: unknown): void {
     return;
   }
 
-  const message = err instanceof Error ? err.message : "An unexpected server error occurred.";
+  const pgCode = (err as { code?: string } | null)?.code;
+  if (pgCode === "22P02") {
+    res.status(400).json({
+      ok: false,
+      error: {
+        code: "INVALID_ID",
+        message: "Invalid identifier format.",
+      },
+    });
+    return;
+  }
+  if (pgCode === "23503") {
+    res.status(400).json({
+      ok: false,
+      error: {
+        code: "INVALID_REFERENCE",
+        message: "Referenced record does not exist.",
+      },
+    });
+    return;
+  }
+  if (pgCode === "23505") {
+    res.status(409).json({
+      ok: false,
+      error: {
+        code: "DUPLICATE_RECORD",
+        message: "A record with these details already exists.",
+      },
+    });
+    return;
+  }
+  if (pgCode === "23514") {
+    res.status(400).json({
+      ok: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Provided values violate data constraints.",
+      },
+    });
+    return;
+  }
+
+  console.error("Unhandled fleet error:", err);
   res.status(500).json({
     ok: false,
     error: {
       code: "INTERNAL_ERROR",
-      message,
+      message: "An unexpected server error occurred.",
     },
   });
 }

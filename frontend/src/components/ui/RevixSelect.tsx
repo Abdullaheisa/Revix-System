@@ -91,7 +91,11 @@ export function RevixSelect({
     searchable !== undefined ? searchable : options.length > 7;
 
   const selectedOption = useMemo(
-    () => options.find((opt) => opt.value === currentValue),
+    () =>
+      options.find((opt) => opt.value === currentValue) ??
+      (currentValue
+        ? options.find((opt) => opt.value.toLowerCase() === currentValue.toLowerCase())
+        : undefined),
     [options, currentValue],
   );
 
@@ -423,6 +427,7 @@ export function RevixSelect({
                         role="option"
                         aria-selected={isSelected}
                         aria-disabled={opt.disabled}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleSelect(opt)}
                         onMouseEnter={() => setHighlightedIndex(idx)}
                         className={`flex items-center justify-between gap-2 rounded-[6px] px-3 py-2 text-[13px] sm:text-[13.5px] transition-colors tabular-nums ${

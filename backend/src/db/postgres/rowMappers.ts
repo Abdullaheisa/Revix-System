@@ -479,6 +479,7 @@ export interface DbFleetVehicleRow {
   daily_rate_3_to_7?: number | string | null;
   daily_rate_8_plus?: number | string | null;
   damage_excess?: number | string | null;
+  security_deposit?: number | string | null;
   mileage_policy?: "unlimited" | "limited" | null;
   daily_km_limit?: number | null;
   extra_km_rate?: number | string | null;
@@ -575,6 +576,7 @@ export function mapFleetVehicleRow(row: DbFleetVehicleRow): FleetVehicleRecord {
     dailyRate3to7: row.daily_rate_3_to_7 != null ? Number(row.daily_rate_3_to_7) : 0,
     dailyRate8Plus: row.daily_rate_8_plus != null ? Number(row.daily_rate_8_plus) : 0,
     damageExcess: row.damage_excess != null ? Number(row.damage_excess) : 0,
+    securityDeposit: row.security_deposit != null ? Number(row.security_deposit) : 0,
     mileagePolicy: (row.mileage_policy as any) ?? "unlimited",
     dailyKmLimit: row.daily_km_limit != null ? Number(row.daily_km_limit) : 0,
     extraKmRate: row.extra_km_rate != null ? Number(row.extra_km_rate) : 0,

@@ -25,6 +25,8 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
   const resourceRoute = parseFleetResourceRoute(pathname);
   const detailCustomerId =
     resourceRoute?.resource === "customers" ? resourceRoute.id : null;
+  const isCreateMode =
+    resourceRoute?.resource === "customers" && resourceRoute.action === "create";
 
   const { data: customersData, isLoading } = useListCustomersQuery();
   const [deleteCustomer] = useDeleteCustomerMutation();
@@ -32,8 +34,6 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 15;
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<CustomerDto | null>(null);
 
   const customers = useMemo(() => customersData?.data ?? [], [customersData?.data]);
 
@@ -74,6 +74,18 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
     );
   }
 
+  if (isCreateMode) {
+    return (
+      <CustomerFormModal
+        variant="page"
+        isOpen
+        isRtl={isRtl}
+        editingCustomer={null}
+        onClose={() => router.push(customerHref())}
+      />
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
@@ -106,10 +118,7 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
 
           <button
             type="button"
-            onClick={() => {
-              setEditingCustomer(null);
-              setIsModalOpen(true);
-            }}
+            onClick={() => router.push(customerHref("new"))}
             className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-colors"
           >
             <RevixIcon name="plus" size={14} />
@@ -186,12 +195,6 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
         />
       </div>
 
-      <CustomerFormModal
-        isOpen={isModalOpen}
-        isRtl={isRtl}
-        editingCustomer={editingCustomer}
-        onClose={() => setIsModalOpen(false)}
-      />
     </div>
   );
 }

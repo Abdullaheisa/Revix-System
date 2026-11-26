@@ -1389,7 +1389,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
         return (
           <form noValidate onSubmit={event => { if (createStep === 3) {
             setCheckedSteps([1, 2, 3]);
-            if (!formVendorId || formNotes.split("\n").some(term => !term.trim())) { event.preventDefault(); return; }
+            if (assignedChassisCount !== totalUnitsCount || !formVendorId || formNotes.split("\n").some(term => !term.trim())) { event.preventDefault(); return; }
             void handleCreateSubmit(event);
           } else event.preventDefault(); }} className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-3 overflow-hidden">
             {/* Top Bar: Back + Title + Primary Actions */}
@@ -1435,7 +1435,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             )}
 
             <nav aria-label={isRtl ? "خطوات إنشاء الطلب" : "Create order steps"} className="flex gap-2 border-b border-revix-border">
-              {(isRtl ? ["السيارات", "أرقام الشاصي", "المورد والدفع"] : ["Vehicles", "Chassis numbers", "Vendor & payment"]).map((label, index) => (
+              {(isRtl ? ["المورد والدفع", "السيارات", "أرقام الشاصي"] : ["Vendor & payment", "Vehicles", "Chassis numbers"]).map((label, index) => (
                 <button key={label} type="button" disabled={index + 1 > createStep} onClick={() => setCreateStep(index + 1)}
                   className={`cursor-pointer border-b-2 px-3 py-2 text-sm disabled:cursor-default ${createStep === index + 1 ? "border-revix-primary font-semibold text-revix-primary" : "border-transparent text-revix-secondary"}`}>
                   {label}
@@ -1444,8 +1444,8 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             </nav>
             {/* Main Full-Width Step Content */}
             <div className="flex min-h-0 flex-initial flex-col">
-                {/* SECTION 1: Order Details & Vehicles */}
-                <div className={createStep === 1 ? "flex min-h-0 flex-col gap-3" : "hidden"}>
+                {/* SECTION 2: Order Details & Vehicles */}
+                <div className={createStep === 2 ? "flex min-h-0 flex-col gap-3" : "hidden"}>
                     <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-xs">
                       <div className="flex items-center justify-between border-b border-revix-border/70 px-4 py-2">
                         <h3 className="text-sm font-bold text-revix-dark">
@@ -1488,7 +1488,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                       label: [v.make, v.model, v.trim].filter(Boolean).join(" "),
                                     }))}
                                   />
-                                  {fieldError(!item.variantId, 1)}
+                                  {fieldError(!item.variantId, 2)}
                                 </td>
                                 <td className="px-3 py-2.5">
                                   <input
@@ -1499,7 +1499,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                     onChange={(e) => handleItemChange(idx, "quantity", Number(e.target.value))}
                                     className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-2.5 text-xs font-mono font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
                                   />
-                                  {fieldError(!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 500, 1)}
+                                  {fieldError(!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 500, 2)}
                                 </td>
                                 <td className="px-3 py-2.5">
                                   <input
@@ -1509,7 +1509,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                     onChange={(e) => handleItemChange(idx, "unitPrice", Number(e.target.value))}
                                     className="h-9 w-full rounded-lg border border-revix-border bg-revix-white px-2.5 text-xs font-mono font-semibold text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
                                   />
-                                  {fieldError(!Number.isFinite(item.unitPrice) || item.unitPrice <= 0, 1)}
+                                  {fieldError(!Number.isFinite(item.unitPrice) || item.unitPrice <= 0, 2)}
                                 </td>
                                 <td className="px-3 py-2.5">
                                   <RevixSelect
@@ -1562,9 +1562,9 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                     </div>
                   </div>
 
-                {/* SECTION 2: Chassis Numbers */}
+                {/* SECTION 3: Chassis Numbers */}
                 {expandedVehicleUnits.length > 0 && (
-                  <div className={createStep === 2 ? "flex min-h-0 flex-col" : "hidden"}>
+                  <div className={createStep === 3 ? "flex min-h-0 flex-col" : "hidden"}>
                   <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white shadow-xs">
                     <div className="flex items-center justify-between border-b border-revix-border/70 px-4 py-2">
                       <div>
@@ -1618,7 +1618,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                   placeholder="e.g. 1HGCR2F83HA001234"
                                   className="h-10 w-full rounded-lg border border-revix-border bg-revix-white px-3.5 text-sm font-mono uppercase text-revix-dark focus:border-revix-primary focus:ring-1 focus:ring-revix-primary focus:outline-hidden"
                                 />
-                                {fieldError(!chassisByUnitKey[unit.key]?.trim(), 2)}
+                                {fieldError(!chassisByUnitKey[unit.key]?.trim(), 3)}
                               </td>
                             </tr>
                           ))}
@@ -1629,8 +1629,8 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                   </div>
                 )}
 
-                {/* SECTION 3: Payment & Terms */}
-                <div className={createStep === 3 ? "min-h-0 overflow-y-auto" : "hidden"}>
+                {/* SECTION 1: Vendor, Payment & Terms */}
+                <div className={createStep === 1 ? "min-h-0 overflow-y-auto" : "hidden"}>
                 <div className="min-h-0">
                     <div className="grid items-start gap-5 lg:grid-cols-2">
                         <div className="space-y-4 rounded-lg border border-revix-border p-4">
@@ -1660,7 +1660,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                               label: `${v.name} (${v.city})`,
                             }))}
                           />
-                          {fieldError(!formVendorId, 3)}
+                          {fieldError(!formVendorId, 1)}
                         </div>
                       <PaymentTermsSelector
                         compact
@@ -1709,7 +1709,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                                   }}
                                   className={`min-h-9 w-full resize-none overflow-hidden rounded-md border px-3 py-2 text-sm leading-5 focus:outline-none focus:ring-1 ${checkedSteps.includes(3) && !term.trim() ? "border-red-400 focus:ring-red-400" : "border-revix-border focus:border-revix-primary focus:ring-revix-primary"}`}
                                   onInput={event => { event.currentTarget.style.height = "auto"; event.currentTarget.style.height = event.currentTarget.scrollHeight + "px"; }} />
-                                {fieldError(!term.trim(), 3)}
+                                {fieldError(!term.trim(), 1)}
                               </div>
                               <button type="button" disabled={terms.length === 1}
                                 aria-label={isRtl ? `حذف الشرط ${index + 1}` : `Remove term ${index + 1}`}
@@ -1739,11 +1739,8 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                 {createStep < 3 ? (
                   <button type="button" onClick={() => {
                     setCheckedSteps(steps => [...new Set([...steps, createStep])]);
-                    if (createStep === 1 && formItems.some(item => !item.variantId || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 500 || !Number.isFinite(item.unitPrice) || item.unitPrice <= 0)) return;
-                    if (createStep === 2 && assignedChassisCount !== totalUnitsCount) {
-
-                      return;
-                    }
+                    if (createStep === 1 && (!formVendorId || formNotes.split("\n").some(term => !term.trim()))) return;
+                    if (createStep === 2 && formItems.some(item => !item.variantId || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 500 || !Number.isFinite(item.unitPrice) || item.unitPrice <= 0)) return;
                     setCreateError(null);
                     setCreateStep(step => step + 1);
                   }} className="cursor-pointer rounded-md bg-revix-primary px-5 py-2 text-sm font-semibold text-white">

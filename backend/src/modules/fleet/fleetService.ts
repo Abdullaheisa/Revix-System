@@ -326,10 +326,14 @@ export class FleetService {
       status?: PurchaseOrderStatus;
     },
   ): Promise<PurchaseOrderRecord[]> {
-    return this.store.listPurchaseOrders(actor.company.id, {
+    const all = await this.store.listPurchaseOrders(actor.company.id, {
       vendorId: filter?.vendorId,
       status: filter?.status,
     });
+    if (actor.role.scopeType === "assigned_branches") {
+      return all.filter((po) => po.branchId != null && actor.branchIds.includes(po.branchId));
+    }
+    return all;
   }
 
   async getPurchaseOrder(
@@ -1162,6 +1166,7 @@ export class FleetService {
       dailyRate3to7: number;
       dailyRate8Plus: number;
       damageExcess: number;
+      securityDeposit?: number;
       mileagePolicy: "unlimited" | "limited";
       dailyKmLimit: number;
       extraKmRate: number;
@@ -1196,6 +1201,7 @@ export class FleetService {
       dailyRate3to7: number;
       dailyRate8Plus: number;
       damageExcess: number;
+      securityDeposit?: number;
       mileagePolicy?: "unlimited" | "limited";
       dailyKmLimit?: number;
       extraKmRate?: number;
@@ -1415,6 +1421,64 @@ export class FleetService {
     return this.store.listCustomers(actor.company.id);
   }
 
+  private async validateCustomerFields(
+    companyId: string,
+    input: {
+      fullName: string;
+      phone: string;
+      email?: string | null;
+      nationalIdExpiry?: string | null;
+      licenseExpiry?: string | null;
+      nationalId?: string | null;
+    },
+    excludeCustomerId?: string,
+  ): Promise<void> {
+    if (!input.fullName?.trim() || !input.phone?.trim()) {
+      throw new FleetServiceError(400, "VALIDATION_ERROR", "Customer name and phone are required.");
+    }
+    const trimmedPhone = input.phone.trim();
+    const digitsOnly = trimmedPhone.replace(/\D/g, "");
+    if (!/^[+\d\s().-]{6,24}$/.test(trimmedPhone) || digitsOnly.length < 6) {
+      throw new FleetServiceError(
+        400,
+        "INVALID_PHONE",
+        "Please enter a valid phone number (at least 6 digits).",
+      );
+    }
+    const trimmedEmail = input.email?.trim() || "";
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      throw new FleetServiceError(400, "INVALID_EMAIL", "Please enter a valid email address.");
+    }
+    const todayYmd = new Date().toISOString().slice(0, 10);
+    const trimmedIdExpiry = input.nationalIdExpiry?.trim() || "";
+    if (trimmedIdExpiry && trimmedIdExpiry.slice(0, 10) < todayYmd) {
+      throw new FleetServiceError(400, "EXPIRED_NATIONAL_ID", "Customer ID / passport is expired.");
+    }
+    const trimmedExpiry = input.licenseExpiry?.trim() || "";
+    if (trimmedExpiry && trimmedExpiry.slice(0, 10) < todayYmd) {
+      throw new FleetServiceError(400, "EXPIRED_LICENSE", "Customer driver license is expired.");
+    }
+    const existing = await this.store.listCustomers(companyId);
+    const natId = input.nationalId?.trim().toLowerCase() || "";
+    for (const c of existing) {
+      if (excludeCustomerId && c.id === excludeCustomerId) continue;
+      if (c.phone.replace(/\D/g, "") === digitsOnly) {
+        throw new FleetServiceError(
+          409,
+          "DUPLICATE_CUSTOMER",
+          "A customer with this phone number already exists.",
+        );
+      }
+      if (natId && c.nationalId?.trim().toLowerCase() === natId) {
+        throw new FleetServiceError(
+          409,
+          "DUPLICATE_CUSTOMER",
+          "A customer with this national ID already exists.",
+        );
+      }
+    }
+  }
+
   async createCustomer(
     actor: TenantActor,
     input: {
@@ -1423,6 +1487,7 @@ export class FleetService {
       secondaryPhone?: string | null;
       email?: string | null;
       nationalId?: string | null;
+      nationalIdExpiry?: string | null;
       driverLicenseNo?: string | null;
       licenseExpiry?: string | null;
       nationality?: string | null;
@@ -1431,9 +1496,7 @@ export class FleetService {
       notes?: string | null;
     },
   ) {
-    if (!input.fullName?.trim() || !input.phone?.trim()) {
-      throw new FleetServiceError(400, "VALIDATION_ERROR", "Customer name and phone are required.");
-    }
+    await this.validateCustomerFields(actor.company.id, input);
     return this.store.createCustomer({ companyId: actor.company.id, ...input });
   }
 
@@ -1446,6 +1509,7 @@ export class FleetService {
       secondaryPhone?: string | null;
       email?: string | null;
       nationalId?: string | null;
+      nationalIdExpiry?: string | null;
       driverLicenseNo?: string | null;
       licenseExpiry?: string | null;
       nationality?: string | null;
@@ -1454,6 +1518,7 @@ export class FleetService {
       notes?: string | null;
     },
   ) {
+    await this.validateCustomerFields(actor.company.id, input, customerId);
     const updated = await this.store.updateCustomer(actor.company.id, customerId, input);
     if (!updated) {
       throw new FleetServiceError(404, "CUSTOMER_NOT_FOUND", "Customer not found.");
@@ -1522,6 +1587,10 @@ export class FleetService {
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
       throw new FleetServiceError(400, "INVALID_DATES", "End date must be on or after start date.");
     }
+    const todayYmd = new Date().toISOString().slice(0, 10);
+    if (input.startDate.slice(0, 10) < todayYmd) {
+      throw new FleetServiceError(400, "INVALID_START_DATE", "Start date cannot be in the past.");
+    }
 
     const existingContracts = await this.store.listRentalContracts(actor.company.id);
     const conflict = existingContracts.find(
@@ -1540,6 +1609,22 @@ export class FleetService {
     }
 
     const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    if (diffDays > 365) {
+      throw new FleetServiceError(
+        400,
+        "CONTRACT_TOO_LONG",
+        "A single rental contract cannot exceed 365 days.",
+      );
+    }
+
+    const customerList = await this.store.listCustomers(actor.company.id);
+    const customer = customerList.find((c) => c.id === input.customerId);
+    if (!customer) {
+      throw new FleetServiceError(404, "CUSTOMER_NOT_FOUND", "Customer not found.");
+    }
+    if (customer.licenseExpiry && customer.licenseExpiry.slice(0, 10) < todayYmd) {
+      throw new FleetServiceError(400, "EXPIRED_LICENSE", "Customer driver license is expired.");
+    }
 
     const autoRate =
       diffDays >= 8
@@ -1553,7 +1638,22 @@ export class FleetService {
     const discount = Number(input.discount ?? 0);
     const insuranceFee = Number(input.insuranceFee ?? 0);
     const extraCharges = Number(input.extraCharges ?? 0);
+    if (discount < 0 || discount > subtotal) {
+      throw new FleetServiceError(
+        400,
+        "INVALID_DISCOUNT",
+        "Discount cannot be negative or exceed the rental subtotal.",
+      );
+    }
     const totalAmount = Math.max(0, subtotal - discount + insuranceFee + extraCharges);
+    const paidAmount = Number(input.paidAmount ?? 0);
+    if (paidAmount < 0 || paidAmount > totalAmount) {
+      throw new FleetServiceError(
+        400,
+        "INVALID_PAYMENT",
+        "Paid amount cannot be negative or exceed the total contract amount.",
+      );
+    }
 
     const contract = await this.store.createRentalContract({
       companyId: actor.company.id,
@@ -1616,6 +1716,15 @@ export class FleetService {
     contractId: string,
     signatureDataUrl: string,
   ) {
+    const existing = (await this.store.listRentalContracts(actor.company.id)).find(
+      (c) => c.id === contractId,
+    );
+    if (!existing) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    if (existing.status !== "active") {
+      throw new FleetServiceError(409, "CONTRACT_NOT_ACTIVE", "Only active contracts can be signed.");
+    }
     const updated = await this.store.signRentalContract(
       actor.company.id,
       contractId,
@@ -1632,6 +1741,22 @@ export class FleetService {
     contractId: string,
     input: { returnOdometer: number; extraCharges?: number; paidAmount?: number; returnCondition?: string | null; notes?: string | null },
   ) {
+    const existing = (await this.store.listRentalContracts(actor.company.id)).find(
+      (c) => c.id === contractId,
+    );
+    if (!existing) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    if (existing.status !== "active") {
+      throw new FleetServiceError(409, "CONTRACT_NOT_ACTIVE", "Only active contracts can be completed.");
+    }
+    if (input.returnOdometer < existing.pickupOdometer) {
+      throw new FleetServiceError(
+        400,
+        "INVALID_ODOMETER",
+        "Return odometer cannot be less than pickup odometer.",
+      );
+    }
     const updated = await this.store.completeRentalContract(actor.company.id, contractId, input);
     if (!updated) {
       throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
@@ -1706,7 +1831,13 @@ export class FleetService {
       limit?: number;
     },
   ) {
-    return this.store.listAuditLogs(actor.company.id, filter);
+    const logs = await this.store.listAuditLogs(actor.company.id, filter);
+    if (actor.role.scopeType === "assigned_branches") {
+      return logs.filter(
+        (l) => l.branchId != null && actor.branchIds.includes(l.branchId),
+      );
+    }
+    return logs;
   }
 
   // ============================================================================
@@ -1831,6 +1962,24 @@ export class FleetService {
     }
     if (vehicle.branchId && vehicle.branchId === input.toBranchId) {
       throw new FleetServiceError(400, "SAME_BRANCH", "Vehicle is already assigned to this branch.");
+    }
+    const companyBranches = await this.store.listBranchesByCompanyId(actor.company.id);
+    const toBranch = companyBranches.find((b) => b.id === input.toBranchId);
+    if (!toBranch) {
+      throw new FleetServiceError(404, "BRANCH_NOT_FOUND", "Destination branch not found.");
+    }
+    if (vehicle.branchId) {
+      const fromBranch = companyBranches.find((b) => b.id === vehicle.branchId);
+      if (
+        fromBranch &&
+        fromBranch.countryCode.toUpperCase() !== toBranch.countryCode.toUpperCase()
+      ) {
+        throw new FleetServiceError(
+          400,
+          "CROSS_COUNTRY_MOVEMENT_DENIED",
+          "Vehicles cannot be moved to a branch in a different country.",
+        );
+      }
     }
     const actorName = actor.user.fullName || actor.user.email || "Staff";
     const movement = await this.store.dispatchVehicleMovement({

@@ -47,6 +47,7 @@ interface BranchPriceRow {
   dailyRate3to7: number;
   dailyRate8Plus: number;
   damageExcess: number;
+  securityDeposit: number;
   vehicleCodes: string[];
 }
 
@@ -61,6 +62,7 @@ interface VariantPriceRow {
   dailyRate3to7: number;
   dailyRate8Plus: number;
   damageExcess: number;
+  securityDeposit: number;
   minRate1to2: number;
   maxRate1to2: number;
   minRate3to7: number;
@@ -84,6 +86,7 @@ interface EditingTarget {
   dailyRate3to7: number;
   dailyRate8Plus: number;
   damageExcess: number;
+  securityDeposit: number;
   mileagePolicy?: "unlimited" | "limited";
   dailyKmLimit?: number;
   extraKmRate?: number;
@@ -172,6 +175,7 @@ export function PriceListPanel({
   const [dailyRate3to7, setDailyRate3to7] = useState<number>(0);
   const [dailyRate8to30, setDailyRate8to30] = useState<number>(0);
   const [damageExcess, setDamageExcess] = useState<number>(0);
+  const [securityDeposit, setSecurityDeposit] = useState<number>(0);
   const [formError, setFormError] = useState<string | undefined>();
 
   const priceLists = useMemo(() => {
@@ -271,6 +275,7 @@ export function PriceListPanel({
       const r3 = Number(v.dailyRate3to7 ?? 0);
       const r8 = Number(v.dailyRate8Plus ?? 0);
       const dmg = Number(v.damageExcess ?? 0);
+      const dep = Number(v.securityDeposit ?? 0);
 
       let bRow = group.branchesMap.get(bKey);
       if (!bRow) {
@@ -284,6 +289,7 @@ export function PriceListPanel({
           dailyRate3to7: r3,
           dailyRate8Plus: r8,
           damageExcess: dmg,
+          securityDeposit: dep,
           vehicleCodes: v.assetCode ? [v.assetCode] : [],
         };
         group.branchesMap.set(bKey, bRow);
@@ -298,6 +304,7 @@ export function PriceListPanel({
           bRow.dailyRate3to7 = r3;
           bRow.dailyRate8Plus = r8;
           bRow.damageExcess = dmg;
+          bRow.securityDeposit = dep;
         }
       }
     }
@@ -323,6 +330,7 @@ export function PriceListPanel({
         dailyRate3to7: branches[0]?.dailyRate3to7 ?? 0,
         dailyRate8Plus: branches[0]?.dailyRate8Plus ?? 0,
         damageExcess: branches[0]?.damageExcess ?? 0,
+        securityDeposit: branches[0]?.securityDeposit ?? 0,
         minRate1to2: Math.min(...r1Vals),
         maxRate1to2: Math.max(...r1Vals),
         minRate3to7: Math.min(...r3Vals),
@@ -372,6 +380,7 @@ export function PriceListPanel({
     setDailyRate3to7(target.dailyRate3to7);
     setDailyRate8to30(target.dailyRate8Plus);
     setDamageExcess(target.damageExcess);
+    setSecurityDeposit(target.securityDeposit);
     setFormError(undefined);
   }
 
@@ -387,6 +396,7 @@ export function PriceListPanel({
           dailyRate3to7: Number(dailyRate3to7) || 0,
           dailyRate8Plus: Number(dailyRate8to30) || 0,
           damageExcess: Number(damageExcess) || 0,
+          securityDeposit: Number(securityDeposit) || 0,
           mileagePolicy: editingTarget.mileagePolicy ?? "unlimited",
           dailyKmLimit: editingTarget.dailyKmLimit ?? 0,
           extraKmRate: editingTarget.extraKmRate ?? 0,
@@ -398,6 +408,7 @@ export function PriceListPanel({
           dailyRate3to7: Number(dailyRate3to7) || 0,
           dailyRate8Plus: Number(dailyRate8to30) || 0,
           damageExcess: Number(damageExcess) || 0,
+          securityDeposit: Number(securityDeposit) || 0,
           branchId: editingTarget.branchKey,
         }).unwrap();
       }
@@ -711,6 +722,7 @@ export function PriceListPanel({
                 dailyRate3to7: selectedVariantRow.dailyRate3to7,
                 dailyRate8Plus: selectedVariantRow.dailyRate8Plus,
                 damageExcess: selectedVariantRow.damageExcess,
+                securityDeposit: selectedVariantRow.securityDeposit,
               })
             }
             className="inline-flex h-9 cursor-pointer items-center rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
@@ -723,20 +735,19 @@ export function PriceListPanel({
           <DataTable fitAvailableHeight className="text-xs">
             <thead>
               <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
-                <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "رقم اللوحة" : "Plate"}</th>
-                <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "اللون" : "Color"}</th>
-                <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "الفرع / الموقع" : "Branch / Location"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-start">Asset ID</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "1 - 2 يوم" : "1 - 2 Days"}</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "3 - 7 أيام" : "3 - 7 Days"}</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "8+ أيام" : "8+ Days"}</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "تحمل الأضرار" : "Damage Excess"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "الديبوزت" : "Deposit"}</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-end">{isRtl ? "إجراء" : "Action"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-revix-border/80">
               {selectedVariantVehicles.length === 0 ? (
                 <TableEmptyRow
-                  colSpan={8}
+                  colSpan={7}
                   title={isRtl ? "لا توجد سيارات مسجلة لهذه الفئة" : "No vehicles in this variant"}
                   description={
                     isRtl
@@ -746,10 +757,7 @@ export function PriceListPanel({
                 />
               ) : (
                 selectedVariantVehicles.map((v) => {
-                  const curr =
-                    (v.branchId && branchCurrencyById.get(v.branchId)) ||
-                    openedList?.currencyCode ||
-                    defaultCurrency;
+                  const curr = openedList?.currencyCode || defaultCurrency;
                   return (
                     <tr key={v.id} className="transition-colors hover:bg-revix-accent-soft/40">
                       <td className="whitespace-nowrap px-4 py-3 text-start">
@@ -757,14 +765,8 @@ export function PriceListPanel({
                           dir="ltr"
                           className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-xs font-bold text-revix-dark"
                         >
-                          {v.licensePlate}
+                          {v.assetCode || "—"}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-start text-revix-secondary">
-                        {v.color || "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-start font-semibold text-revix-dark">
-                        {v.branchName || (isRtl ? "مخزون الشركة (غير منقول)" : "Company Stock")}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-center font-mono font-semibold text-revix-dark">
                         <span dir="ltr" className="inline-block">
@@ -786,6 +788,11 @@ export function PriceListPanel({
                           {Number(v.damageExcess || 0).toLocaleString()} {curr}
                         </span>
                       </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-secondary">
+                        <span dir="ltr" className="inline-block">
+                          {Number(v.securityDeposit || 0).toLocaleString()} {curr}
+                        </span>
+                      </td>
                       <td className="whitespace-nowrap px-4 py-3 text-end">
                         <button
                           type="button"
@@ -793,7 +800,7 @@ export function PriceListPanel({
                             openEditModal({
                               variantId: selectedVariantRow.variantId,
                               vehicleId: v.id,
-                              title: `${selectedVariantRow.title} — ${v.licensePlate}`,
+                              title: `${selectedVariantRow.title} — ${v.assetCode || v.licensePlate}`,
                               totalCount: 1,
                               branchLabel: v.branchName || (isRtl ? "مخزون الشركة" : "Company Stock"),
                               currency: curr,
@@ -801,6 +808,7 @@ export function PriceListPanel({
                               dailyRate3to7: Number(v.dailyRate3to7 || 0),
                               dailyRate8Plus: Number(v.dailyRate8Plus || 0),
                               damageExcess: Number(v.damageExcess || 0),
+                              securityDeposit: Number(v.securityDeposit || 0),
                               mileagePolicy: v.mileagePolicy ?? "unlimited",
                               dailyKmLimit: Number(v.dailyKmLimit || 0),
                               extraKmRate: Number(v.extraKmRate || 0),
@@ -872,6 +880,13 @@ export function PriceListPanel({
                 label={isRtl ? `تحمل الأضرار (${editingTarget?.currency ?? defaultCurrency})` : `Damage Excess (${editingTarget?.currency ?? defaultCurrency})`}
                 value={damageExcess || ""}
                 onChange={(e) => setDamageExcess(Number(e.target.value) || 0)}
+              />
+              <FormInput
+                type="number"
+                min={0}
+                label={isRtl ? `الديبوزت / التأمين (${editingTarget?.currency ?? defaultCurrency})` : `Deposit (${editingTarget?.currency ?? defaultCurrency})`}
+                value={securityDeposit || ""}
+                onChange={(e) => setSecurityDeposit(Number(e.target.value) || 0)}
               />
             </div>
 
@@ -1026,6 +1041,13 @@ export function PriceListPanel({
               label={isRtl ? `تحمل الأضرار (${editingTarget?.currency ?? defaultCurrency})` : `Damage Excess (${editingTarget?.currency ?? defaultCurrency})`}
               value={damageExcess || ""}
               onChange={(e) => setDamageExcess(Number(e.target.value) || 0)}
+            />
+            <FormInput
+              type="number"
+              min={0}
+              label={isRtl ? `الديبوزت / التأمين (${editingTarget?.currency ?? defaultCurrency})` : `Deposit (${editingTarget?.currency ?? defaultCurrency})`}
+              value={securityDeposit || ""}
+              onChange={(e) => setSecurityDeposit(Number(e.target.value) || 0)}
             />
           </div>
 

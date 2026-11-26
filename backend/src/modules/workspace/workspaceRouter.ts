@@ -63,7 +63,23 @@ const branchPayloadSchema = z.object({
   phone: z.string().trim().min(4).max(48),
   email: z.string().trim().max(254).regex(EMAIL_REGEX),
   currencyCode: z.string().trim().min(3).max(8).optional(),
-  timezone: z.string().trim().max(64).optional(),
+  timezone: z
+    .string()
+    .trim()
+    .max(64)
+    .refine(
+      (tz) => {
+        if (!tz) return true;
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Invalid IANA timezone." },
+    )
+    .optional(),
   workingDays: z.string().trim().min(1).max(160).default("Sun - Thu"),
   workingHours: z.string().trim().min(1).max(64).default("08:00 - 22:00"),
   isActive: z.boolean().optional().default(true),

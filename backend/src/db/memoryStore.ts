@@ -1699,14 +1699,14 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     let maxSeq = 0;
     for (const existing of this.vehiclesById.values()) {
       if (existing.companyId === input.companyId && existing.assetCode) {
-        const m = /^VEH-(\d+)$/.exec(existing.assetCode);
+        const m = /^(?:VEH-)?(\d+)$/.exec(existing.assetCode);
         if (m) maxSeq = Math.max(maxSeq, Number(m[1]));
       }
     }
 
     const record: FleetVehicleRecord = {
       id: input.id ?? crypto.randomUUID(),
-      assetCode: input.assetCode?.trim() || `VEH-${String(maxSeq + 1).padStart(4, "0")}`,
+      assetCode: input.assetCode?.trim() || String(maxSeq + 1).padStart(4, "0"),
       companyId: input.companyId,
       branchId: input.branchId,
       variantId: input.variantId,
@@ -2287,14 +2287,14 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     let maxSeq = 0;
     for (const c of this.customersById.values()) {
       if (c.companyId === input.companyId && c.customerCode) {
-        const m = /^CUS-(\d+)$/.exec(c.customerCode);
+        const m = /^(?:CUS-)?(\d+)$/.exec(c.customerCode);
         if (m) maxSeq = Math.max(maxSeq, Number(m[1]));
       }
     }
     const rec = {
       ...input,
       id: crypto.randomUUID(),
-      customerCode: `CUS-${String(maxSeq + 1).padStart(4, "0")}`,
+      customerCode: String(maxSeq + 1).padStart(4, "0"),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -2378,6 +2378,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       dailyRate3to7: number;
       dailyRate8Plus: number;
       damageExcess: number;
+      securityDeposit?: number;
       mileagePolicy?: "unlimited" | "limited";
       dailyKmLimit?: number;
       extraKmRate?: number;
@@ -2398,6 +2399,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
           dailyRate3to7: input.dailyRate3to7,
           dailyRate8Plus: input.dailyRate8Plus,
           damageExcess: input.damageExcess,
+          securityDeposit: input.securityDeposit ?? v.securityDeposit,
           mileagePolicy: input.mileagePolicy ?? v.mileagePolicy,
           dailyKmLimit: input.dailyKmLimit ?? v.dailyKmLimit,
           extraKmRate: input.extraKmRate ?? v.extraKmRate,

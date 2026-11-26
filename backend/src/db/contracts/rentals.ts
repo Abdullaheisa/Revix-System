@@ -9,6 +9,7 @@ export interface CustomerRecord {
   secondaryPhone: string | null;
   email: string | null;
   nationalId: string | null;
+  nationalIdExpiry: string | null;
   driverLicenseNo: string | null;
   licenseExpiry: string | null;
   nationality: string | null;

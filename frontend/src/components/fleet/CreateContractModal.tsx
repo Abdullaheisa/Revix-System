@@ -294,7 +294,7 @@ function CreateContractForm({
                       : "No vehicles available for these dates"
                     : isRtl
                       ? "ابحث برقم اللوحة أو كود المركبة..."
-                      : "Search by plate or Vehicle ID..."
+                      : "Search by plate or Asset ID..."
                 }
                 buttonClassName="h-9 rounded-lg text-xs"
                 options={availableVehicles.map((v) => {
@@ -314,7 +314,7 @@ function CreateContractForm({
           {selectedVehicle && (
             <div className="grid grid-cols-2 gap-2 rounded-xl border border-emerald-900/10 bg-emerald-50/70 p-3 sm:grid-cols-4">
               <div>
-                <div className="text-[10.5px] text-slate-500">Vehicle ID</div>
+                <div className="text-[10.5px] text-slate-500">Asset ID</div>
                 <div className="font-mono font-bold text-revix-primary" dir="ltr">
                   {selectedVehicle.assetCode || "—"}
                 </div>

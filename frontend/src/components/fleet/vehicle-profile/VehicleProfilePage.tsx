@@ -525,7 +525,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                 ...(vh.assetCode
                   ? [
                       {
-                        label: "Vehicle ID",
+                        label: "Asset ID",
                         value: vh.assetCode,
                         valueClassName: "font-mono font-bold text-revix-primary",
                       },

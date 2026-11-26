@@ -21,7 +21,13 @@ export const createVendorSchema = z.object({
   legalName: z.string().trim().max(150).nullable().optional(),
   category: z.enum(["dealership", "leasing", "auction", "maintenance_parts"]).optional(),
   contactPerson: z.string().trim().min(1).max(100),
-  phone: z.string().trim().min(4).max(30),
+  phone: z
+    .string()
+    .trim()
+    .min(6)
+    .max(30)
+    .regex(/^[+\d\s().-]{6,30}$/, "Invalid phone number")
+    .refine((v) => v.replace(/\D/g, "").length >= 6, "Phone must contain at least 6 digits"),
   email: z.string().trim().email().max(254).nullable().optional(),
   countryCode: z.string().trim().min(2).max(3),
   city: z.string().trim().min(1).max(80),
@@ -42,7 +48,7 @@ export const updateVendorSchema = createVendorSchema.partial().extend({
 export const createPoItemSchema = z.object({
   variantId: z.string().uuid(),
   quantity: z.number().int().min(1).max(500),
-  unitPrice: z.number().min(0),
+  unitPrice: z.number().positive(),
   vin: z.string().trim().max(40).nullable().optional(),
   color: z.string().trim().max(40).nullable().optional(),
   notes: z.string().trim().max(300).nullable().optional(),
@@ -76,7 +82,12 @@ export const updatePoStatusSchema = z.object({
 export const receiveVehicleSchema = z.object({
   itemId: z.string().uuid(),
   branchId: z.string().uuid().nullable().optional(),
-  vin: z.string().trim().min(4).max(40),
+  vin: z
+    .string()
+    .trim()
+    .min(4)
+    .max(40)
+    .regex(/^[A-Za-z0-9-]{4,40}$/, "VIN must contain only letters, numbers, and hyphens"),
   licensePlate: z.string().trim().min(1).max(30),
   keyNumber: z.string().trim().max(20).nullable().optional(),
   color: z.string().trim().min(1).max(40),
@@ -117,7 +128,12 @@ export const createVehicleSchema = z.object({
   branchId: z.string().uuid(),
   variantId: z.string().uuid(),
   purchaseOrderId: z.string().uuid().nullable().optional(),
-  vin: z.string().trim().min(4).max(40),
+  vin: z
+    .string()
+    .trim()
+    .min(4)
+    .max(40)
+    .regex(/^[A-Za-z0-9-]{4,40}$/, "VIN must contain only letters, numbers, and hyphens"),
   licensePlate: z.string().trim().min(1).max(30),
   keyNumber: z.string().trim().max(20).nullable().optional(),
   color: z.string().trim().min(1).max(40),

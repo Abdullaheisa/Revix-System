@@ -420,8 +420,11 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
   if (selectedVehicleForDetails) {
     return <VehicleProfilePage key={selectedVehicleForDetails.id} vehicle={selectedVehicleForDetails} isRtl={isRtl} company={company} activeVehicleTab={activeVehicleTab} onClose={closeVehicleDetails} onTabChange={switchVehicleTab} />;
   }
-  if (selectedVariantSummary && isVariantSetup) {
-    const variantObj = variants.find((v) => v.id === selectedVariantSummary.variantId);
+  if (selectedVariantId && isVariantSetup) {
+    const variantObj = variants.find((v) => v.id === selectedVariantId);
+    const variantTitle = variantObj
+      ? `${variantObj.make} ${variantObj.model}${variantObj.trim ? ` ${variantObj.trim}` : ""} ${variantObj.modelYear}`
+      : selectedVariantSummary?.title || (isRtl ? "تجهيز الفئة" : "Variant Setup");
     const sampleVehicle =
       paginatedVehicles.find(
         (v) =>
@@ -433,8 +436,8 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
       null;
     return (
       <VariantSetupPage
-        variantId={selectedVariantSummary.variantId}
-        variantTitle={selectedVariantSummary.title}
+        variantId={selectedVariantId}
+        variantTitle={variantTitle}
         variant={variantObj}
         sampleVehicle={sampleVehicle}
         unitsCount={paginatedVehicles.length}
@@ -451,7 +454,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
             <button
               type="button"
               onClick={() => setSelectedVariantId(null)}
-              title={isRtl ? "العودة لكل الفئات" : "Back to all variants"}
+              title={isRtl ? "عرض كل السيارات" : "Show all vehicles"}
               className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface transition-colors"
             >
               <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
@@ -465,7 +468,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                 : "Vehicle Assets"}
           </h1>
           <span className="rounded-md bg-revix-surface px-2 py-0.5 font-mono text-xs font-semibold text-revix-secondary">
-            {selectedVariantSummary ? paginatedVehicles.length : variantSummaries.length}
+            {selectedVariantSummary ? paginatedVehicles.length : totalVehicles}
           </span>
         </div>
 
@@ -484,7 +487,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder={isRtl ? "بحث برقم المركبة، اللوحة، الشاسيه..." : "Search Vehicle ID, plate, VIN..."}
+              placeholder={isRtl ? "بحث برقم الأصل، اللوحة، الشاسيه..." : "Search Asset ID, plate, VIN..."}
               className={`h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder:text-revix-muted focus:border-revix-primary focus:outline-hidden ${
                 isRtl ? "pr-8.5 pl-3" : "pl-8.5 pr-3"
               }`}
@@ -511,20 +514,6 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
               />
             </div>
           )}
-          {selectedVariantSummary && (
-            <button
-              type="button"
-              onClick={() =>
-                router.push(
-                  `/workspace/fleet/vehicles?variant=${encodeURIComponent(selectedVariantSummary.variantId)}&setup=1`,
-                )
-              }
-              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-revix-primary/40 bg-emerald-50 px-3 text-xs font-semibold text-revix-primary hover:bg-emerald-100 transition-colors"
-            >
-              <RevixIcon name="settings" size={14} />
-              <span>{isRtl ? "تجهيز الفريانت (الصور والمزايا والتسليم)" : "Variant Setup"}</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -537,113 +526,11 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
       ) : (
         <>
           <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
-            {!selectedVariantSummary ? (
-              <DataTable fitAvailableHeight className="text-xs">
-                <thead>
-                  <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
-                    <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-4 py-2.5 text-start font-semibold">
-                      {isRtl ? "الفريانت / الفئة" : "Vehicle Variant"}
-                    </th>
-                    <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-center font-semibold">
-                      {isRtl ? "الإجمالي" : "Total"}
-                    </th>
-                    <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-center font-semibold">
-                      {isRtl ? "متاح" : "Available"}
-                    </th>
-                    <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-center font-semibold">
-                      {isRtl ? "مؤجر" : "On Rent"}
-                    </th>
-                    <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-center font-semibold">
-                      {isRtl ? "محجوز" : "Reserved"}
-                    </th>
-                    <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-center font-semibold">
-                      {isRtl ? "صيانة" : "Maintenance"}
-                    </th>
-                    <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-center font-semibold">
-                      {isRtl ? "السعر اليومي" : "Daily Rate"}
-                    </th>
-                    <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-4 py-2.5 text-end font-semibold">
-                      {isRtl ? "إجراء" : "Action"}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-revix-border/60">
-                  {variantSummaries.length === 0 ? (
-                    <TableEmptyRow
-                      colSpan={8}
-                      title={isRtl ? "لا توجد فئات سيارات مسجلة في الأسطول" : "No variants in fleet"}
-                      description={
-                        isRtl
-                          ? "أضف أول مركبة لبدء متابعة الفئات وحجوزاتها وصيانتها."
-                          : "Add your first vehicle to start tracking variants, bookings, and maintenance."
-                      }
-                    />
-                  ) : (
-                    variantSummaries.map((row, idx) => (
-                      <tr
-                        key={row.variantId}
-                        onClick={() => setSelectedVariantId(row.variantId)}
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") setSelectedVariantId(row.variantId);
-                        }}
-                        className="cursor-pointer transition-colors hover:bg-revix-surface/60 focus:bg-revix-surface/60 focus:outline-none"
-                      >
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <span
-                              dir="ltr"
-                              className="inline-flex min-w-7 justify-center rounded-md bg-revix-accent-soft px-2 py-0.5 font-mono text-[11px] font-bold text-revix-primary"
-                            >
-                              {idx + 1}
-                            </span>
-                            <span className="font-bold text-revix-dark">{row.title}</span>
-                          </div>
-                        </td>
-                        <td className="px-3.5 py-3 text-center font-mono font-bold text-revix-dark">
-                          {row.totalCount}
-                        </td>
-                        <td className="px-3.5 py-3 text-center">
-                          <span className="inline-flex min-w-6 justify-center rounded-full bg-emerald-50 px-2 py-0.5 font-mono text-[11px] font-bold text-emerald-700">
-                            {row.availableCount}
-                          </span>
-                        </td>
-                        <td className="px-3.5 py-3 text-center">
-                          <span className="inline-flex min-w-6 justify-center rounded-full bg-sky-50 px-2 py-0.5 font-mono text-[11px] font-bold text-sky-700">
-                            {row.onRentCount}
-                          </span>
-                        </td>
-                        <td className="px-3.5 py-3 text-center">
-                          <span className="inline-flex min-w-6 justify-center rounded-full bg-violet-50 px-2 py-0.5 font-mono text-[11px] font-bold text-violet-700">
-                            {row.reservedCount}
-                          </span>
-                        </td>
-                        <td className="px-3.5 py-3 text-center">
-                          <span className="inline-flex min-w-6 justify-center rounded-full bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-700">
-                            {row.maintenanceCount}
-                          </span>
-                        </td>
-                        <td className="px-3.5 py-3 text-center font-mono font-semibold text-revix-primary">
-                          {row.dailyRate1to2 > 0 ? `${row.dailyRate1to2.toLocaleString()} / d` : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-end whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedVariantId(row.variantId)}
-                            className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border border-revix-border bg-white px-2.5 text-[11px] font-semibold text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft hover:text-revix-primary"
-                          >
-                            <span>{isRtl ? "عرض السيارات" : "View Vehicles"}</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </DataTable>
-            ) : (
             <DataTable fitAvailableHeight className="text-xs">
               <thead>
                 <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "رقم الأصل" : "Asset ID"}</th>
+                  <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "الفئة / الموديل" : "Variant"}</th>
                   <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "اللوحة" : "Plate"}</th>
                   <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "الشاسيه" : "Chassis #"}</th>
                   <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3.5 py-2.5 text-start font-semibold">{isRtl ? "المفتاح" : "Key"}</th>
@@ -658,12 +545,12 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
               <tbody className="divide-y divide-revix-border/60">
                 {paginatedVehicles.length === 0 ? (
                   <TableEmptyRow
-                    colSpan={9}
-                    title={isRtl ? "لا توجد سيارات مسجلة في هذه الفئة" : "No vehicles in this variant"}
+                    colSpan={11}
+                    title={isRtl ? "لا توجد سيارات مسجلة في الأسطول" : "No vehicles in fleet"}
                     description={
                       isRtl
-                        ? "أضف مركبة جديدة لهذه الفئة لبدء متابعتها."
-                        : "Add a vehicle to this variant to start tracking it."
+                        ? "أضف أول مركبة لبدء متابعة الأصول وحجوزاتها وصيانتها."
+                        : "Add your first vehicle to start tracking assets, bookings, and maintenance."
                     }
                   />
                 ) : paginatedVehicles.map((vh) => {
@@ -675,6 +562,9 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                         ? COLOR_AR_MAP[vh.color.trim().toLowerCase()] || vh.color
                         : vh.color
                       : "—";
+                    const variantLabel = vh.variant
+                      ? `${vh.variant.make} ${vh.variant.model}${vh.variant.trim ? ` ${vh.variant.trim}` : ""} ${vh.variant.modelYear}`
+                      : "—";
 
                     return (
                       <tr
@@ -684,6 +574,14 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                         onKeyDown={(e) => { if (e.key === "Enter") openVehicleDetails(vh); }}
                         className="cursor-pointer transition-colors hover:bg-revix-surface/60 focus:bg-revix-surface/60 focus:outline-none"
                       >
+                        <td className="py-2.5 px-3.5">
+                          <span className="inline-flex rounded-md bg-revix-accent-soft px-2 py-0.5 font-mono text-xs font-bold text-revix-primary whitespace-nowrap" dir="ltr">
+                            {vh.assetCode}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3.5 font-semibold text-revix-dark whitespace-nowrap">
+                          {variantLabel}
+                        </td>
                         <td className="py-2.5 px-3.5">
                           <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-xs font-bold text-revix-dark whitespace-nowrap" dir="ltr">
                             {vh.licensePlate}
@@ -741,7 +639,6 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
                   })}
               </tbody>
             </DataTable>
-            )}
           </div>
 
           {/* Unified Compact Pagination */}

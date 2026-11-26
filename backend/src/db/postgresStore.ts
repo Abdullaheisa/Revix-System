@@ -1632,10 +1632,73 @@ export class PostgresAuthDataStore implements AuthDataStore {
         [poRow.company_id, itemRow.variant_id, input.branchId ?? null],
       );
       const inheritedPricing = existingVariantPriceRes.rows[0];
+      const variantDefaultsRes = await client.query<{
+        daily_rate_1_to_2: string | null;
+        daily_rate_3_to_7: string | null;
+        daily_rate_8_plus: string | null;
+        damage_excess: string | null;
+        photo_url: string | null;
+      }>(
+        `SELECT daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess, photo_url
+         FROM vehicle_variants WHERE id = $1 AND company_id = $2`,
+        [itemRow.variant_id, poRow.company_id],
+      );
+      const variantDefaults = variantDefaultsRes.rows[0];
+      const mergedInherited = inheritedPricing
+        ? {
+            ...inheritedPricing,
+            daily_rate_1_to_2:
+              Number(inheritedPricing.daily_rate_1_to_2) > 0
+                ? inheritedPricing.daily_rate_1_to_2
+                : (variantDefaults?.daily_rate_1_to_2 ?? "0"),
+            daily_rate_3_to_7:
+              Number(inheritedPricing.daily_rate_3_to_7) > 0
+                ? inheritedPricing.daily_rate_3_to_7
+                : (variantDefaults?.daily_rate_3_to_7 ?? "0"),
+            daily_rate_8_plus:
+              Number(inheritedPricing.daily_rate_8_plus) > 0
+                ? inheritedPricing.daily_rate_8_plus
+                : (variantDefaults?.daily_rate_8_plus ?? "0"),
+            damage_excess:
+              Number(inheritedPricing.damage_excess) > 0
+                ? inheritedPricing.damage_excess
+                : (variantDefaults?.damage_excess ?? "0"),
+            photo_url: inheritedPricing.photo_url ?? variantDefaults?.photo_url ?? null,
+          }
+        : variantDefaults
+          ? {
+              daily_rate_1_to_2: variantDefaults.daily_rate_1_to_2 ?? "0",
+              daily_rate_3_to_7: variantDefaults.daily_rate_3_to_7 ?? "0",
+              daily_rate_8_plus: variantDefaults.daily_rate_8_plus ?? "0",
+              damage_excess: variantDefaults.damage_excess ?? "0",
+              mileage_policy: null,
+              daily_km_limit: null,
+              extra_km_rate: "0",
+              photo_url: variantDefaults.photo_url ?? null,
+              location_type: null,
+              fuel_policy: null,
+              instant_confirmation: null,
+              description: null,
+              delivery_policy: null,
+              inclusions: null,
+              seats: null,
+              doors: null,
+              air_conditioning: null,
+              fuel_type: null,
+              luggage_capacity: null,
+              transmission: null,
+            }
+          : undefined;
 
-      // Create vehicle (use license plate as asset code)
+      // Create vehicle with a unique 4-digit sequential Asset ID (0001...)
       const vehicleId = crypto.randomUUID();
-      const assetCode = input.licensePlate.trim().toUpperCase();
+      const maxAssetRes = await client.query<{ max_seq: number }>(
+        `SELECT COALESCE(MAX(CAST(SUBSTRING(asset_code FROM '^(?:VEH-)?([0-9]+)$') AS INTEGER)), 0) AS max_seq
+         FROM fleet_vehicles WHERE company_id = $1`,
+        [poRow.company_id],
+      );
+      const nextSeq = Number(maxAssetRes.rows[0]?.max_seq ?? 0) + 1;
+      const assetCode = String(nextSeq).padStart(4, "0");
       const vehicleRes = await client.query<DbFleetVehicleRow>(
         `INSERT INTO fleet_vehicles
           (id, asset_code, company_id, branch_id, variant_id, purchase_order_id, vin, license_plate,
@@ -1670,30 +1733,30 @@ export class PostgresAuthDataStore implements AuthDataStore {
           input.deliveryPolicy?.trim() || inheritedPricing?.delivery_policy || null,
           (input.dailyRate1to2 && input.dailyRate1to2 > 0)
             ? input.dailyRate1to2
-            : (inheritedPricing ? Number(inheritedPricing.daily_rate_1_to_2) : 0),
+            : (mergedInherited ? Number(mergedInherited.daily_rate_1_to_2) : 0),
           (input.dailyRate3to7 && input.dailyRate3to7 > 0)
             ? input.dailyRate3to7
-            : (inheritedPricing ? Number(inheritedPricing.daily_rate_3_to_7) : 0),
+            : (mergedInherited ? Number(mergedInherited.daily_rate_3_to_7) : 0),
           (input.dailyRate8Plus && input.dailyRate8Plus > 0)
             ? input.dailyRate8Plus
-            : (inheritedPricing ? Number(inheritedPricing.daily_rate_8_plus) : 0),
+            : (mergedInherited ? Number(mergedInherited.daily_rate_8_plus) : 0),
           (input.damageExcess && input.damageExcess > 0)
             ? input.damageExcess
-            : (inheritedPricing ? Number(inheritedPricing.damage_excess) : 0),
-          input.mileagePolicy ?? inheritedPricing?.mileage_policy ?? "unlimited",
-          input.dailyKmLimit ?? inheritedPricing?.daily_km_limit ?? 0,
-          input.extraKmRate ?? (inheritedPricing ? Number(inheritedPricing.extra_km_rate) : 0),
+            : (mergedInherited ? Number(mergedInherited.damage_excess) : 0),
+          input.mileagePolicy ?? mergedInherited?.mileage_policy ?? "unlimited",
+          input.dailyKmLimit ?? mergedInherited?.daily_km_limit ?? 0,
+          input.extraKmRate ?? (mergedInherited ? Number(mergedInherited.extra_km_rate) : 0),
           (input.inclusions && input.inclusions.length > 0)
             ? input.inclusions
-            : (inheritedPricing?.inclusions ?? []),
-          input.seats ?? inheritedPricing?.seats ?? 5,
-          input.doors ?? inheritedPricing?.doors ?? 4,
+            : (mergedInherited?.inclusions ?? []),
+          input.seats ?? mergedInherited?.seats ?? 5,
+          input.doors ?? mergedInherited?.doors ?? 4,
           input.airConditioning !== undefined
             ? input.airConditioning
-            : (inheritedPricing?.air_conditioning ?? true),
-          input.fuelType ?? inheritedPricing?.fuel_type ?? "petrol",
-          input.luggageCapacity ?? inheritedPricing?.luggage_capacity ?? "2 Bags",
-          input.transmission ?? inheritedPricing?.transmission ?? "automatic",
+            : (mergedInherited?.air_conditioning ?? true),
+          input.fuelType ?? mergedInherited?.fuel_type ?? "petrol",
+          input.luggageCapacity ?? mergedInherited?.luggage_capacity ?? "2 Bags",
+          input.transmission ?? mergedInherited?.transmission ?? "automatic",
           Boolean(input.isBookable),
           input.inServiceDate ?? null,
           input.createdByUserId ?? null,
@@ -1764,8 +1827,16 @@ export class PostgresAuthDataStore implements AuthDataStore {
     input: CreateFleetVehicleInput,
   ): Promise<FleetVehicleRecord> {
     const id = input.id ?? crypto.randomUUID();
-    const assetCode =
-      input.assetCode?.trim() || input.licensePlate.trim().toUpperCase();
+    let assetCode = input.assetCode?.trim() || "";
+    if (!assetCode) {
+      const maxAssetRes = await this.pool.query<{ max_seq: number }>(
+        `SELECT COALESCE(MAX(CAST(SUBSTRING(asset_code FROM '^(?:VEH-)?([0-9]+)$') AS INTEGER)), 0) AS max_seq
+         FROM fleet_vehicles WHERE company_id = $1`,
+        [input.companyId],
+      );
+      const nextSeq = Number(maxAssetRes.rows[0]?.max_seq ?? 0) + 1;
+      assetCode = String(nextSeq).padStart(4, "0");
+    }
     const hasExplicitPricing =
       (input.dailyRate1to2 ?? 0) > 0 ||
       (input.dailyRate3to7 ?? 0) > 0 ||
@@ -2760,6 +2831,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       dailyRate3to7: number;
       dailyRate8Plus: number;
       damageExcess: number;
+      securityDeposit?: number;
       mileagePolicy: "unlimited" | "limited";
       dailyKmLimit: number;
       extraKmRate: number;
@@ -2774,8 +2846,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
            mileage_policy = $5,
            daily_km_limit = $6,
            extra_km_rate = $7,
+           security_deposit = $8,
            updated_at = NOW()
-       WHERE id = $8 AND company_id = $9`,
+       WHERE id = $9 AND company_id = $10`,
       [
         input.dailyRate1to2,
         input.dailyRate3to7,
@@ -2784,6 +2857,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.mileagePolicy,
         input.dailyKmLimit,
         input.extraKmRate,
+        input.securityDeposit ?? 0,
         vehicleId,
         companyId,
       ],
@@ -2799,6 +2873,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       dailyRate3to7: number;
       dailyRate8Plus: number;
       damageExcess: number;
+      securityDeposit?: number;
       mileagePolicy?: "unlimited" | "limited";
       dailyKmLimit?: number;
       extraKmRate?: number;
@@ -2814,15 +2889,16 @@ export class PostgresAuthDataStore implements AuthDataStore {
       input.mileagePolicy ?? null,
       input.dailyKmLimit ?? null,
       input.extraKmRate ?? null,
+      input.securityDeposit ?? null,
       variantId,
       companyId,
     ];
-    let whereClause = "WHERE variant_id = $8 AND company_id = $9";
+    let whereClause = "WHERE variant_id = $9 AND company_id = $10";
     if (input.unassignedOnly) {
       whereClause += " AND branch_id IS NULL";
     } else if (Array.isArray(input.branchIds) && input.branchIds.length > 0) {
       params.push(input.branchIds);
-      whereClause += " AND branch_id = ANY($10::uuid[])";
+      whereClause += " AND branch_id = ANY($11::uuid[])";
     }
     const res = await this.pool.query(
       `UPDATE fleet_vehicles
@@ -2833,9 +2909,29 @@ export class PostgresAuthDataStore implements AuthDataStore {
            mileage_policy = COALESCE($5, mileage_policy),
            daily_km_limit = COALESCE($6, daily_km_limit),
            extra_km_rate = COALESCE($7, extra_km_rate),
+           security_deposit = COALESCE($8, security_deposit),
            updated_at = NOW()
        ${whereClause}`,
       params,
+    );
+    await this.pool.query(
+      `UPDATE vehicle_variants
+       SET daily_rate_1_to_2 = $1,
+           daily_rate_3_to_7 = $2,
+           daily_rate_8_plus = $3,
+           damage_excess = $4,
+           security_deposit = COALESCE($5, security_deposit),
+           updated_at = NOW()
+       WHERE id = $6 AND company_id = $7`,
+      [
+        input.dailyRate1to2,
+        input.dailyRate3to7,
+        input.dailyRate8Plus,
+        input.damageExcess,
+        input.securityDeposit ?? null,
+        variantId,
+        companyId,
+      ],
     );
     return { updatedCount: res.rowCount ?? 0 };
   }
@@ -2928,6 +3024,26 @@ export class PostgresAuthDataStore implements AuthDataStore {
            updated_at = NOW()
        ${whereClause}`,
       params,
+    );
+    await this.pool.query(
+      `UPDATE vehicle_variants
+       SET daily_rate_1_to_2 = COALESCE($1, daily_rate_1_to_2),
+           daily_rate_3_to_7 = COALESCE($2, daily_rate_3_to_7),
+           daily_rate_8_plus = COALESCE($3, daily_rate_8_plus),
+           damage_excess = COALESCE($4, damage_excess),
+           photo_url = CASE WHEN $5 THEN $6 ELSE photo_url END,
+           updated_at = NOW()
+       WHERE id = $7 AND company_id = $8`,
+      [
+        input.dailyRate1to2 ?? null,
+        input.dailyRate3to7 ?? null,
+        input.dailyRate8Plus ?? null,
+        input.damageExcess ?? null,
+        input.photoUrl !== undefined,
+        input.photoUrl !== undefined ? input.photoUrl?.trim() || null : null,
+        variantId,
+        companyId,
+      ],
     );
     return { updatedCount: res.rowCount ?? 0 };
   }
@@ -3161,6 +3277,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       secondaryPhone: (r.secondary_phone as string | null) ?? null,
       email: (r.email as string | null) ?? null,
       nationalId: (r.national_id as string | null) ?? null,
+      nationalIdExpiry: r.national_id_expiry ? new Date(String(r.national_id_expiry)).toISOString().slice(0, 10) : null,
       driverLicenseNo: (r.driver_license_no as string | null) ?? null,
       licenseExpiry: r.license_expiry ? new Date(String(r.license_expiry)).toISOString().slice(0, 10) : null,
       nationality: (r.nationality as string | null) ?? null,
@@ -3187,6 +3304,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
     secondaryPhone?: string | null;
     email?: string | null;
     nationalId?: string | null;
+    nationalIdExpiry?: string | null;
     driverLicenseNo?: string | null;
     licenseExpiry?: string | null;
     nationality?: string | null;
@@ -3195,17 +3313,17 @@ export class PostgresAuthDataStore implements AuthDataStore {
     notes?: string | null;
   }): Promise<CustomerRecord> {
     const seqRes = await this.pool.query<{ max_seq: number }>(
-      `SELECT COALESCE(MAX((REGEXP_MATCH(customer_code, '^CUS-(\\d+)$'))[1]::int), 0) AS max_seq
+      `SELECT COALESCE(MAX((REGEXP_MATCH(customer_code, '^(?:CUS-)?(\\d+)$'))[1]::int), 0) AS max_seq
        FROM customers
        WHERE company_id = $1`,
       [input.companyId],
     );
-    const customerCode = `CUS-${String(Number(seqRes.rows[0]?.max_seq ?? 0) + 1).padStart(4, "0")}`;
+    const customerCode = String(Number(seqRes.rows[0]?.max_seq ?? 0) + 1).padStart(4, "0");
 
     const res = await this.pool.query(
       `INSERT INTO customers
-        (company_id, customer_code, full_name, phone, secondary_phone, email, national_id, driver_license_no, license_expiry, nationality, address, work_address, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        (company_id, customer_code, full_name, phone, secondary_phone, email, national_id, national_id_expiry, driver_license_no, license_expiry, nationality, address, work_address, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         input.companyId,
@@ -3215,6 +3333,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.secondaryPhone?.trim() || null,
         input.email?.trim() || null,
         input.nationalId?.trim() || null,
+        input.nationalIdExpiry || null,
         input.driverLicenseNo?.trim() || null,
         input.licenseExpiry || null,
         input.nationality?.trim() || null,
@@ -3235,6 +3354,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       secondaryPhone?: string | null;
       email?: string | null;
       nationalId?: string | null;
+      nationalIdExpiry?: string | null;
       driverLicenseNo?: string | null;
       licenseExpiry?: string | null;
       nationality?: string | null;
@@ -3246,9 +3366,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
     const res = await this.pool.query(
       `UPDATE customers
        SET full_name = $1, phone = $2, secondary_phone = $3, email = $4, national_id = $5,
-           driver_license_no = $6, license_expiry = $7, nationality = $8,
-           address = $9, work_address = $10, notes = $11, updated_at = NOW()
-       WHERE id = $12 AND company_id = $13
+           national_id_expiry = $6, driver_license_no = $7, license_expiry = $8, nationality = $9,
+           address = $10, work_address = $11, notes = $12, updated_at = NOW()
+       WHERE id = $13 AND company_id = $14
        RETURNING *`,
       [
         input.fullName.trim(),
@@ -3256,6 +3376,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.secondaryPhone?.trim() || null,
         input.email?.trim() || null,
         input.nationalId?.trim() || null,
+        input.nationalIdExpiry || null,
         input.driverLicenseNo?.trim() || null,
         input.licenseExpiry || null,
         input.nationality?.trim() || null,

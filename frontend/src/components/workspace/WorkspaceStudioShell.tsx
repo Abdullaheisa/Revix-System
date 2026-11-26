@@ -258,9 +258,11 @@ export function WorkspaceStudioShell({
     };
   }, [availableSections, dispatch, isCommandPaletteOpen]);
 
+  const lastRedirectPathnameRef = useRef<string | null>(null);
+
   // Guard: if current activeSection/activeSubPage is not in available sections, redirect to first ready page
   useEffect(() => {
-    if (!company || !user) return;
+    if (!company || !user || pendingUrlPush) return;
     const matchedSection = availableSections.find((s) => s.id === activeSection);
     const hasSubPage = Boolean(
       matchedSection?.groups.some((g) =>
@@ -274,15 +276,15 @@ export function WorkspaceStudioShell({
         fallbackSub &&
         (targetSec.id !== activeSection || fallbackSub !== activeSubPage)
       ) {
-        dispatch(
-          navigateToWorkspacePage({
-            section: targetSec.id,
-            subPage: fallbackSub,
-          }),
-        );
+        const currentPath = pathname || "";
+        if (lastRedirectPathnameRef.current === currentPath) return;
+        lastRedirectPathnameRef.current = currentPath;
+        router.replace(buildWorkspaceHref(targetSec.id, fallbackSub));
       }
+    } else {
+      lastRedirectPathnameRef.current = null;
     }
-  }, [activeSection, activeSubPage, availableSections, company, user, dispatch]);
+  }, [activeSection, activeSubPage, availableSections, company, user, pendingUrlPush, pathname, router]);
 
   const currentSectionConfig = useMemo(() => {
     return (
