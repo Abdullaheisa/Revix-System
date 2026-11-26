@@ -116,7 +116,6 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
     return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
   const [discount, setDiscount] = useState(0);
-  const [insuranceFee, setInsuranceFee] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState("");
   const [createdContract, setCreatedContract] = useState<RentalContractDto | null>(null);
@@ -245,7 +244,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
   const depositAmount = Number(selectedVehicle?.securityDeposit || 0);
 
   const subtotal = dailyRate * totalDays;
-  const totalAmount = Math.max(0, subtotal - discount + insuranceFee);
+  const totalAmount = Math.max(0, subtotal - discount);
   const balanceDue = Math.max(0, totalAmount - paidAmount);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -279,7 +278,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         pickupOdometer: Number(pickupOdometer) || 0,
         dailyRate: Number(dailyRate) || 0,
         discount: Number(discount) || 0,
-        insuranceFee: Number(insuranceFee) || 0,
+        insuranceFee: 0,
         depositAmount: Number(depositAmount) || 0,
         paidAmount: Number(paidAmount) || 0,
         notes: notes.trim() || null,
@@ -923,7 +922,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                 </div>
 
                 {/* Editable contract fields */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 pt-2 border-t border-revix-border/60">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-revix-border/60">
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1.5">
                       {isRtl ? "الخصم" : "Discount"}
@@ -934,19 +933,6 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                       placeholder="0"
                       value={discount === 0 ? "" : discount}
                       onChange={(e) => setDiscount(Math.max(0, Number(e.target.value) || 0))}
-                      className="h-10 w-full rounded-lg border border-revix-border px-3 font-mono text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-revix-dark mb-1.5">
-                      {isRtl ? "رسوم التأمين" : "Insurance Fee"}
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      placeholder="0"
-                      value={insuranceFee === 0 ? "" : insuranceFee}
-                      onChange={(e) => setInsuranceFee(Math.max(0, Number(e.target.value) || 0))}
                       className="h-10 w-full rounded-lg border border-revix-border px-3 font-mono text-xs"
                     />
                   </div>
@@ -1030,14 +1016,6 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                   {subtotal.toLocaleString()}
                 </span>
               </div>
-              {insuranceFee > 0 && (
-                <div className="flex items-center justify-between text-revix-secondary">
-                  <span>{isRtl ? "+ رسوم التأمين" : "+ Insurance"}</span>
-                  <span className="font-mono font-semibold text-revix-dark">
-                    +{insuranceFee.toLocaleString()}
-                  </span>
-                </div>
-              )}
               {discount > 0 && (
                 <div className="flex items-center justify-between text-rose-700">
                   <span>{isRtl ? "- الخصم" : "- Discount"}</span>
