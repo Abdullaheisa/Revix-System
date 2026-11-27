@@ -46,6 +46,48 @@ function getActionMeta(action: string, isRtl: boolean): {
         tone: "bg-red-50 text-red-700 border-red-200",
         icon: "x",
       };
+    case "fleet.rental_contract_created":
+      return {
+        label: isRtl ? "إنشاء عقد الإيجار" : "Created Rental Contract",
+        tone: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        icon: "file-text",
+      };
+    case "fleet.rental_contract_signed":
+      return {
+        label: isRtl ? "توقيع العقد" : "Signed Contract",
+        tone: "bg-indigo-50 text-indigo-700 border-indigo-200",
+        icon: "check",
+      };
+    case "fleet.rental_contract_completed":
+      return {
+        label: isRtl ? "استلام السيارة وإغلاق العقد" : "Returned Vehicle & Closed Contract",
+        tone: "bg-blue-50 text-blue-700 border-blue-200",
+        icon: "check-circle-2",
+      };
+    case "fleet.rental_contract_cancelled":
+      return {
+        label: isRtl ? "إلغاء العقد" : "Cancelled Contract",
+        tone: "bg-rose-50 text-rose-700 border-rose-200",
+        icon: "x",
+      };
+    case "fleet.contract_voucher_receipt":
+      return {
+        label: isRtl ? "إصدار سند قبض" : "Issued Receipt Voucher",
+        tone: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        icon: "wallet",
+      };
+    case "fleet.contract_voucher_payment":
+      return {
+        label: isRtl ? "إصدار سند دفع" : "Issued Payment Voucher",
+        tone: "bg-amber-50 text-amber-700 border-amber-200",
+        icon: "wallet",
+      };
+    case "fleet.contract_voucher_refund":
+      return {
+        label: isRtl ? "إصدار سند مرتجع" : "Issued Refund Voucher",
+        tone: "bg-rose-50 text-rose-700 border-rose-200",
+        icon: "wallet",
+      };
     case "fleet.po_signed":
       return {
         label: isRtl ? "توقيع أمر الشراء" : "Signed Purchase Order",
