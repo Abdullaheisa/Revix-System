@@ -523,6 +523,18 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
               keyCode: "l",
               isReady: true,
             },
+            {
+              id: "contract-terms",
+              titleEn: "Contract Terms & Conditions",
+              titleAr: "شروط وأحكام العقود",
+              descEn:
+                "Manage bilingual contract terms and clauses printed automatically on rental agreements.",
+              descAr:
+                "إدارة بنود وشروط عقد الإيجار بالعربية والإنجليزية للطباعة التلقائية في العقود.",
+              shortcut: "G T",
+              keyCode: "t",
+              isReady: true,
+            },
           ],
         },
         {
@@ -597,7 +609,7 @@ export function canAccessWorkspacePage(
 
   if (sectionId === "settings") {
     if (subPageId === "security") return true;
-    if (subPageId === "company-profile") {
+    if (subPageId === "company-profile" || subPageId === "contract-terms") {
       return (
         isOwnerOrCeo(membership) ||
         Boolean(membership?.permissions.company?.includes("read"))

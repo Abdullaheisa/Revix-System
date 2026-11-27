@@ -10,6 +10,7 @@ const PriceListPanel = dynamic(() => import("@/components/fleet/PriceListPanel")
 const AccountSecurityPanel = dynamic(() => import("@/components/workspace/AccountSecurityPanel").then((module) => module.AccountSecurityPanel), { loading: PanelLoading });
 const CompanyNetworkPanel = dynamic(() => import("@/components/workspace/CompanyNetworkPanel").then((module) => module.CompanyNetworkPanel), { loading: PanelLoading });
 const CompanySettingsPanel = dynamic(() => import("@/components/workspace/CompanySettingsPanel").then((module) => module.CompanySettingsPanel), { loading: PanelLoading });
+const ContractTermsSettingsPanel = dynamic(() => import("@/components/workspace/ContractTermsSettingsPanel").then((module) => module.ContractTermsSettingsPanel), { loading: PanelLoading });
 const LocationsManager = dynamic(() => import("@/components/workspace/LocationsManager").then((module) => module.LocationsManager), { loading: PanelLoading });
 const RolesMatrixPanel = dynamic(() => import("@/components/workspace/RolesMatrixPanel").then((module) => module.RolesMatrixPanel), { loading: PanelLoading });
 const TeamMembersPanel = dynamic(() => import("@/components/workspace/TeamMembersPanel").then((module) => module.TeamMembersPanel), { loading: PanelLoading });
@@ -52,6 +53,9 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
           ) : activeSection === "settings" &&
             activeSubPage === "company-profile" ? (
             <CompanySettingsPanel isRtl={isRtl} company={company} />
+          ) : activeSection === "settings" &&
+            activeSubPage === "contract-terms" ? (
+            <ContractTermsSettingsPanel isRtl={isRtl} company={company} />
           ) : activeSection === "settings" && activeSubPage === "security" ? (
             <AccountSecurityPanel
               isRtl={isRtl}

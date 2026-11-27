@@ -20,10 +20,6 @@ import {
   useUpdateCompanyMutation,
   type CompanyDto,
 } from "@/store/api/workspaceApi";
-import {
-  DEFAULT_CONTRACT_TERMS_AR,
-  DEFAULT_CONTRACT_TERMS_EN,
-} from "@/lib/constants/contractTerms";
 
 export interface CompanySettingsPanelProps {
   isRtl: boolean;
@@ -55,12 +51,6 @@ export function CompanySettingsPanel({
   const [operatingMode, setOperatingMode] = useState<
     "independent" | "network_main"
   >(company.operatingMode === "network_main" ? "network_main" : "independent");
-  const [contractTermsAr, setContractTermsAr] = useState(
-    company.contractTermsAr ?? DEFAULT_CONTRACT_TERMS_AR,
-  );
-  const [contractTermsEn, setContractTermsEn] = useState(
-    company.contractTermsEn ?? DEFAULT_CONTRACT_TERMS_EN,
-  );
 
   const [savedNotice, setSavedNotice] = useState<string | undefined>();
   const [errorNotice, setErrorNotice] = useState<string | undefined>();
@@ -87,8 +77,8 @@ export function CompanySettingsPanel({
         businessRegNumber: businessRegNumber.trim(),
         taxRegNumber: taxRegNumber.trim(),
         operatingMode,
-        contractTermsAr: contractTermsAr.trim() || null,
-        contractTermsEn: contractTermsEn.trim() || null,
+        contractTermsAr: company.contractTermsAr ?? null,
+        contractTermsEn: company.contractTermsEn ?? null,
       }).unwrap();
 
       setSavedNotice(
@@ -310,54 +300,6 @@ export function CompanySettingsPanel({
             value={operatingMode}
             onChange={setOperatingMode}
           />
-        </SectionCard>
-
-        <SectionCard title={isRtl ? "٥. شروط وأحكام عقد الإيجار" : "5. Rental Contract Terms & Conditions"}>
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-revix-secondary">
-                {isRtl
-                  ? "اكتب كل بند في سطر منفصل ليتم ترقيمه وعرضه تلقائياً في الصفحة الثانية من عقد الإيجار المطبوع."
-                  : "Enter each clause on a separate line. They will be numbered and printed automatically on Page 2 of every rental contract."}
-              </p>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setContractTermsAr(DEFAULT_CONTRACT_TERMS_AR);
-                  setContractTermsEn(DEFAULT_CONTRACT_TERMS_EN);
-                }}
-              >
-                {isRtl ? "استعادة الشروط الافتراضية" : "Reset to Default Terms"}
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-revix-dark">
-                  {isRtl ? "الشروط والأحكام (عربي)" : "Terms & Conditions (Arabic)"}
-                </label>
-                <textarea
-                  rows={10}
-                  dir="rtl"
-                  value={contractTermsAr}
-                  onChange={(e) => setContractTermsAr(e.target.value)}
-                  className="w-full rounded-xl border border-revix-border bg-white p-3 text-xs leading-relaxed focus:border-revix-primary focus:outline-hidden"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-revix-dark">
-                  {isRtl ? "الشروط والأحكام (إنجليزي)" : "Terms & Conditions (English)"}
-                </label>
-                <textarea
-                  rows={10}
-                  dir="ltr"
-                  value={contractTermsEn}
-                  onChange={(e) => setContractTermsEn(e.target.value)}
-                  className="w-full rounded-xl border border-revix-border bg-white p-3 text-xs leading-relaxed focus:border-revix-primary focus:outline-hidden"
-                />
-              </div>
-            </div>
-          </div>
         </SectionCard>
       </div>
     </form>
