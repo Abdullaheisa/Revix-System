@@ -41,7 +41,7 @@ function formatTime(isoDateOrTimestamp: string | undefined): string {
 function CompanyPrintHeader({ company }: { company: CompanyDto | null }) {
   const nameArOrEn = company?.legalName || company?.name || "Revix Car Rental";
   const nameEn = company?.name || "Revix Car Rental";
-  const accent = company?.brandColor || "#9a7b3e";
+  const accent = company?.brandColor || "#14532D";
 
   return (
     <div className="flex items-center justify-between gap-4 border-b-2 pb-2.5" style={{ borderColor: accent }}>
@@ -78,7 +78,7 @@ function CompanyPrintHeader({ company }: { company: CompanyDto | null }) {
 }
 
 function CompanyPrintFooter({ company }: { company: CompanyDto | null }) {
-  const accent = company?.brandColor || "#9a7b3e";
+  const accent = company?.brandColor || "#14532D";
   const addressLine = [company?.address, company?.city, company?.postalCode]
     .filter(Boolean)
     .join(" — ");
@@ -114,8 +114,8 @@ function SignatureBox({
   return (
     <div
       onClick={onClick}
-      className={`flex flex-col justify-between rounded-lg border border-amber-700/40 bg-white p-2 min-h-[78px] ${
-        onClick ? "cursor-pointer hover:border-revix-primary hover:bg-emerald-50/30 transition-colors" : ""
+      className={`brand-box flex flex-col justify-between rounded-lg border bg-white p-2 min-h-[78px] ${
+        onClick ? "cursor-pointer hover:opacity-90 transition-opacity" : ""
       }`}
     >
       <div className="flex items-center justify-between gap-1 text-[10px] font-bold text-slate-700 border-b border-slate-200 pb-1">
@@ -195,7 +195,7 @@ export function RentalContractPrintModal({
   if (!contract) return null;
 
   const currency = contract.currencyCode || company?.baseCurrency || "EGP";
-  const accent = company?.brandColor || "#9a7b3e";
+  const accent = company?.brandColor || "#14532D";
   const contractTime = formatTime(contract.createdAt);
 
   // Employee signature comes strictly from the contract creator (or current user if they are the creator)
@@ -244,41 +244,106 @@ export function RentalContractPrintModal({
     }
   }
 
+  function handlePrintContract() {
+    if (canPromptEmployeeSign) {
+      setSignError(
+        isRtl
+          ? "يجب إضافة توقيع الموظف المسئول أولاً قبل الطباعة."
+          : "Employee signature is required before printing.",
+      );
+      setSignTarget("employee");
+      return;
+    }
+    const container = document.getElementById("revix-printable-contract");
+    if (!container) return;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    const stylesHtml = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"))
+      .map((el) => el.outerHTML)
+      .join("\n");
+
+    doc.open();
+    doc.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${contract?.contractNumber ?? "Contract"}</title>
+  ${stylesHtml}
+  <style>
+    @page { size: A4 portrait; margin: 10mm; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .revix-print-root {
+      --brand: ${accent};
+      --brand-soft: color-mix(in srgb, ${accent} 10%, white);
+      --brand-border: color-mix(in srgb, ${accent} 35%, white);
+      padding: 0 !important;
+    }
+    .revix-print-page {
+      break-after: page;
+      page-break-after: always;
+      border: none !important;
+      box-shadow: none !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+      max-width: 100% !important;
+    }
+    .revix-print-page:last-child {
+      break-after: auto;
+      page-break-after: auto;
+    }
+    .no-print { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="revix-print-root">${container.innerHTML}</div>
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 1500);
+    }, 350);
+  }
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-[2px] print:static print:bg-white print:p-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-[2px]"
       dir="ltr"
     >
       <style>{`
-        @media print {
-          @page { size: A4 portrait; margin: 10mm; }
-          body * { visibility: hidden !important; }
-          #revix-printable-contract, #revix-printable-contract * { visibility: visible !important; }
-          #revix-printable-contract {
-            position: fixed !important;
-            inset: 0 !important;
-            width: 100% !important;
-            max-width: none !important;
-            overflow: visible !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-          }
-          .revix-print-page {
-            break-after: page;
-            page-break-after: always;
-            box-shadow: none !important;
-            border: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          .revix-print-page:last-child {
-            break-after: auto;
-            page-break-after: auto;
-          }
-          .no-print { display: none !important; }
+        .revix-print-root {
+          --brand: ${accent};
+          --brand-soft: color-mix(in srgb, ${accent} 10%, white);
+          --brand-border: color-mix(in srgb, ${accent} 35%, white);
         }
+        .brand-box { border-color: var(--brand-border) !important; }
+        .brand-head { background-color: var(--brand-soft) !important; border-color: var(--brand-border) !important; }
+        .brand-text { color: var(--brand) !important; }
+        .brand-bg { background-color: var(--brand) !important; }
       `}</style>
 
       <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-revix-border bg-slate-100 shadow-2xl print:max-h-none print:rounded-none print:border-0 print:bg-white print:shadow-none">
@@ -318,18 +383,7 @@ export function RentalContractPrintModal({
             )}
             <button
               type="button"
-              onClick={() => {
-                if (canPromptEmployeeSign) {
-                  setSignError(
-                    isRtl
-                      ? "يجب إضافة توقيع الموظف المسئول أولاً قبل الطباعة."
-                      : "Employee signature is required before printing.",
-                  );
-                  setSignTarget("employee");
-                  return;
-                }
-                window.print();
-              }}
+              onClick={handlePrintContract}
               className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white hover:bg-revix-primary-hover"
             >
               <RevixIcon name="file-text" size={13} />
@@ -347,7 +401,7 @@ export function RentalContractPrintModal({
         </div>
 
         {/* Printable 3-Page Sheets */}
-        <div id="revix-printable-contract" className="min-h-0 flex-1 overflow-y-auto p-5 space-y-6">
+        <div id="revix-printable-contract" className="revix-print-root min-h-0 flex-1 overflow-y-auto p-5 space-y-6">
           {signError && (
             <div className="no-print" dir={isRtl ? "rtl" : "ltr"}>
               <Alert variant="error" message={signError} />
@@ -360,10 +414,10 @@ export function RentalContractPrintModal({
 
             {/* Top Strip: Title + 5 Date/Rate Boxes */}
             <div className="grid grid-cols-12 gap-2 items-stretch">
-              <div className="col-span-4 flex flex-col items-center justify-center rounded-lg border-2 border-amber-700/40 bg-amber-50/40 px-2 py-1.5 text-center">
+              <div className="brand-head brand-box col-span-4 flex flex-col items-center justify-center rounded-lg border-2 px-2 py-1.5 text-center">
                 <div className="text-xs font-extrabold text-slate-900">عقد تأجير سيارة</div>
                 <div className="text-[11px] font-bold text-slate-700">Car Rental Contract</div>
-                <div className="mt-0.5 font-mono text-[11px] font-bold text-amber-800">
+                <div className="brand-text mt-0.5 font-mono text-[11px] font-bold">
                   {contract.contractNumber}
                 </div>
               </div>
@@ -381,7 +435,7 @@ export function RentalContractPrintModal({
                 ].map((box) => (
                   <div
                     key={box.en}
-                    className="flex flex-col justify-between rounded-lg border border-amber-700/40 bg-white p-1.5 text-center"
+                    className="brand-box flex flex-col justify-between rounded-lg border bg-white p-1.5 text-center"
                   >
                     <div className="text-[9.5px] font-bold text-slate-700 leading-tight">{box.ar}</div>
                     <div className="text-[9px] text-slate-500 leading-tight">{box.en}</div>
@@ -395,23 +449,23 @@ export function RentalContractPrintModal({
             <div className="grid grid-cols-12 gap-3">
               {/* Left Column: Renewals, Second Driver, Sponsor, Handing over */}
               <div className="col-span-5 space-y-2.5">
-                <div className="rounded-lg border border-amber-700/40 overflow-hidden">
-                  <div className="flex items-center justify-between bg-amber-50/70 px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b border-amber-700/30">
+                <div className="brand-box rounded-lg border overflow-hidden">
+                  <div className="brand-head flex items-center justify-between px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b">
                     <span>Contract Renewals</span>
                     <span>تجديد العقد</span>
                   </div>
-                  <div className="grid grid-cols-2 divide-x divide-amber-700/30 text-[10px] font-semibold text-slate-700 border-b border-amber-700/20">
+                  <div className="brand-box grid grid-cols-2 divide-x text-[10px] font-semibold text-slate-700 border-b">
                     <div className="px-2 py-1 text-center">إلى تاريخ / To Date</div>
                     <div className="px-2 py-1 text-center">من تاريخ / From Date</div>
                   </div>
-                  <div className="grid grid-cols-2 divide-x divide-amber-700/20 h-20">
+                  <div className="grid grid-cols-2 divide-x divide-slate-200 h-20">
                     <div />
                     <div />
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-amber-700/40 overflow-hidden">
-                  <div className="flex items-center justify-between bg-amber-50/70 px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b border-amber-700/30">
+                <div className="brand-box rounded-lg border overflow-hidden">
+                  <div className="brand-head flex items-center justify-between px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b">
                     <span>Second Driver Details</span>
                     <span>بيانات السائق الثاني</span>
                   </div>
@@ -421,8 +475,8 @@ export function RentalContractPrintModal({
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-amber-700/40 overflow-hidden">
-                  <div className="flex items-center justify-between bg-amber-50/70 px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b border-amber-700/30">
+                <div className="brand-box rounded-lg border overflow-hidden">
+                  <div className="brand-head flex items-center justify-between px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b">
                     <span>Sponsor Details</span>
                     <span>بيانات الكفيل</span>
                   </div>
@@ -433,8 +487,8 @@ export function RentalContractPrintModal({
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-amber-700/40 overflow-hidden">
-                  <div className="flex items-center justify-between bg-amber-50/70 px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b border-amber-700/30">
+                <div className="brand-box rounded-lg border overflow-hidden">
+                  <div className="brand-head flex items-center justify-between px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b">
                     <span>Handing over the car lessor</span>
                     <span>إعادة السيارة للمؤجر</span>
                   </div>
@@ -461,8 +515,8 @@ export function RentalContractPrintModal({
 
               {/* Right Column: Lessee Details, Car Details, Declaration */}
               <div className="col-span-7 space-y-2.5">
-                <div className="rounded-lg border border-amber-700/40 overflow-hidden">
-                  <div className="flex items-center justify-between bg-amber-50/70 px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b border-amber-700/30">
+                <div className="brand-box rounded-lg border overflow-hidden">
+                  <div className="brand-head flex items-center justify-between px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b">
                     <span>Lessee Details</span>
                     <span>بيانات المستأجر</span>
                   </div>
@@ -480,8 +534,8 @@ export function RentalContractPrintModal({
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-amber-700/40 overflow-hidden">
-                  <div className="flex items-center justify-between bg-amber-50/70 px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b border-amber-700/30">
+                <div className="brand-box rounded-lg border overflow-hidden">
+                  <div className="brand-head flex items-center justify-between px-2.5 py-1 text-[10.5px] font-bold text-slate-800 border-b">
                     <span>Car Details</span>
                     <span>بيانات السيارة</span>
                   </div>
@@ -510,7 +564,7 @@ export function RentalContractPrintModal({
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-amber-700/40 bg-amber-50/20 p-2.5 space-y-1 text-[9.5px] leading-relaxed">
+                <div className="brand-head brand-box rounded-lg border p-2.5 space-y-1 text-[9.5px] leading-relaxed">
                   <div className="text-end font-semibold text-slate-800" dir="rtl">
                     أقر أنا الموقع أدناه / (المستأجر) بأنني استأجرت السيارة المبين بياناتها أعلاه وقمت بمعاينتها معاينة وافية نافية للجهالة وهي بحالة سليمة من السادة /{" "}
                     <span className="font-bold">{company?.legalName || company?.name || "الشركة المؤجرة"}</span>{" "}
@@ -569,7 +623,7 @@ export function RentalContractPrintModal({
                 ].map((box) => (
                   <div
                     key={box.en}
-                    className="rounded-lg border border-amber-700/40 p-1.5 text-center"
+                    className="brand-box rounded-lg border p-1.5 text-center"
                   >
                     <div className="text-[9px] font-bold text-slate-700">{box.ar}</div>
                     <div className="text-[8.5px] text-slate-500">{box.en}</div>
@@ -590,11 +644,11 @@ export function RentalContractPrintModal({
             </div>
 
             {/* Bilingual Terms Grid */}
-            <div className="grid grid-cols-2 gap-3 rounded-lg border border-amber-700/40 p-3">
-              <div className="space-y-1.5 border-r border-amber-700/20 pr-2.5 text-[9.2px] leading-snug text-slate-800">
+            <div className="brand-box grid grid-cols-2 gap-3 rounded-lg border p-3">
+              <div className="brand-box space-y-1.5 border-r pr-2.5 text-[9.2px] leading-snug text-slate-800">
                 {termsEn.map((clause, idx) => (
                   <div key={idx} className="flex gap-1.5">
-                    <span className="font-mono font-bold text-amber-800 shrink-0">{idx + 1}.</span>
+                    <span className="brand-text font-mono font-bold shrink-0">{idx + 1}.</span>
                     <span>{clause}</span>
                   </div>
                 ))}
@@ -602,7 +656,7 @@ export function RentalContractPrintModal({
               <div className="space-y-1.5 pl-1 text-[9.5px] leading-snug text-slate-800 text-right" dir="rtl">
                 {termsAr.map((clause, idx) => (
                   <div key={idx} className="flex gap-1.5">
-                    <span className="font-mono font-bold text-amber-800 shrink-0">{idx + 1} -</span>
+                    <span className="brand-text font-mono font-bold shrink-0">{idx + 1} -</span>
                     <span>{clause}</span>
                   </div>
                 ))}
@@ -639,17 +693,17 @@ export function RentalContractPrintModal({
             </div>
 
             <div className="flex items-center justify-between gap-4">
-              <div className="rounded-lg border border-amber-700/40 px-3 py-1.5 font-mono text-xs font-bold">
+              <div className="brand-box rounded-lg border px-3 py-1.5 font-mono text-xs font-bold">
                 No.: {contract.contractNumber}
               </div>
-              <div className="rounded-lg border border-amber-700/40 px-3 py-1.5 font-mono text-xs font-bold">
+              <div className="brand-box rounded-lg border px-3 py-1.5 font-mono text-xs font-bold">
                 Date / التاريخ : {contract.startDate}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-amber-700/40 overflow-hidden">
-                <div className="bg-amber-50/70 px-3 py-1 text-center text-xs font-bold text-slate-800 border-b border-amber-700/30">
+              <div className="brand-box rounded-lg border overflow-hidden">
+                <div className="brand-head px-3 py-1 text-center text-xs font-bold text-slate-800 border-b">
                   بيانات السيارة
                 </div>
                 <div className="px-3 py-1.5 space-y-0.5">
@@ -660,8 +714,8 @@ export function RentalContractPrintModal({
                 </div>
               </div>
 
-              <div className="rounded-lg border border-amber-700/40 overflow-hidden">
-                <div className="bg-amber-50/70 px-3 py-1 text-center text-xs font-bold text-slate-800 border-b border-amber-700/30">
+              <div className="brand-box rounded-lg border overflow-hidden">
+                <div className="brand-head px-3 py-1 text-center text-xs font-bold text-slate-800 border-b">
                   بيانات العميل
                 </div>
                 <div className="px-3 py-1.5 space-y-0.5">
@@ -674,7 +728,7 @@ export function RentalContractPrintModal({
             </div>
 
             {/* Check List & Car Diagram */}
-            <div className="rounded-lg border border-amber-700/40 overflow-hidden">
+            <div className="brand-box rounded-lg border overflow-hidden">
               <div
                 className="flex items-center justify-center gap-6 px-3 py-1.5 text-xs font-bold text-white"
                 style={{ backgroundColor: accent }}
@@ -687,13 +741,13 @@ export function RentalContractPrintModal({
                   {/* Fuel Gauge SVG */}
                   <div className="flex flex-col items-center">
                     <svg viewBox="0 0 120 75" className="w-28 h-16">
-                      <path d="M 20 55 A 40 40 0 0 1 100 55" fill="none" stroke="#9a7b3e" strokeWidth="3" />
-                      <line x1="20" y1="55" x2="27" y2="55" stroke="#9a7b3e" strokeWidth="2" />
-                      <line x1="60" y1="15" x2="60" y2="23" stroke="#9a7b3e" strokeWidth="2" />
-                      <line x1="100" y1="55" x2="93" y2="55" stroke="#9a7b3e" strokeWidth="2" />
+                      <path d="M 20 55 A 40 40 0 0 1 100 55" fill="none" stroke={accent} strokeWidth="3" />
+                      <line x1="20" y1="55" x2="27" y2="55" stroke={accent} strokeWidth="2" />
+                      <line x1="60" y1="15" x2="60" y2="23" stroke={accent} strokeWidth="2" />
+                      <line x1="100" y1="55" x2="93" y2="55" stroke={accent} strokeWidth="2" />
                       <text x="12" y="70" fontSize="11" fontWeight="bold" fill="#1e293b">E</text>
                       <text x="97" y="70" fontSize="11" fontWeight="bold" fill="#1e293b">F</text>
-                      <rect x="52" y="42" width="16" height="22" rx="2" fill="none" stroke="#9a7b3e" strokeWidth="2" />
+                      <rect x="52" y="42" width="16" height="22" rx="2" fill="none" stroke={accent} strokeWidth="2" />
                     </svg>
                     <div className="text-[11px] font-bold text-slate-700">دفتر السيارة / Fuel</div>
                   </div>
@@ -744,7 +798,7 @@ export function RentalContractPrintModal({
             </div>
 
             {/* Vehicle Data Notes */}
-            <div className="rounded-lg border border-amber-700/40 overflow-hidden">
+            <div className="brand-box rounded-lg border overflow-hidden">
               <div
                 className="flex items-center justify-center gap-6 px-3 py-1.5 text-xs font-bold text-white"
                 style={{ backgroundColor: accent }}
