@@ -268,8 +268,7 @@ export function RevixDatePicker({
     }
   };
 
-  const handleSelectDay = (day: number) => {
-    const dateStr = toDateString(viewYear, viewMonth, day);
+  const handleSelectDate = (dateStr: string) => {
     let finalVal = dateStr;
     if (withTime) {
       const hh = String(selectedHour).padStart(2, "0");
@@ -357,13 +356,25 @@ export function RevixDatePicker({
       const prevMonth = viewMonth === 0 ? 11 : viewMonth - 1;
       const prevYear = viewMonth === 0 ? viewYear - 1 : viewYear;
       const dateStr = toDateString(prevYear, prevMonth, d);
+      let isDisabled = false;
+      if (minDate && dateStr < minDate) isDisabled = true;
+      if (maxDate && dateStr > maxDate) isDisabled = true;
+      const isSelected =
+        parsedCurrent !== null &&
+        parsedCurrent.year === prevYear &&
+        parsedCurrent.month === prevMonth &&
+        parsedCurrent.day === d;
+      const isToday =
+        today.year === prevYear &&
+        today.month === prevMonth &&
+        today.day === d;
       days.push({
         dayNumber: d,
         isCurrentMonth: false,
         dateString: dateStr,
-        isSelected: false,
-        isToday: false,
-        isDisabled: true,
+        isSelected,
+        isToday,
+        isDisabled,
       });
     }
 
@@ -401,13 +412,25 @@ export function RevixDatePicker({
       const nextMonth = viewMonth === 11 ? 0 : viewMonth + 1;
       const nextYear = viewMonth === 11 ? viewYear + 1 : viewYear;
       const dateStr = toDateString(nextYear, nextMonth, d);
+      let isDisabled = false;
+      if (minDate && dateStr < minDate) isDisabled = true;
+      if (maxDate && dateStr > maxDate) isDisabled = true;
+      const isSelected =
+        parsedCurrent !== null &&
+        parsedCurrent.year === nextYear &&
+        parsedCurrent.month === nextMonth &&
+        parsedCurrent.day === d;
+      const isToday =
+        today.year === nextYear &&
+        today.month === nextMonth &&
+        today.day === d;
       days.push({
         dayNumber: d,
         isCurrentMonth: false,
         dateString: dateStr,
-        isSelected: false,
-        isToday: false,
-        isDisabled: true,
+        isSelected,
+        isToday,
+        isDisabled,
       });
     }
 
@@ -612,24 +635,12 @@ export function RevixDatePicker({
 
           {/* Days Grid */}
           <div className="mt-1 grid grid-cols-7 gap-1">
-            {calendarDays.map((cd, index) => {
-              if (!cd.isCurrentMonth) {
-                return (
-                  <div
-                    key={index}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-xs text-revix-disabled/40 select-none"
-                  >
-                    {cd.dayNumber}
-                  </div>
-                );
-              }
-
-              return (
+            {calendarDays.map((cd, index) => (
                 <button
                   key={index}
                   type="button"
                   disabled={cd.isDisabled}
-                  onClick={() => handleSelectDay(cd.dayNumber)}
+                  onClick={() => handleSelectDate(cd.dateString)}
                   className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-all duration-100 ${
                     cd.isDisabled
                       ? "cursor-not-allowed opacity-30 text-revix-disabled"
@@ -637,13 +648,14 @@ export function RevixDatePicker({
                         ? "bg-revix-primary text-white shadow-xs scale-105"
                         : cd.isToday
                           ? "border border-revix-primary text-revix-primary font-bold hover:bg-revix-tint"
-                          : "text-revix-dark hover:bg-revix-surface hover:text-revix-primary"
+                          : cd.isCurrentMonth
+                            ? "cursor-pointer text-revix-dark hover:bg-revix-surface hover:text-revix-primary"
+                            : "cursor-pointer text-revix-secondary/70 hover:bg-revix-surface hover:text-revix-primary"
                   }`}
                 >
                   {cd.dayNumber}
                 </button>
-              );
-            })}
+            ))}
           </div>
 
           {/* Time Picker Section (if withTime is true) */}
