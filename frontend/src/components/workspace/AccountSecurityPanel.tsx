@@ -8,8 +8,10 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { StudioBadge } from "@/components/shared/workspace";
 import {
   useChangePasswordMutation,
+  useUpdateMySignatureMutation,
   type AuthUserDto,
 } from "@/store/api/authApi";
+import { SignaturePadModal } from "@/components/shared/SignaturePadModal";
 import type {
   BranchDto,
   CompanyDto,
@@ -34,12 +36,17 @@ export function AccountSecurityPanel({
 }: AccountSecurityPanelProps) {
   const [changePassword, { isLoading: isChangingPassword }] =
     useChangePasswordMutation();
+  const [updateMySignature, { isLoading: isSavingSignature }] =
+    useUpdateMySignatureMutation();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
   const [pwError, setPwError] = useState<string | null>(null);
+  const [isSignPadOpen, setIsSignPadOpen] = useState(false);
+  const [sigSuccess, setSigSuccess] = useState<string | null>(null);
+  const [sigError, setSigError] = useState<string | null>(null);
 
   const initials = user.fullName
     .split(" ")
@@ -253,6 +260,118 @@ export function AccountSecurityPanel({
           </div>
         </form>
       </SectionCard>
+
+      <SectionCard
+        title={isRtl ? "٣. توقيعي الشخصي للعقود" : "3. My Personal Contract Signature"}
+      >
+        <div className="space-y-3">
+          <p className="text-xs text-revix-secondary">
+            {isRtl
+              ? "يُحفظ هذا التوقيع على حسابك الشخصي ويُطبع تلقائياً كتوقيع المؤجر (الموظف المسؤول) في جميع العقود التي تنشئها."
+              : "Saved exclusively on your employee account and printed automatically as the Lessor's signature on contracts you issue."}
+          </p>
+
+          {sigSuccess && (
+            <Alert
+              variant="success"
+              message={sigSuccess}
+              onClose={() => setSigSuccess(null)}
+            />
+          )}
+          {sigError && (
+            <Alert
+              variant="error"
+              message={sigError}
+              onClose={() => setSigError(null)}
+            />
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-revix-border bg-revix-surface/40 p-4">
+            {user.signatureDataUrl ? (
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg border border-revix-border bg-white p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={user.signatureDataUrl}
+                    alt={isRtl ? "توقيع الموظف" : "Employee Signature"}
+                    className="h-14 w-44 object-contain"
+                  />
+                </div>
+                <StudioBadge variant="success">
+                  {isRtl ? "التوقيع محفوظ" : "Signature Saved"}
+                </StudioBadge>
+              </div>
+            ) : (
+              <div className="text-xs font-medium text-revix-secondary">
+                {isRtl ? "لم تقم بإضافة توقيعك الشخصي بعد." : "No personal signature saved yet."}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              {user.signatureDataUrl && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isSavingSignature}
+                  onClick={async () => {
+                    setSigSuccess(null);
+                    setSigError(null);
+                    try {
+                      await updateMySignature({ signatureDataUrl: null }).unwrap();
+                      setSigSuccess(isRtl ? "تم حذف التوقيع." : "Signature cleared.");
+                    } catch (err) {
+                      setSigError(getApiErrorMessage(err) ?? (isRtl ? "تعذر حذف التوقيع." : "Failed to clear signature."));
+                    }
+                  }}
+                >
+                  {isRtl ? "مسح التوقيع" : "Clear"}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="primary"
+                disabled={isSavingSignature}
+                onClick={() => setIsSignPadOpen(true)}
+              >
+                {user.signatureDataUrl
+                  ? isRtl
+                    ? "تحديث التوقيع"
+                    : "Update Signature"
+                  : isRtl
+                    ? "إضافة توقيعي"
+                    : "Add Signature"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SignaturePadModal
+        isOpen={isSignPadOpen}
+        isRtl={isRtl}
+        title={isRtl ? "توقيعي الشخصي (الموظف)" : "My Personal Signature"}
+        initialSignatureUrl={user.signatureDataUrl ?? null}
+        isSaving={isSavingSignature}
+        onClose={() => setIsSignPadOpen(false)}
+        onSave={async (dataUrl) => {
+          setSigSuccess(null);
+          setSigError(null);
+          try {
+            await updateMySignature({ signatureDataUrl: dataUrl }).unwrap();
+            setIsSignPadOpen(false);
+            setSigSuccess(
+              isRtl
+                ? "تم حفظ توقيعك الشخصي بنجاح."
+                : "Your personal signature has been saved.",
+            );
+          } catch (err) {
+            setSigError(
+              getApiErrorMessage(err) ??
+                (isRtl ? "تعذر حفظ التوقيع." : "Failed to save signature."),
+            );
+          }
+        }}
+      />
     </div>
   );
 }

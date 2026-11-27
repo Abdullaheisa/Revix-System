@@ -25,6 +25,7 @@ export interface PublicAuthUser {
   emailVerified: boolean;
   status: "active" | "disabled";
   companyId: string | null;
+  signatureDataUrl?: string | null;
 }
 
 function toPublicUser(
@@ -38,6 +39,7 @@ function toPublicUser(
     emailVerified: user.emailVerifiedAt !== null,
     status: user.status,
     companyId,
+    signatureDataUrl: user.signatureDataUrl ?? null,
   };
 }
 
@@ -52,7 +54,8 @@ export type AuthServiceErrorCode =
   | "ALREADY_VERIFIED"
   | "UNAUTHORIZED"
   | "WRONG_CURRENT_PASSWORD"
-  | "DELIVERY_FAILED";
+  | "DELIVERY_FAILED"
+  | "INVALID_INPUT";
 
 export class AuthServiceError extends Error {
   public readonly code: AuthServiceErrorCode;
@@ -450,6 +453,25 @@ export class AuthService {
       : await this.store.findCompanyByOwnerUserId(user.id);
     const companyId = membership?.companyId ?? company?.id ?? null;
     return toPublicUser(user, companyId);
+  }
+
+  async updateMySignature(
+    rawSessionToken: string | undefined,
+    signatureDataUrl: string | null,
+  ): Promise<PublicAuthUser> {
+    const authUser = await this.authenticateSession(rawSessionToken);
+    if (!authUser) {
+      throw new AuthServiceError("UNAUTHORIZED", "Not signed in.", 401);
+    }
+    const cleanSig = signatureDataUrl?.trim() || null;
+    if (cleanSig && !cleanSig.startsWith("data:image/")) {
+      throw new AuthServiceError("INVALID_INPUT", "Invalid signature image format.", 400);
+    }
+    const updated = await this.store.updateUserSignature(authUser.id, cleanSig);
+    if (!updated) {
+      throw new AuthServiceError("UNAUTHORIZED", "User not found.", 401);
+    }
+    return toPublicUser(updated, authUser.companyId);
   }
 
   async logout(rawSessionToken: string | undefined): Promise<void> {

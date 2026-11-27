@@ -52,6 +52,8 @@ const companyPayloadSchema = z.object({
     .enum(["independent", "network_main"])
     .optional()
     .default("independent"),
+  contractTermsAr: z.string().max(25000).nullable().optional(),
+  contractTermsEn: z.string().max(25000).nullable().optional(),
 });
 
 const branchPayloadSchema = z.object({

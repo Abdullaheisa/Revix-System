@@ -22,6 +22,10 @@ export interface AuthDataStore {
     updatedAt: Date,
   ): Promise<void>;
   updateUserStatus(userId: string, status: UserStatus): Promise<void>;
+  updateUserSignature(
+    userId: string,
+    signatureDataUrl: string | null,
+  ): Promise<UserRecord | null>;
 
   createSession(input: {
     id: string;

@@ -161,6 +161,22 @@ export class PostgresAuthDataStore implements AuthDataStore {
     );
   }
 
+  async updateUserSignature(
+    userId: string,
+    signatureDataUrl: string | null,
+  ): Promise<UserRecord | null> {
+    const res = await this.pool.query<DbUserRow>(
+      `UPDATE users
+       SET signature_data_url = $2,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [userId, signatureDataUrl],
+    );
+    const row = res.rows[0];
+    return row ? mapUserRow(row) : null;
+  }
+
   async createSession(input: {
     id: string;
     userId: string;
@@ -383,6 +399,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
         business_reg_number = $14,
         tax_reg_number = $15,
         operating_mode = $16,
+        contract_terms_ar = $17,
+        contract_terms_en = $18,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *`,
@@ -403,6 +421,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.businessRegNumber.trim(),
         input.taxRegNumber.trim(),
         input.operatingMode,
+        input.contractTermsAr?.trim() || null,
+        input.contractTermsEn?.trim() || null,
       ],
     );
     const row = res.rows[0];
@@ -3284,6 +3304,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       address: (r.address as string | null) ?? null,
       workAddress: (r.work_address as string | null) ?? null,
       notes: (r.notes as string | null) ?? null,
+      signatureDataUrl: (r.signature_data_url as string | null) ?? null,
       createdAt: new Date(String(r.created_at)),
       updatedAt: new Date(String(r.updated_at)),
     };
@@ -3436,13 +3457,37 @@ export class PostgresAuthDataStore implements AuthDataStore {
       signedAt: r.signed_at ? new Date(String(r.signed_at)) : null,
       createdByUserId: (r.created_by_user_id as string | null) ?? null,
       createdByUserName: (r.created_by_user_name as string | null) ?? null,
+      createdByUserSignatureDataUrl: (r.created_by_user_signature_data_url as string | null) ?? null,
       createdAt: new Date(String(r.created_at)),
       updatedAt: new Date(String(r.updated_at)),
       vehicleAssetCode: (r.vehicle_asset_code as string | undefined) ?? undefined,
       vehiclePlate: (r.vehicle_plate as string | undefined) ?? undefined,
       vehicleName: (r.vehicle_name as string | undefined) ?? undefined,
+      vehicleMake: (r.vehicle_make as string | undefined) ?? undefined,
+      vehicleModel: (r.vehicle_model as string | undefined) ?? undefined,
+      vehicleModelYear: r.vehicle_model_year != null ? Number(r.vehicle_model_year) : undefined,
+      vehicleCategory: (r.vehicle_category as string | undefined) ?? undefined,
+      vehicleColor: (r.vehicle_color as string | undefined) ?? undefined,
+      vehicleInsuranceCompany: (r.vehicle_insurance_company as string | null) ?? null,
+      vehicleInsuranceExpiry: r.vehicle_insurance_expiry
+        ? this.formatPgDate(r.vehicle_insurance_expiry)
+        : null,
+      vehicleDailyKmLimit: r.vehicle_daily_km_limit != null ? Number(r.vehicle_daily_km_limit) : null,
+      vehicleExtraKmRate: r.vehicle_extra_km_rate != null ? Number(r.vehicle_extra_km_rate) : null,
       customerName: (r.customer_name as string | undefined) ?? undefined,
       customerPhone: (r.customer_phone as string | undefined) ?? undefined,
+      customerSecondaryPhone: (r.customer_secondary_phone as string | null) ?? null,
+      customerNationality: (r.customer_nationality as string | null) ?? null,
+      customerNationalId: (r.customer_national_id as string | null) ?? null,
+      customerNationalIdExpiry: r.customer_national_id_expiry
+        ? this.formatPgDate(r.customer_national_id_expiry)
+        : null,
+      customerDriverLicenseNo: (r.customer_driver_license_no as string | null) ?? null,
+      customerLicenseExpiry: r.customer_license_expiry
+        ? this.formatPgDate(r.customer_license_expiry)
+        : null,
+      customerAddress: (r.customer_address as string | null) ?? null,
+      customerWorkAddress: (r.customer_work_address as string | null) ?? null,
       branchName: (r.branch_name as string | undefined) ?? undefined,
     };
   }
@@ -3453,10 +3498,28 @@ export class PostgresAuthDataStore implements AuthDataStore {
               fv.asset_code AS vehicle_asset_code,
               fv.license_plate AS vehicle_plate,
               CONCAT_WS(' ', vv.make, vv.model, vv.model_year) AS vehicle_name,
+              vv.make AS vehicle_make,
+              vv.model AS vehicle_model,
+              vv.model_year AS vehicle_model_year,
+              vv.category AS vehicle_category,
+              fv.color AS vehicle_color,
+              fv.insurance_company AS vehicle_insurance_company,
+              fv.insurance_expiry AS vehicle_insurance_expiry,
+              fv.daily_km_limit AS vehicle_daily_km_limit,
+              fv.extra_km_rate AS vehicle_extra_km_rate,
               cu.full_name AS customer_name,
               cu.phone AS customer_phone,
+              cu.secondary_phone AS customer_secondary_phone,
+              cu.nationality AS customer_nationality,
+              cu.national_id AS customer_national_id,
+              cu.national_id_expiry AS customer_national_id_expiry,
+              cu.driver_license_no AS customer_driver_license_no,
+              cu.license_expiry AS customer_license_expiry,
+              cu.address AS customer_address,
+              cu.work_address AS customer_work_address,
               br.name AS branch_name,
-              COALESCE(rcu.full_name, rcu.email) AS created_by_user_name
+              COALESCE(rcu.full_name, rcu.email) AS created_by_user_name,
+              rcu.signature_data_url AS created_by_user_signature_data_url
        FROM rental_contracts rc
        JOIN fleet_vehicles fv ON fv.id = rc.vehicle_id
        LEFT JOIN vehicle_variants vv ON vv.id = fv.variant_id
@@ -3498,6 +3561,15 @@ export class PostgresAuthDataStore implements AuthDataStore {
     const nextNum = Number(countRes.rows[0]?.cnt ?? 0) + 1;
     const contractNumber = `RC-${String(nextNum).padStart(4, "0")}`;
 
+    let effectiveSignature = input.customerSignatureDataUrl?.trim() || null;
+    if (!effectiveSignature) {
+      const custSigRes = await this.pool.query<{ signature_data_url: string | null }>(
+        `SELECT signature_data_url FROM customers WHERE id = $1 AND company_id = $2`,
+        [input.customerId, input.companyId],
+      );
+      effectiveSignature = custSigRes.rows[0]?.signature_data_url?.trim() || null;
+    }
+
     const res = await this.pool.query(
       `INSERT INTO rental_contracts
         (company_id, branch_id, contract_number, vehicle_id, customer_id, status,
@@ -3525,7 +3597,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.paidAmount ?? 0,
         input.depositAmount ?? 0,
         input.notes?.trim() || null,
-        input.customerSignatureDataUrl?.trim() || null,
+        effectiveSignature,
         input.createdByUserId || null,
       ],
     );
@@ -3564,16 +3636,23 @@ export class PostgresAuthDataStore implements AuthDataStore {
     contractId: string,
     signatureDataUrl: string,
   ): Promise<RentalContractRecord | null> {
-    const res = await this.pool.query(
+    const res = await this.pool.query<{ id: string; customer_id: string }>(
       `UPDATE rental_contracts
        SET customer_signature_data_url = $1,
            signed_at = NOW(),
            updated_at = NOW()
        WHERE id = $2 AND company_id = $3
-       RETURNING id`,
+       RETURNING id, customer_id`,
       [signatureDataUrl, contractId, companyId],
     );
     if (!res.rows[0]) return null;
+    await this.pool.query(
+      `UPDATE customers
+       SET signature_data_url = $1,
+           updated_at = NOW()
+       WHERE id = $2 AND company_id = $3`,
+      [signatureDataUrl, res.rows[0].customer_id, companyId],
+    );
     const list = await this.listRentalContracts(companyId);
     return list.find((c) => c.id === contractId) ?? null;
   }

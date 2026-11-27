@@ -387,6 +387,24 @@ export interface RentalContractDto {
   branchName?: string;
   createdByUserId?: string | null;
   createdByUserName?: string | null;
+  createdByUserSignatureDataUrl?: string | null;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleModelYear?: number;
+  vehicleCategory?: string;
+  vehicleColor?: string;
+  vehicleInsuranceCompany?: string | null;
+  vehicleInsuranceExpiry?: string | null;
+  vehicleDailyKmLimit?: number | null;
+  vehicleExtraKmRate?: number | null;
+  customerSecondaryPhone?: string | null;
+  customerNationality?: string | null;
+  customerNationalId?: string | null;
+  customerNationalIdExpiry?: string | null;
+  customerDriverLicenseNo?: string | null;
+  customerLicenseExpiry?: string | null;
+  customerAddress?: string | null;
+  customerWorkAddress?: string | null;
 }
 
 export interface InsuranceCompanyDto {

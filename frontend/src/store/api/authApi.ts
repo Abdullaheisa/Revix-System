@@ -7,6 +7,7 @@ export interface AuthUserDto {
   emailVerified: boolean;
   status: "active" | "disabled";
   companyId: string | null;
+  signatureDataUrl?: string | null;
 }
 
 export interface SignupRequestDto {
@@ -155,6 +156,18 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["AuthUser"],
     }),
+
+    updateMySignature: builder.mutation<
+      AuthUserResponseDto,
+      { signatureDataUrl: string | null }
+    >({
+      query: (body) => ({
+        url: "/auth/me/signature",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["AuthUser"],
+    }),
   }),
   overrideExisting: true,
 });
@@ -170,4 +183,5 @@ export const {
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useChangePasswordMutation,
+  useUpdateMySignatureMutation,
 } = authApi;

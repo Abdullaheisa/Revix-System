@@ -393,6 +393,35 @@ export function createAuthRouter(options: {
     });
   });
 
+  router.patch("/me/signature", async (req: Request, res: Response) => {
+    const rawSession = req.cookies?.[env.sessionCookieName] as
+      | string
+      | undefined;
+    const sig =
+      typeof req.body?.signatureDataUrl === "string"
+        ? req.body.signatureDataUrl
+        : null;
+    try {
+      const user = await authService.updateMySignature(rawSession, sig);
+      res.status(200).json({
+        ok: true,
+        data: { user },
+      });
+    } catch (err) {
+      if (err instanceof AuthServiceError) {
+        res.status(err.status).json({
+          ok: false,
+          error: { code: err.code, message: err.message },
+        });
+        return;
+      }
+      res.status(500).json({
+        ok: false,
+        error: { code: "INTERNAL_ERROR", message: "Failed to update signature." },
+      });
+    }
+  });
+
   router.post(
     "/forgot-password",
     strictAuthLimiter,

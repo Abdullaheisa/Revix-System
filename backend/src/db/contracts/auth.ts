@@ -11,6 +11,7 @@ export interface UserRecord {
   passwordHash: string;
   emailVerifiedAt: Date | null;
   status: UserStatus;
+  signatureDataUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

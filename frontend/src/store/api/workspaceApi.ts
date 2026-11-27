@@ -25,6 +25,8 @@ export interface CompanyDto {
   taxRegNumber: string;
   operatingMode: CompanyOperatingMode;
   parentCompanyId: string | null;
+  contractTermsAr?: string | null;
+  contractTermsEn?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -87,6 +89,8 @@ export interface UpsertCompanyRequestDto {
   businessRegNumber: string;
   taxRegNumber: string;
   operatingMode: "independent" | "network_main";
+  contractTermsAr?: string | null;
+  contractTermsEn?: string | null;
 }
 
 export interface CompanyResponseDto {

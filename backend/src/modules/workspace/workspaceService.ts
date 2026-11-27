@@ -233,6 +233,8 @@ export class WorkspaceService {
     businessRegNumber: string;
     taxRegNumber: string;
     operatingMode: CompanyOperatingMode;
+    contractTermsAr?: string | null;
+    contractTermsEn?: string | null;
   }): Promise<CompanyRecord> {
     const existingMembership = await this.store.findMembershipByUserId(
       input.userId,
@@ -325,6 +327,8 @@ export class WorkspaceService {
     businessRegNumber: string;
     taxRegNumber: string;
     operatingMode: CompanyOperatingMode;
+    contractTermsAr?: string | null;
+    contractTermsEn?: string | null;
   }): Promise<CompanyRecord> {
     const { company } = await this.resolveCompanyAndAuthorize(input.userId, {
       resource: "company",
@@ -356,6 +360,8 @@ export class WorkspaceService {
       businessRegNumber: input.businessRegNumber,
       taxRegNumber: input.taxRegNumber,
       operatingMode: input.operatingMode,
+      contractTermsAr: input.contractTermsAr ?? null,
+      contractTermsEn: input.contractTermsEn ?? null,
     });
 
     if (!updated) {

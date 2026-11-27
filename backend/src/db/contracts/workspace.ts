@@ -24,6 +24,8 @@ export interface CompanyRecord {
   taxRegNumber: string;
   operatingMode: CompanyOperatingMode;
   parentCompanyId: string | null;
+  contractTermsAr?: string | null;
+  contractTermsEn?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +67,8 @@ export interface UpdateCompanyInput {
   businessRegNumber: string;
   taxRegNumber: string;
   operatingMode: CompanyOperatingMode;
+  contractTermsAr?: string | null;
+  contractTermsEn?: string | null;
 }
 
 export interface BranchRecord {

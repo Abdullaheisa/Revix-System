@@ -7,6 +7,7 @@ export interface DbUserRow {
   password_hash: string;
   email_verified_at: Date | null;
   status: UserStatus;
+  signature_data_url?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -51,6 +52,8 @@ export interface DbCompanyRow {
   tax_reg_number: string;
   operating_mode: CompanyOperatingMode;
   parent_company_id: string | null;
+  contract_terms_ar?: string | null;
+  contract_terms_en?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -647,6 +650,7 @@ export function mapUserRow(row: DbUserRow): UserRecord {
       ? new Date(row.email_verified_at)
       : null,
     status: row.status,
+    signatureDataUrl: row.signature_data_url ?? null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -697,6 +701,8 @@ export function mapCompanyRow(row: DbCompanyRow): CompanyRecord {
     taxRegNumber: row.tax_reg_number,
     operatingMode: row.operating_mode,
     parentCompanyId: row.parent_company_id,
+    contractTermsAr: row.contract_terms_ar ?? null,
+    contractTermsEn: row.contract_terms_en ?? null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };

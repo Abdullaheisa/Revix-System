@@ -461,6 +461,18 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     this.saveToDisk();
   }
 
+  async updateUserSignature(
+    userId: string,
+    signatureDataUrl: string | null,
+  ): Promise<UserRecord | null> {
+    const user = this.usersById.get(userId);
+    if (!user) return null;
+    user.signatureDataUrl = signatureDataUrl;
+    user.updatedAt = new Date();
+    this.saveToDisk();
+    return user;
+  }
+
   async createSession(input: {
     id: string;
     userId: string;
@@ -2351,6 +2363,14 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       updatedAt: new Date(),
     };
     this.contractsById.set(contractId, updated);
+    const cust = this.customersById.get(existing.customerId);
+    if (cust && cust.companyId === companyId) {
+      this.customersById.set(existing.customerId, {
+        ...cust,
+        signatureDataUrl,
+        updatedAt: new Date(),
+      });
+    }
     return updated;
   }
 

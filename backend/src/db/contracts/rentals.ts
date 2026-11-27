@@ -16,6 +16,7 @@ export interface CustomerRecord {
   address: string | null;
   workAddress: string | null;
   notes: string | null;
+  signatureDataUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,13 +50,31 @@ export interface RentalContractRecord {
   signedAt?: Date | null;
   createdByUserId: string | null;
   createdByUserName?: string | null;
+  createdByUserSignatureDataUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
   // Enriched presentation fields
   vehicleAssetCode?: string;
   vehiclePlate?: string;
   vehicleName?: string;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleModelYear?: number;
+  vehicleCategory?: string;
+  vehicleColor?: string;
+  vehicleInsuranceCompany?: string | null;
+  vehicleInsuranceExpiry?: string | null;
+  vehicleDailyKmLimit?: number | null;
+  vehicleExtraKmRate?: number | null;
   customerName?: string;
   customerPhone?: string;
+  customerSecondaryPhone?: string | null;
+  customerNationality?: string | null;
+  customerNationalId?: string | null;
+  customerNationalIdExpiry?: string | null;
+  customerDriverLicenseNo?: string | null;
+  customerLicenseExpiry?: string | null;
+  customerAddress?: string | null;
+  customerWorkAddress?: string | null;
   branchName?: string;
 }
