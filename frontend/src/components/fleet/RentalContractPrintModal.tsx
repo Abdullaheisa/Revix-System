@@ -285,7 +285,7 @@ export function RentalContractPrintModal({
   <title>${contract?.contractNumber ?? "Contract"}</title>
   ${stylesHtml}
   <style>
-    @page { size: A4 portrait; margin: 10mm; }
+    @page { size: A4 portrait; margin: 0; }
     html, body {
       margin: 0;
       padding: 0;
@@ -298,19 +298,26 @@ export function RentalContractPrintModal({
       --brand-soft: color-mix(in srgb, ${accent} 10%, white);
       --brand-border: color-mix(in srgb, ${accent} 35%, white);
       padding: 0 !important;
+      margin: 0 !important;
     }
     .revix-print-page {
+      box-sizing: border-box !important;
       break-after: page;
       page-break-after: always;
       border: none !important;
       box-shadow: none !important;
       margin: 0 auto !important;
-      padding: 0 !important;
+      padding: 8mm 10mm !important;
       max-width: 100% !important;
+      width: 100% !important;
     }
     .revix-print-page:last-child {
       break-after: auto;
       page-break-after: auto;
+    }
+    .revix-clause-item, .revix-sig-row {
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
     .no-print { display: none !important; }
   </style>
@@ -612,7 +619,7 @@ export function RentalContractPrintModal({
           </div>
 
           {/* ================= PAGE 2: TERMS & CONDITIONS ================= */}
-          <div className="revix-print-page mx-auto w-full max-w-[820px] rounded-xl border border-slate-300 bg-white p-6 shadow-sm space-y-3 text-slate-900">
+          <div className="revix-print-page mx-auto w-full max-w-[820px] rounded-xl border border-slate-300 bg-white p-5 shadow-sm space-y-2 text-slate-900">
             <CompanyPrintHeader company={company} />
 
             <div className="grid grid-cols-12 gap-2 items-center">
@@ -624,15 +631,15 @@ export function RentalContractPrintModal({
                 ].map((box) => (
                   <div
                     key={box.en}
-                    className="brand-box rounded-lg border p-1.5 text-center"
+                    className="brand-box rounded-lg border p-1 text-center"
                   >
-                    <div className="text-[9px] font-bold text-slate-700">{box.ar}</div>
-                    <div className="text-[8.5px] text-slate-500">{box.en}</div>
-                    <div className="mt-0.5 font-mono text-[10px] font-bold text-slate-900">{box.val}</div>
+                    <div className="text-[8.5px] font-bold text-slate-700">{box.ar}</div>
+                    <div className="text-[8px] text-slate-500">{box.en}</div>
+                    <div className="mt-0.5 font-mono text-[9.5px] font-bold text-slate-900">{box.val}</div>
                   </div>
                 ))}
               </div>
-              <div className="col-span-7 text-end text-[10.5px] leading-relaxed font-semibold text-slate-800" dir="rtl">
+              <div className="col-span-7 text-end text-[9.5px] leading-snug font-semibold text-slate-800" dir="rtl">
                 <div>أقر أنا الموقع أدناه / (المستأجر)</div>
                 <div>
                   بأنني استأجرت السيارة التي تحمل اللوحة رقم:{" "}
@@ -645,18 +652,18 @@ export function RentalContractPrintModal({
             </div>
 
             {/* Bilingual Terms Grid */}
-            <div className="brand-box grid grid-cols-2 gap-3 rounded-lg border p-3">
-              <div className="brand-box space-y-1.5 border-r pr-2.5 text-[9.2px] leading-snug text-slate-800">
+            <div className="brand-box grid grid-cols-2 gap-2.5 rounded-lg border p-2.5">
+              <div className="brand-box space-y-1 border-r pr-2 text-[8.1px] leading-[1.3] text-slate-800">
                 {termsEn.map((clause, idx) => (
-                  <div key={idx} className="flex gap-1.5">
+                  <div key={idx} className="revix-clause-item flex gap-1">
                     <span className="brand-text font-mono font-bold shrink-0">{idx + 1}.</span>
                     <span>{clause}</span>
                   </div>
                 ))}
               </div>
-              <div className="space-y-1.5 pl-1 text-[9.5px] leading-snug text-slate-800 text-right" dir="rtl">
+              <div className="space-y-1 pl-0.5 text-[8.4px] leading-[1.34] text-slate-800 text-right" dir="rtl">
                 {termsAr.map((clause, idx) => (
-                  <div key={idx} className="flex gap-1.5">
+                  <div key={idx} className="revix-clause-item flex gap-1">
                     <span className="brand-text font-mono font-bold shrink-0">{idx + 1} -</span>
                     <span>{clause}</span>
                   </div>
@@ -664,7 +671,7 @@ export function RentalContractPrintModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 pt-1">
+            <div className="revix-sig-row grid grid-cols-3 gap-3 pt-0.5">
               <SignatureBox
                 labelEn="Lessor's Signature"
                 labelAr="توقيع المؤجر"
