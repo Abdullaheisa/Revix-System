@@ -8,6 +8,7 @@ interface ContractActionsMenuProps {
   contract: RentalContractDto;
   isRtl: boolean;
   onPrintContract: (contract: RentalContractDto) => void;
+  onViewReturnScan?: (contract: RentalContractDto) => void;
   onOpenVoucher: (contract: RentalContractDto, type: ContractVoucherType) => void;
   onCompleteContract: (contract: RentalContractDto) => void;
   onCancelContract: (contract: RentalContractDto) => void;
@@ -17,6 +18,7 @@ export function ContractActionsMenu({
   contract,
   isRtl,
   onPrintContract,
+  onViewReturnScan,
   onOpenVoucher,
   onCompleteContract,
   onCancelContract,
@@ -115,6 +117,21 @@ export function ContractActionsMenu({
             <RevixIcon name="file-text" size={14} className="text-slate-500" />
             <span>{isRtl ? "طباعة / توقيع" : "Print / Sign"}</span>
           </button>
+
+          {contract.returnContractImageUrl && onViewReturnScan && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onViewReturnScan(contract);
+              }}
+              className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-start font-semibold text-blue-700 hover:bg-blue-50/70"
+            >
+              <RevixIcon name="eye" size={14} className="text-blue-600" />
+              <span>{isRtl ? "صورة العقد بعد التسليم" : "Return Contract Scan"}</span>
+            </button>
+          )}
 
           <div className="my-1 border-t border-slate-100" />
 

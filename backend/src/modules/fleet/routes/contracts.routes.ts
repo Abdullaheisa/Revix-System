@@ -112,10 +112,16 @@ router.post(
       try {
         const updated = await fleetService.completeRentalContract(req.tenantActor!, id!, {
           returnOdometer: Number(req.body?.returnOdometer ?? 0),
+          returnedAt: typeof req.body?.returnedAt === "string" ? req.body.returnedAt.trim() || null : null,
+          actualDays: req.body?.actualDays != null ? Number(req.body.actualDays) : undefined,
           extraCharges: req.body?.extraCharges != null ? Number(req.body.extraCharges) : undefined,
           paidAmount: req.body?.paidAmount != null ? Number(req.body.paidAmount) : undefined,
           returnCondition: typeof req.body?.returnCondition === "string" ? req.body.returnCondition.trim() : null,
           notes: req.body?.notes ?? null,
+          returnContractImageUrl:
+            typeof req.body?.returnContractImageUrl === "string" && req.body.returnContractImageUrl.trim()
+              ? req.body.returnContractImageUrl.trim()
+              : null,
         });
         res.status(200).json({ ok: true, data: updated });
       } catch (err) {

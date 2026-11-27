@@ -562,7 +562,11 @@ export function RentalContractPrintModal({
                     <BilingualRow
                       labelEn="Employee"
                       labelAr="الموظف"
-                      value={contract.status === "completed" ? contract.createdByUserName || "" : ""}
+                      value={
+                        contract.status === "completed"
+                          ? contract.receivedByUserName || contract.createdByUserName || ""
+                          : ""
+                      }
                     />
                     <div className="pt-1 flex items-center justify-between text-[10px] font-bold text-slate-700">
                       <span>Lessee&apos;s Signature</span>
@@ -894,7 +898,18 @@ export function RentalContractPrintModal({
                   signatureDataUrl={lesseeSignatureUrl}
                   subLabel={contract.customerName}
                 />
-                <SignatureBox labelEn="Employee (Return)" labelAr="توقيع الموظف عند التسليم" />
+                <SignatureBox
+                  labelEn="Employee (Return)"
+                  labelAr="توقيع الموظف عند التسليم"
+                  signatureDataUrl={
+                    contract.status === "completed"
+                      ? contract.receivedByUserSignatureDataUrl
+                      : null
+                  }
+                  subLabel={
+                    contract.status === "completed" ? contract.receivedByUserName : null
+                  }
+                />
                 <SignatureBox labelEn="Customer (Return)" labelAr="توقيع العميل عند التسليم" />
               </div>
             </div>

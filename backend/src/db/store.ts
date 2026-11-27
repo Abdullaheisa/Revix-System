@@ -554,10 +554,14 @@ export interface AuthDataStore {
     contractId: string,
     input: {
       returnOdometer: number;
+      returnedAt?: string | null;
+      actualDays?: number;
       extraCharges?: number;
       paidAmount?: number;
       returnCondition?: string | null;
       notes?: string | null;
+      receivedByUserId?: string | null;
+      returnContractImageUrl?: string | null;
     },
   ): Promise<RentalContractRecord | null>;
   cancelRentalContract(

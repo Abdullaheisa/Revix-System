@@ -397,6 +397,11 @@ export interface RentalContractDto {
   cancelledByUserId?: string | null;
   cancelledByUserName?: string | null;
   cancelledAt?: string | null;
+  receivedByUserId?: string | null;
+  receivedByUserName?: string | null;
+  receivedByUserSignatureDataUrl?: string | null;
+  actualDays?: number | null;
+  returnContractImageUrl?: string | null;
   vehicleMake?: string;
   vehicleModel?: string;
   vehicleModelYear?: number;
@@ -1488,10 +1493,13 @@ export const fleetApi = baseApi.injectEndpoints({
       {
         id: string;
         returnOdometer: number;
+        returnedAt?: string | null;
+        actualDays?: number;
         extraCharges?: number;
         paidAmount?: number;
         returnCondition?: string | null;
         notes?: string | null;
+        returnContractImageUrl?: string | null;
       }
     >({
       query: ({ id, ...body }) => ({

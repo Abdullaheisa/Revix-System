@@ -57,6 +57,7 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
     contract: RentalContractDto;
     type: ContractVoucherType;
   } | null>(null);
+  const [viewingReturnScan, setViewingReturnScan] = useState<RentalContractDto | null>(null);
 
   const contracts = useMemo(() => contractsData?.data ?? [], [contractsData?.data]);
 
@@ -249,6 +250,11 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                     <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.cls}`}>
                       {isRtl ? st.ar : st.en}
                     </span>
+                    {c.status === "completed" && c.receivedByUserName && (
+                      <div className="mt-0.5 text-[10px] text-blue-700">
+                        {isRtl ? "استلمها:" : "Received by:"} {c.receivedByUserName}
+                      </div>
+                    )}
                     {c.status === "cancelled" && c.cancelledByUserName && (
                       <div className="mt-0.5 text-[10px] text-rose-600">
                         {isRtl ? "ألغاه:" : "By:"} {c.cancelledByUserName}
@@ -260,6 +266,7 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                       contract={c}
                       isRtl={isRtl}
                       onPrintContract={setPrintingContract}
+                      onViewReturnScan={setViewingReturnScan}
                       onOpenVoucher={(contract, type) => setVoucherModal({ contract, type })}
                       onCompleteContract={setCompletingContract}
                       onCancelContract={(contract) => {
@@ -305,6 +312,42 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
         isRtl={isRtl}
         onClose={() => setVoucherModal(null)}
       />
+
+      {viewingReturnScan && viewingReturnScan.returnContractImageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-[2px]"
+          onClick={() => setViewingReturnScan(null)}
+        >
+          <div
+            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-revix-border bg-white shadow-2xl"
+            dir={isRtl ? "rtl" : "ltr"}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-revix-border px-5 py-3.5">
+              <h3 className="text-sm font-bold text-revix-dark">
+                {isRtl
+                  ? `صورة العقد بعد التسليم — ${viewingReturnScan.contractNumber}`
+                  : `Return Contract Scan — ${viewingReturnScan.contractNumber}`}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setViewingReturnScan(null)}
+                className="cursor-pointer rounded-lg p-1 text-revix-secondary hover:bg-revix-surface"
+              >
+                <RevixIcon name="x" size={16} />
+              </button>
+            </div>
+            <div className="p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={viewingReturnScan.returnContractImageUrl}
+                alt="Signed return contract"
+                className="mx-auto max-h-[75vh] w-full rounded-xl border border-slate-200 object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {cancellingContract && (
         <div

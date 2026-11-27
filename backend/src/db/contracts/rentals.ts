@@ -60,6 +60,11 @@ export interface RentalContractRecord {
   cancelledByUserId?: string | null;
   cancelledByUserName?: string | null;
   cancelledAt?: Date | null;
+  receivedByUserId?: string | null;
+  receivedByUserName?: string | null;
+  receivedByUserSignatureDataUrl?: string | null;
+  actualDays?: number | null;
+  returnContractImageUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
   // Enriched presentation fields

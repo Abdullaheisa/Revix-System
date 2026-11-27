@@ -3574,6 +3574,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
       cancelledByUserId: (r.cancelled_by_user_id as string | null) ?? null,
       cancelledByUserName: (r.cancelled_by_user_name as string | null) ?? null,
       cancelledAt: r.cancelled_at ? new Date(String(r.cancelled_at)) : null,
+      receivedByUserId: (r.received_by_user_id as string | null) ?? null,
+      receivedByUserName: (r.received_by_user_name as string | null) ?? null,
+      receivedByUserSignatureDataUrl: (r.received_by_user_signature_data_url as string | null) ?? null,
+      actualDays: r.actual_days != null ? Number(r.actual_days) : null,
+      returnContractImageUrl: (r.return_contract_image_url as string | null) ?? null,
       createdAt: new Date(String(r.created_at)),
       updatedAt: new Date(String(r.updated_at)),
       vehicleAssetCode: (r.vehicle_asset_code as string | undefined) ?? undefined,
@@ -3639,7 +3644,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
               COALESCE(NULLIF(TRIM(br.currency_code), ''), NULLIF(TRIM(comp.base_currency), ''), 'EGP') AS currency_code,
               COALESCE(rcu.full_name, rcu.email) AS created_by_user_name,
               rcu.signature_data_url AS created_by_user_signature_data_url,
-              COALESCE(ccu.full_name, ccu.email) AS cancelled_by_user_name
+              COALESCE(ccu.full_name, ccu.email) AS cancelled_by_user_name,
+              COALESCE(rcvu.full_name, rcvu.email) AS received_by_user_name,
+              rcvu.signature_data_url AS received_by_user_signature_data_url
        FROM rental_contracts rc
        JOIN fleet_vehicles fv ON fv.id = rc.vehicle_id
        LEFT JOIN vehicle_variants vv ON vv.id = fv.variant_id
@@ -3655,6 +3662,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
        LEFT JOIN companies comp ON comp.id = rc.company_id
        LEFT JOIN users rcu ON rcu.id = rc.created_by_user_id
        LEFT JOIN users ccu ON ccu.id = rc.cancelled_by_user_id
+       LEFT JOIN users rcvu ON rcvu.id = rc.received_by_user_id
        WHERE rc.company_id = $1
        ORDER BY rc.created_at DESC`,
       [companyId],
@@ -3802,10 +3810,14 @@ export class PostgresAuthDataStore implements AuthDataStore {
     contractId: string,
     input: {
       returnOdometer: number;
+      returnedAt?: string | null;
+      actualDays?: number;
       extraCharges?: number;
       paidAmount?: number;
       returnCondition?: string | null;
       notes?: string | null;
+      receivedByUserId?: string | null;
+      returnContractImageUrl?: string | null;
     },
   ): Promise<RentalContractRecord | null> {
     const existingRes = await this.pool.query(
@@ -3815,12 +3827,22 @@ export class PostgresAuthDataStore implements AuthDataStore {
     const existing = existingRes.rows[0];
     if (!existing) return null;
 
+    const effectiveDays =
+      input.actualDays != null && input.actualDays >= 1
+        ? Math.round(input.actualDays)
+        : Number(existing.total_days ?? 1);
+    const newSubtotal =
+      input.actualDays != null && input.actualDays >= 1
+        ? Number(existing.daily_rate ?? 0) * effectiveDays
+        : Number(existing.subtotal ?? 0);
     const extra = Number(input.extraCharges ?? existing.extra_charges ?? 0);
-    const newTotal =
-      Number(existing.subtotal ?? 0) -
-      Number(existing.discount ?? 0) +
-      Number(existing.insurance_fee ?? 0) +
-      extra;
+    const newTotal = Math.max(
+      0,
+      newSubtotal -
+        Number(existing.discount ?? 0) +
+        Number(existing.insurance_fee ?? 0) +
+        extra,
+    );
 
     await this.pool.query(
       `UPDATE rental_contracts
@@ -3831,7 +3853,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
            paid_amount = COALESCE($4, paid_amount),
            return_condition = COALESCE($5, return_condition),
            notes = COALESCE($6, notes),
-           returned_at = NOW(),
+           actual_days = $9,
+           subtotal = $10,
+           returned_at = COALESCE($11::timestamptz, NOW()),
+           received_by_user_id = $12,
+           return_contract_image_url = COALESCE($13, return_contract_image_url),
            updated_at = NOW()
        WHERE id = $7 AND company_id = $8`,
       [
@@ -3843,6 +3869,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.notes?.trim() || null,
         contractId,
         companyId,
+        effectiveDays,
+        newSubtotal,
+        input.returnedAt || null,
+        input.receivedByUserId || null,
+        input.returnContractImageUrl || null,
       ],
     );
 

@@ -1810,7 +1810,16 @@ export class FleetService {
   async completeRentalContract(
     actor: TenantActor,
     contractId: string,
-    input: { returnOdometer: number; extraCharges?: number; paidAmount?: number; returnCondition?: string | null; notes?: string | null },
+    input: {
+      returnOdometer: number;
+      returnedAt?: string | null;
+      actualDays?: number;
+      extraCharges?: number;
+      paidAmount?: number;
+      returnCondition?: string | null;
+      notes?: string | null;
+      returnContractImageUrl?: string | null;
+    },
   ) {
     const existing = (await this.store.listRentalContracts(actor.company.id)).find(
       (c) => c.id === contractId,
@@ -1828,7 +1837,10 @@ export class FleetService {
         "Return odometer cannot be less than pickup odometer.",
       );
     }
-    const updated = await this.store.completeRentalContract(actor.company.id, contractId, input);
+    const updated = await this.store.completeRentalContract(actor.company.id, contractId, {
+      ...input,
+      receivedByUserId: actor.user.id,
+    });
     if (!updated) {
       throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
     }
