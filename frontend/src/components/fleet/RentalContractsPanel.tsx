@@ -3,7 +3,12 @@
 import { DataTable } from "@/components/ui/DataTable";
 import { useMemo, useState } from "react";
 import { Link, usePathname } from "@/i18n/navigation";
-import { parseFleetResourceRoute, rentalContractNewHref } from "@/lib/workspace/resourceRoutes";
+import {
+  customerHref,
+  parseFleetResourceRoute,
+  rentalContractNewHref,
+  vehicleHref,
+} from "@/lib/workspace/resourceRoutes";
 import {
   useCancelRentalContractMutation,
   useListRentalContractsQuery,
@@ -174,23 +179,52 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                     )}
                   </td>
                   <td className="py-2.5 px-3">
-                    <div className="font-bold text-revix-dark">{c.customerName || "—"}</div>
+                    {c.customerId ? (
+                      <Link
+                        href={customerHref(c.customerId)}
+                        className="font-bold text-revix-dark transition-colors hover:text-revix-primary hover:underline"
+                      >
+                        {c.customerName || "—"}
+                      </Link>
+                    ) : (
+                      <div className="font-bold text-revix-dark">{c.customerName || "—"}</div>
+                    )}
                     {c.customerPhone && (
                       <div className="font-mono text-[11px] text-revix-secondary">{c.customerPhone}</div>
                     )}
                   </td>
                   <td className="py-2.5 px-3">
-                    <div className="font-semibold text-revix-dark">{c.vehicleName || "—"}</div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                      {c.vehicleAssetCode && (
-                        <span className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary" dir="ltr">
-                          {c.vehicleAssetCode}
-                        </span>
-                      )}
-                      <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
-                        {c.vehiclePlate}
-                      </span>
-                    </div>
+                    {c.vehicleId ? (
+                      <Link href={vehicleHref(c.vehicleId)} className="group block">
+                        <div className="font-semibold text-revix-dark transition-colors group-hover:text-revix-primary group-hover:underline">
+                          {c.vehicleName || "—"}
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                          {c.vehicleAssetCode && (
+                            <span className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary" dir="ltr">
+                              {c.vehicleAssetCode}
+                            </span>
+                          )}
+                          <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
+                            {c.vehiclePlate}
+                          </span>
+                        </div>
+                      </Link>
+                    ) : (
+                      <>
+                        <div className="font-semibold text-revix-dark">{c.vehicleName || "—"}</div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                          {c.vehicleAssetCode && (
+                            <span className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary" dir="ltr">
+                              {c.vehicleAssetCode}
+                            </span>
+                          )}
+                          <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
+                            {c.vehiclePlate}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </td>
                   <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">
                     <div>{c.startDate} → {c.endDate}</div>
