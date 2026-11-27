@@ -1,10 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import pg from "pg";
 import { createApp } from "./app.ts";
 import { loadEnvConfig } from "./config/env.ts";
 import { InMemoryAuthDataStore } from "./db/memoryStore.ts";
 import { runMigrations } from "./db/migrate.ts";
+import { createPgPool } from "./db/pool.ts";
 import { PostgresAuthDataStore } from "./db/postgresStore.ts";
 import type { AuthDataStore } from "./db/store.ts";
 import {
@@ -24,7 +24,7 @@ async function startServer(): Promise<void> {
   let store: AuthDataStore;
 
   if (env.databaseUrl) {
-    const pool = new pg.Pool({ connectionString: env.databaseUrl });
+    const pool = createPgPool(env.databaseUrl);
     await runMigrations(pool);
     store = new PostgresAuthDataStore(pool);
     console.log("[Revix Backend] Connected to PostgreSQL database and applied migrations.");

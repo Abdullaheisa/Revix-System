@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { loadEnvConfig } from "../config/env.ts";
+import { createPgPool } from "./pool.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(__dirname, "migrations");
@@ -68,7 +69,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.exit(1);
   }
 
-  const pool = new pg.Pool({ connectionString: env.databaseUrl });
+  const pool = createPgPool(env.databaseUrl);
   runMigrations(pool)
     .then(async (files) => {
       console.log(`Applied ${files.length} migration(s): ${files.join(", ")}`);
