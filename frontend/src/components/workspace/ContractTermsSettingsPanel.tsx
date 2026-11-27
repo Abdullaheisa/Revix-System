@@ -97,6 +97,9 @@ export function ContractTermsSettingsPanel({
     buildInitialClauses(company),
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewLang, setViewLang] = useState<"ar" | "en" | "both">(
+    isRtl ? "ar" : "en",
+  );
   const [savedNotice, setSavedNotice] = useState<string | undefined>();
   const [errorNotice, setErrorNotice] = useState<string | undefined>();
 
@@ -493,141 +496,152 @@ export function ContractTermsSettingsPanel({
         />
       )}
 
-      {/* Document Sheet Container */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-        {/* Document Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-3.5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-            <RevixIcon name="file-text" size={15} className="text-revix-primary" />
-            <span>{isRtl ? "وثيقة الشروط والأحكام" : "Terms & Conditions Document"}</span>
-          </div>
-
-          <div className="relative w-full sm:w-72">
-            <RevixIcon
-              name="search"
-              size={14}
-              className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-slate-400 ${
-                isRtl ? "right-3" : "left-3"
-              }`}
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                isRtl ? "بحث في البنود..." : "Search clauses..."
-              }
-              className={`h-8 w-full rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:border-revix-primary focus:outline-hidden ${
-                isRtl ? "pr-8 pl-3" : "pl-8 pr-3"
-              }`}
-            />
-          </div>
+      {/* Search & Language View Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white px-4 py-3 shadow-2xs">
+        <div className="relative min-w-[220px] flex-1">
+          <RevixIcon
+            name="search"
+            size={15}
+            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-slate-400 ${
+              isRtl ? "right-3" : "left-3"
+            }`}
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={
+              isRtl
+                ? "ابحث في البنود بالعربية أو الإنجليزية أو برقم البند..."
+                : "Search clauses in Arabic, English, or by number..."
+            }
+            className={`h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-800 placeholder:text-slate-400 focus:border-revix-primary focus:bg-white focus:outline-hidden ${
+              isRtl ? "pr-9 pl-3" : "pl-9 pr-3"
+            }`}
+          />
         </div>
 
-        {/* Column Headers (Desktop) */}
-        {filteredClauses.length > 0 && (
-          <div className="hidden border-b border-slate-100 bg-slate-50/40 px-5 py-2 text-[11px] font-semibold text-slate-500 lg:grid lg:grid-cols-[52px_1fr_1fr_132px] lg:gap-6">
-            <div>{isRtl ? "م" : "#"}</div>
-            <div>{isRtl ? "النص بالعربية" : "Arabic Clause"}</div>
-            <div>{isRtl ? "النص بالإنجليزية" : "English Clause"}</div>
-            <div className="text-end">{isRtl ? "الإجراءات" : "Actions"}</div>
-          </div>
-        )}
+        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/70 p-1 text-xs">
+          <button
+            type="button"
+            onClick={() => setViewLang("ar")}
+            className={`cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all ${
+              viewLang === "ar"
+                ? "bg-white text-revix-dark shadow-2xs"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            {isRtl ? "العربية" : "Arabic"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewLang("en")}
+            className={`cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all ${
+              viewLang === "en"
+                ? "bg-white text-revix-dark shadow-2xs"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            {isRtl ? "الإنجليزية" : "English"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewLang("both")}
+            className={`cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all ${
+              viewLang === "both"
+                ? "bg-white text-revix-dark shadow-2xs"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            {isRtl ? "كلاهما" : "Both"}
+          </button>
+        </div>
+      </div>
 
-        {/* Clauses Rows */}
-        {clauses.length === 0 ? (
-          <div className="py-14 text-center">
-            <RevixIcon name="file-text" size={30} className="mx-auto text-slate-300" />
-            <p className="mt-2.5 text-sm font-medium text-slate-700">
-              {isRtl ? "لا توجد بنود مضافة حالياً" : "No clauses added yet"}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              {isRtl
-                ? "أضف بنداً جديداً أو استعد الشروط الافتراضية."
-                : "Add a new clause or restore the default terms."}
-            </p>
-            <div className="mt-4 flex justify-center gap-2">
-              <Button type="button" variant="secondary" onClick={handleRestoreDefaults}>
-                {isRtl ? "استعادة الافتراضي" : "Restore Defaults"}
-              </Button>
-              <Button type="button" variant="primary" onClick={() => openAddModal()}>
-                {isRtl ? "إضافة بند جديد" : "Add Clause"}
-              </Button>
-            </div>
-          </div>
-        ) : filteredClauses.length === 0 ? (
-          <div className="py-12 text-center text-xs text-slate-500">
+      {/* Clauses Cards */}
+      {clauses.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-14 text-center">
+          <RevixIcon name="file-text" size={30} className="mx-auto text-slate-300" />
+          <p className="mt-2.5 text-sm font-medium text-slate-700">
+            {isRtl ? "لا توجد بنود مضافة حالياً" : "No clauses added yet"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
             {isRtl
-              ? `لا توجد بنود مطابقة للبحث «${searchQuery}».`
-              : `No clauses match "${searchQuery}".`}
+              ? "أضف بنداً جديداً أو استورد من ملف Excel أو استعد الشروط الافتراضية."
+              : "Add a new clause, import from Excel, or restore the default terms."}
+          </p>
+          <div className="mt-4 flex justify-center gap-2">
+            <Button type="button" variant="secondary" onClick={handleRestoreDefaults}>
+              {isRtl ? "استعادة الافتراضي" : "Restore Defaults"}
+            </Button>
+            <Button type="button" variant="primary" onClick={() => openAddModal()}>
+              {isRtl ? "إضافة بند جديد" : "Add Clause"}
+            </Button>
           </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {filteredClauses.map(({ clause, index }) => {
-              const isFiltering = Boolean(searchQuery.trim());
-              return (
-                <div
-                  key={clause.id}
-                  className="group grid grid-cols-1 gap-4 px-5 py-4 transition-colors hover:bg-slate-50/60 lg:grid-cols-[52px_1fr_1fr_132px] lg:items-start lg:gap-6"
-                >
-                  {/* Number Badge */}
-                  <div className="flex items-center justify-between lg:block">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 font-mono text-xs font-bold text-revix-primary ring-1 ring-emerald-200/70">
+        </div>
+      ) : filteredClauses.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white py-12 text-center text-xs text-slate-500">
+          {isRtl
+            ? `لا توجد بنود مطابقة للبحث «${searchQuery}».`
+            : `No clauses match "${searchQuery}".`}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredClauses.map(({ clause, index }) => {
+            const isFiltering = Boolean(searchQuery.trim());
+            const hasAr = Boolean(clause.ar.trim());
+            const hasEn = Boolean(clause.en.trim());
+
+            return (
+              <div
+                key={clause.id}
+                className="group rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition-all hover:border-revix-primary/40 hover:shadow-sm"
+              >
+                {/* Clause Card Top Bar */}
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-lg bg-revix-primary/10 px-2 font-mono text-xs font-bold text-revix-primary">
                       {String(index + 1).padStart(2, "0")}
                     </span>
+                    <span className="text-xs font-bold text-slate-800">
+                      {isRtl ? `البند رقم ${index + 1}` : `Clause #${index + 1}`}
+                    </span>
 
-                    {/* Mobile Actions */}
-                    <div className="flex items-center gap-1 lg:hidden">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(clause, index)}
-                        className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+                    <div className="flex items-center gap-1">
+                      <span
+                        className={`inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+                          hasAr
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}
                       >
-                        {isRtl ? "تعديل" : "Edit"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isSaving}
-                        onClick={() => handleRemoveClause(clause.id)}
-                        className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
-                        aria-label={isRtl ? "حذف البند" : "Delete clause"}
+                        AR {hasAr ? "✓" : "!"}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+                          hasEn
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}
                       >
-                        <RevixIcon name="trash-2" size={13} />
-                      </button>
+                        EN {hasEn ? "✓" : "!"}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Arabic Text */}
-                  <div dir="rtl" className="text-[13px] leading-6 text-slate-800">
-                    {clause.ar || (
-                      <span className="italic text-slate-400">
-                        {isRtl ? "لم يُضف نص عربي لهذا البند" : "No Arabic text"}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* English Text */}
-                  <div dir="ltr" className="text-[12.5px] leading-6 text-slate-600">
-                    {clause.en || (
-                      <span className="italic text-slate-400">
-                        {isRtl ? "لم يُضف نص إنجليزي لهذا البند" : "No English text"}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Desktop Actions */}
-                  <div className="hidden items-center justify-end gap-1 lg:flex">
+                  {/* Card Actions */}
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       disabled={isSaving}
                       onClick={() => openEditModal(clause, index)}
-                      className="inline-flex h-7 cursor-pointer items-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-700 transition-colors hover:border-revix-primary/40 hover:bg-emerald-50/50 hover:text-revix-primary"
+                      className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 text-[11px] font-semibold text-slate-700 transition-colors hover:border-revix-primary/50 hover:bg-emerald-50 hover:text-revix-primary"
                     >
                       {isRtl ? "تعديل" : "Edit"}
                     </button>
 
                     {!isFiltering && (
-                      <>
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           disabled={isSaving || index === 0}
@@ -648,7 +662,7 @@ export function ContractTermsSettingsPanel({
                         >
                           <RevixIcon name="chevron-down" size={13} />
                         </button>
-                      </>
+                      </div>
                     )}
 
                     <button
@@ -663,11 +677,57 @@ export function ContractTermsSettingsPanel({
                     </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+                {/* Clause Content (Click to Edit) */}
+                <div
+                  onClick={() => openEditModal(clause, index)}
+                  className="cursor-pointer space-y-3"
+                >
+                  {(viewLang === "ar" || viewLang === "both") && (
+                    <div
+                      dir="rtl"
+                      className="rounded-xl bg-slate-50/60 px-3.5 py-2.5 text-[13px] leading-6 text-slate-800 transition-colors group-hover:bg-slate-50"
+                    >
+                      {viewLang === "both" && (
+                        <span className="mb-1 inline-block rounded bg-slate-200/70 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">
+                          AR
+                        </span>
+                      )}
+                      <p>
+                        {clause.ar || (
+                          <span className="italic text-slate-400">
+                            {isRtl ? "لم يُضف نص عربي لهذا البند — اضغط للتعديل" : "No Arabic text — click to edit"}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                  {(viewLang === "en" || viewLang === "both") && (
+                    <div
+                      dir="ltr"
+                      className="rounded-xl bg-slate-50/60 px-3.5 py-2.5 text-[12.5px] leading-6 text-slate-700 transition-colors group-hover:bg-slate-50"
+                    >
+                      {viewLang === "both" && (
+                        <span className="mb-1 inline-block rounded bg-slate-200/70 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">
+                          EN
+                        </span>
+                      )}
+                      <p>
+                        {clause.en || (
+                          <span className="italic text-slate-400">
+                            {isRtl ? "لم يُضف نص إنجليزي لهذا البند — اضغط للتعديل" : "No English text — click to edit"}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add / Edit Clause Popup Modal */}
       {modalState && (
