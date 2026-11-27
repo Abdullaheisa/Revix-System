@@ -10,9 +10,12 @@ import {
   useListVehiclesQuery,
   type RentalContractDto,
 } from "@/store/api/fleetApi";
+import { useUpdateMySignatureMutation } from "@/store/api/authApi";
+import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import { Alert } from "@/components/ui/Alert";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
+import { SignaturePadModal } from "@/components/shared/SignaturePadModal";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { RentalContractPrintModal } from "./RentalContractPrintModal";
 import { getApiErrorMessage } from "@/lib/api/errors";
@@ -61,6 +64,12 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
   });
   const { data: customersData, isLoading: isLoadingCustomers } = useListCustomersQuery();
   const { data: contractsData } = useListRentalContractsQuery();
+  const { data: ctx } = useGetWorkspaceContextQuery();
+  const currentUser = ctx?.data?.user ?? null;
+  const [updateMySignature, { isLoading: isSavingEmpSig }] = useUpdateMySignatureMutation();
+  const [isEmpSignOpen, setIsEmpSignOpen] = useState(false);
+  const [localEmpSigned, setLocalEmpSigned] = useState(false);
+
   const [createContract, { isLoading: isCreating }] = useCreateRentalContractMutation();
 
   const today = useMemo(() => toLocalIso(new Date()), []);
@@ -269,6 +278,14 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
       );
       return;
     }
+    if (currentUser && !currentUser.signatureDataUrl && !localEmpSigned) {
+      setIsEmpSignOpen(true);
+      return;
+    }
+    await submitCreateContract();
+  }
+
+  async function submitCreateContract() {
     try {
       const res = await createContract({
         vehicleId,
@@ -1088,6 +1105,33 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         editingCustomer={null}
         onClose={() => setIsAddCustomerOpen(false)}
         onCreated={(created) => setSelectedCustomerId(created.id)}
+      />
+
+      <SignaturePadModal
+        isOpen={isEmpSignOpen}
+        isRtl={isRtl}
+        title={isRtl ? "توقيع الموظف المسئول (مطلوب قبل الطباعة)" : "Employee Signature (Required Before Printing)"}
+        description={
+          isRtl
+            ? "لم تقم بإضافة توقيعك الشخصي بعد. وقّع مرة واحدة الآن ليُحفظ على حسابك ويظهر في جميع عقودك."
+            : "You haven't saved your personal signature yet. Sign once now to save it to your account for all your contracts."
+        }
+        isSaving={isSavingEmpSig}
+        onClose={() => setIsEmpSignOpen(false)}
+        onSave={async (dataUrl) => {
+          try {
+            await updateMySignature({ signatureDataUrl: dataUrl }).unwrap();
+            setLocalEmpSigned(true);
+            setIsEmpSignOpen(false);
+            await submitCreateContract();
+          } catch (err) {
+            setIsEmpSignOpen(false);
+            setErrorMsg(
+              getApiErrorMessage(err) ||
+                (isRtl ? "تعذر حفظ توقيع الموظف." : "Failed to save employee signature."),
+            );
+          }
+        }}
       />
 
       <RentalContractPrintModal

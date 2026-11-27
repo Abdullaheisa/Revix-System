@@ -5,6 +5,7 @@ import {
   useSignRentalContractMutation,
   type RentalContractDto,
 } from "@/store/api/fleetApi";
+import { useUpdateMySignatureMutation } from "@/store/api/authApi";
 import { useGetWorkspaceContextQuery, type CompanyDto } from "@/store/api/workspaceApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { SignaturePadModal } from "@/components/shared/SignaturePadModal";
@@ -173,7 +174,10 @@ export function RentalContractPrintModal({
 }: RentalContractPrintModalProps) {
   const { data: ctx } = useGetWorkspaceContextQuery();
   const [signContract, { isLoading: isSigning }] = useSignRentalContractMutation();
-  const [isSignPadOpen, setIsSignPadOpen] = useState(false);
+  const [updateMySignature, { isLoading: isSavingEmpSig }] = useUpdateMySignatureMutation();
+  const [signTarget, setSignTarget] = useState<"employee" | "customer" | null>(null);
+  const [savedEmployeeSig, setSavedEmployeeSig] = useState<string | null>(null);
+  const [savedCustomerSig, setSavedCustomerSig] = useState<string | null>(null);
   const [signError, setSignError] = useState<string | null>(null);
 
   const company = ctx?.data?.company ?? null;
@@ -195,15 +199,17 @@ export function RentalContractPrintModal({
   const contractTime = formatTime(contract.createdAt);
 
   // Employee signature comes strictly from the contract creator (or current user if they are the creator)
+  const canCurrentUserSignAsEmployee =
+    !contract.createdByUserId || contract.createdByUserId === currentUser?.id;
   const lessorSignatureUrl =
+    savedEmployeeSig ||
     contract.createdByUserSignatureDataUrl ||
-    (contract.createdByUserId && currentUser?.id === contract.createdByUserId
-      ? currentUser.signatureDataUrl
-      : null) ||
+    (canCurrentUserSignAsEmployee ? currentUser?.signatureDataUrl : null) ||
     null;
 
-  const lesseeSignatureUrl = contract.customerSignatureDataUrl || null;
+  const lesseeSignatureUrl = savedCustomerSig || contract.customerSignatureDataUrl || null;
   const canPromptCustomerSign = !lesseeSignatureUrl && contract.status === "active";
+  const canPromptEmployeeSign = !lessorSignatureUrl && canCurrentUserSignAsEmployee;
 
   const dailyKmLabel =
     contract.vehicleDailyKmLimit && contract.vehicleDailyKmLimit > 0
@@ -218,11 +224,18 @@ export function RentalContractPrintModal({
     if (!contract) return;
     setSignError(null);
     try {
+      if (signTarget === "employee") {
+        await updateMySignature({ signatureDataUrl: dataUrl }).unwrap();
+        setSavedEmployeeSig(dataUrl);
+        setSignTarget(null);
+        return;
+      }
       const res = await signContract({
         id: contract.id,
         signatureDataUrl: dataUrl,
       }).unwrap();
-      setIsSignPadOpen(false);
+      setSavedCustomerSig(dataUrl);
+      setSignTarget(null);
       onSigned?.(res.data);
     } catch (err) {
       setSignError(
@@ -283,10 +296,20 @@ export function RentalContractPrintModal({
             </h3>
           </div>
           <div className="flex items-center gap-2">
+            {canPromptEmployeeSign && (
+              <button
+                type="button"
+                onClick={() => setSignTarget("employee")}
+                className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-rose-500/50 bg-rose-50 px-3 text-xs font-bold text-rose-800 hover:bg-rose-100"
+              >
+                <RevixIcon name="check" size={13} />
+                <span>{isRtl ? "توقيع الموظف (مطلوب)" : "Employee Sign (Required)"}</span>
+              </button>
+            )}
             {canPromptCustomerSign && (
               <button
                 type="button"
-                onClick={() => setIsSignPadOpen(true)}
+                onClick={() => setSignTarget("customer")}
                 className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/50 bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100"
               >
                 <RevixIcon name="check" size={13} />
@@ -295,7 +318,18 @@ export function RentalContractPrintModal({
             )}
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={() => {
+                if (canPromptEmployeeSign) {
+                  setSignError(
+                    isRtl
+                      ? "يجب إضافة توقيع الموظف المسئول أولاً قبل الطباعة."
+                      : "Employee signature is required before printing.",
+                  );
+                  setSignTarget("employee");
+                  return;
+                }
+                window.print();
+              }}
               className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white hover:bg-revix-primary-hover"
             >
               <RevixIcon name="file-text" size={13} />
@@ -507,6 +541,7 @@ export function RentalContractPrintModal({
                 labelAr="توقيع المؤجر"
                 signatureDataUrl={lessorSignatureUrl}
                 subLabel={contract.createdByUserName}
+                onClick={canPromptEmployeeSign ? () => setSignTarget("employee") : undefined}
               />
               <SignatureBox labelEn="Sponsor's Signature" labelAr="توقيع الكفيل" />
               <SignatureBox
@@ -514,7 +549,7 @@ export function RentalContractPrintModal({
                 labelAr="توقيع المستأجر"
                 signatureDataUrl={lesseeSignatureUrl}
                 subLabel={contract.customerName}
-                onClick={canPromptCustomerSign ? () => setIsSignPadOpen(true) : undefined}
+                onClick={canPromptCustomerSign ? () => setSignTarget("customer") : undefined}
               />
             </div>
 
@@ -580,6 +615,7 @@ export function RentalContractPrintModal({
                 labelAr="توقيع المؤجر"
                 signatureDataUrl={lessorSignatureUrl}
                 subLabel={contract.createdByUserName}
+                onClick={canPromptEmployeeSign ? () => setSignTarget("employee") : undefined}
               />
               <SignatureBox labelEn="Sponsor's Signature" labelAr="توقيع الكفيل" />
               <SignatureBox
@@ -587,7 +623,7 @@ export function RentalContractPrintModal({
                 labelAr="توقيع المستأجر"
                 signatureDataUrl={lesseeSignatureUrl}
                 subLabel={contract.customerName}
-                onClick={canPromptCustomerSign ? () => setIsSignPadOpen(true) : undefined}
+                onClick={canPromptCustomerSign ? () => setSignTarget("customer") : undefined}
               />
             </div>
 
@@ -737,13 +773,14 @@ export function RentalContractPrintModal({
                   labelAr="توقيع الموظف المسئول"
                   signatureDataUrl={lessorSignatureUrl}
                   subLabel={contract.createdByUserName}
+                  onClick={canPromptEmployeeSign ? () => setSignTarget("employee") : undefined}
                 />
                 <SignatureBox
                   labelEn="Customer (Delivery)"
                   labelAr="توقيع العميل عند الاستلام"
                   signatureDataUrl={lesseeSignatureUrl}
                   subLabel={contract.customerName}
-                  onClick={canPromptCustomerSign ? () => setIsSignPadOpen(true) : undefined}
+                  onClick={canPromptCustomerSign ? () => setSignTarget("customer") : undefined}
                 />
                 <SignatureBox labelEn="Employee (Return)" labelAr="توقيع الموظف عند التسليم" />
                 <SignatureBox labelEn="Customer (Return)" labelAr="توقيع العميل عند التسليم" />
@@ -756,16 +793,28 @@ export function RentalContractPrintModal({
       </div>
 
       <SignaturePadModal
-        isOpen={isSignPadOpen}
+        isOpen={Boolean(signTarget)}
         isRtl={isRtl}
-        title={isRtl ? "توقيع العميل (يُحفظ لملف العميل)" : "Customer Signature (Saved to Profile)"}
-        description={
-          isRtl
-            ? "سيتم حفظ هذا التوقيع في ملف العميل لاستخدامه تلقائياً في العقود القادمة دون طلبه مرة أخرى."
-            : "This signature will be saved to the customer's profile and reused automatically in future contracts."
+        title={
+          signTarget === "employee"
+            ? isRtl
+              ? "توقيع الموظف المسئول (يُحفظ لحسابك)"
+              : "Employee Signature (Saved to Your Account)"
+            : isRtl
+              ? "توقيع العميل (يُحفظ لملف العميل)"
+              : "Customer Signature (Saved to Profile)"
         }
-        isSaving={isSigning}
-        onClose={() => setIsSignPadOpen(false)}
+        description={
+          signTarget === "employee"
+            ? isRtl
+              ? "سيتم حفظ هذا التوقيع على حسابك الشخصي فقط ليظهر تلقائياً كتوقيع المؤجر/الموظف المسئول في العقود."
+              : "This signature will be saved to your personal employee account and printed automatically as Lessor's Signature."
+            : isRtl
+              ? "سيتم حفظ هذا التوقيع في ملف العميل لاستخدامه تلقائياً في العقود القادمة دون طلبه مرة أخرى."
+              : "This signature will be saved to the customer's profile and reused automatically in future contracts."
+        }
+        isSaving={isSigning || isSavingEmpSig}
+        onClose={() => setSignTarget(null)}
         onSave={handleSaveSignature}
       />
     </div>
