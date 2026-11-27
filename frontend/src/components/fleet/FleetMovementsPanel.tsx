@@ -3,7 +3,7 @@
 import { DataTable } from "@/components/ui/DataTable";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormField";
@@ -22,6 +22,162 @@ import {
 import { useGetWorkspaceContextQuery, type BranchDto } from "@/store/api/workspaceApi";
 import { formatCompanyDateTime } from "@/lib/date/companyDate";
 import { getApiErrorMessage } from "@/lib/api/errors";
+
+function VehicleColumnSelect({
+  isRtl,
+  vehicles,
+  value,
+  onChange,
+}: {
+  isRtl: boolean;
+  vehicles: FleetVehicleDto[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const boxRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const selected = useMemo(
+    () => vehicles.find((v) => v.id === value) ?? null,
+    [vehicles, value],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return vehicles;
+    return vehicles.filter((v) => {
+      const model = v.variant
+        ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}`.toLowerCase()
+        : "";
+      return (
+        (v.assetCode && v.assetCode.toLowerCase().includes(q)) ||
+        v.licensePlate.toLowerCase().includes(q) ||
+        model.includes(q) ||
+        (v.branchName && v.branchName.toLowerCase().includes(q))
+      );
+    });
+  }, [vehicles, query]);
+
+  const selectedModel = selected?.variant
+    ? `${selected.variant.make} ${selected.variant.model} ${selected.variant.modelYear}`
+    : "";
+
+  return (
+    <div ref={boxRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-revix-border bg-white px-3 text-xs hover:border-revix-primary focus:border-revix-primary focus:outline-hidden"
+      >
+        {selected ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              dir="ltr"
+              className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-[11px] font-bold text-revix-primary"
+            >
+              {selected.assetCode || "—"}
+            </span>
+            <span className="truncate font-semibold text-revix-dark">{selectedModel}</span>
+            <span
+              dir="ltr"
+              className="shrink-0 rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10.5px] font-semibold text-revix-secondary"
+            >
+              {selected.licensePlate}
+            </span>
+            <span className="hidden sm:inline-block shrink-0 text-[11px] text-revix-secondary">
+              · {selected.branchName || (isRtl ? "مخزون الشركة" : "Company Stock")}
+            </span>
+          </div>
+        ) : (
+          <span className="text-revix-muted">
+            {isRtl ? "اختر السيارة..." : "Select vehicle..."}
+          </span>
+        )}
+        <RevixIcon name={isOpen ? "chevron-up" : "chevron-down"} size={14} className="shrink-0 text-revix-secondary" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute start-0 end-0 top-full z-40 mt-1 overflow-hidden rounded-xl border border-revix-border bg-white shadow-xl">
+          <div className="border-b border-revix-border p-2">
+            <div className="relative">
+              <RevixIcon
+                name="search"
+                size={13}
+                className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-revix-muted start-2.5"
+              />
+              <input
+                type="text"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={isRtl ? "ابحث برقم الأصل أو اللوحة أو الموديل..." : "Search Asset ID, plate, model..."}
+                className="h-8 w-full rounded-md border border-revix-border bg-revix-surface/40 ps-8 pe-3 text-xs focus:border-revix-primary focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-[214px] overflow-y-auto">
+            <div className="sticky top-0 grid h-8 grid-cols-12 items-center gap-2 border-b border-revix-border bg-revix-surface px-3 text-[10.5px] font-bold uppercase text-revix-secondary">
+              <div className="col-span-2">Asset ID</div>
+              <div className="col-span-4">{isRtl ? "الموديل" : "Model"}</div>
+              <div className="col-span-3">{isRtl ? "اللوحة" : "Plate"}</div>
+              <div className="col-span-3">{isRtl ? "الموقع" : "Location"}</div>
+            </div>
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs text-revix-secondary">
+                {isRtl ? "لا توجد سيارات مطابقة" : "No matching vehicles"}
+              </div>
+            ) : (
+              filtered.map((v) => {
+                const modelLabel = v.variant
+                  ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}`
+                  : "—";
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(v.id);
+                      setIsOpen(false);
+                      setQuery("");
+                    }}
+                    className={`grid h-9 w-full cursor-pointer grid-cols-12 items-center gap-2 border-b border-revix-border/40 px-3 text-start text-xs transition-colors hover:bg-emerald-50/70 ${
+                      v.id === value ? "bg-emerald-50 font-semibold" : ""
+                    }`}
+                  >
+                    <div className="col-span-2 font-mono font-bold text-revix-primary" dir="ltr">
+                      <span className="inline-block">{v.assetCode || "—"}</span>
+                    </div>
+                    <div className="col-span-4 truncate font-semibold text-revix-dark">
+                      {modelLabel}
+                    </div>
+                    <div className="col-span-3 truncate font-mono font-semibold text-revix-dark" dir="ltr">
+                      <span className="inline-block">{v.licensePlate}</span>
+                    </div>
+                    <div className="col-span-3 truncate text-revix-secondary">
+                      {v.branchName || (isRtl ? "مخزون الشركة" : "Company Stock")}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export interface DispatchMovementModalProps {
   isOpen: boolean;
@@ -109,19 +265,14 @@ export function DispatchMovementModal({
           <label className="mb-1 block text-xs font-semibold text-revix-dark">
             {isRtl ? "السيارة *" : "Vehicle *"}
           </label>
-          <RevixSelect
-            size="sm"
+          <VehicleColumnSelect
             isRtl={isRtl}
+            vehicles={vehicles}
             value={vehicleId}
-            onChange={(e) => {
-              setSelectedVehicleId(e.target.value);
+            onChange={(nextId) => {
+              setSelectedVehicleId(nextId);
               setOdoOverride(null);
             }}
-            buttonClassName="h-9 rounded-lg text-xs"
-            options={vehicles.map((v) => ({
-              value: v.id,
-              label: `${v.assetCode ? `[${v.assetCode}] ` : ""}${v.variant ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}` : "Vehicle"} • ${v.licensePlate} (${v.branchName || v.companyName || (isRtl ? "مخزون الشركة" : "Company Stock")})`,
-            }))}
           />
         </div>
 
