@@ -4,6 +4,7 @@ import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { parseFleetResourceRoute, vehicleHref, type VehicleProfileTab } from "@/lib/workspace/resourceRoutes";
+import { navigateBackOrFallback } from "@/lib/workspace/useSmartBack";
 import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
 import { useGetVehicleQuery } from "@/store/api/fleetApi";
 import { VehicleProfilePage } from "./vehicle-profile/VehicleProfilePage";
@@ -155,7 +156,7 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
 
   const openVehicleDetails = (vehicle: FleetVehicleDto) => syncVehicleUrl(vehicle.id, "overview", true);
 
-  const closeVehicleDetails = () => syncVehicleUrl(null, "overview", true);
+  const closeVehicleDetails = () => navigateBackOrFallback(router, "/workspace/fleet/vehicles");
 
   const switchVehicleTab = (tab: VehicleProfileTab, id?: string) => { if (id || detailId) syncVehicleUrl(id || detailId, tab); };
 

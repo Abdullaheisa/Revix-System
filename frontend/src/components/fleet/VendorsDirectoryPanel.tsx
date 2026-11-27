@@ -7,6 +7,7 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { parseFleetResourceRoute, vendorHref } from "@/lib/workspace/resourceRoutes";
+import { navigateBackOrFallback } from "@/lib/workspace/useSmartBack";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import {
@@ -61,7 +62,7 @@ export function VendorsDirectoryPanel({ isRtl }: VendorsDirectoryPanelProps) {
   };
 
   const closeVendorDetails = () => {
-    router.push(vendorHref());
+    navigateBackOrFallback(router, vendorHref());
   };
 
   // Form State

@@ -107,7 +107,7 @@ export const RevixPagination: React.FC<RevixPaginationProps> = ({
                 type="button"
                 onClick={() => onPageChange(p)}
                 aria-current={isActive ? "page" : undefined}
-                className={`${compact ? "min-w-7 h-7 text-xs rounded-md" : "min-w-[34px] h-[34px] text-xs sm:text-sm rounded-lg"} flex items-center justify-center font-semibold transition ${
+                className={`${compact ? "min-w-7 h-7 text-xs rounded-md" : "min-w-[34px] h-[34px] text-xs sm:text-sm rounded-lg"} flex cursor-pointer items-center justify-center font-semibold transition ${
                   isActive
                     ? "bg-[#0b4d3b] text-white shadow-sm"
                     : "border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"

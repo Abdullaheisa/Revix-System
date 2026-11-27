@@ -5,6 +5,7 @@ import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { customerHref, parseFleetResourceRoute } from "@/lib/workspace/resourceRoutes";
+import { navigateBackOrFallback } from "@/lib/workspace/useSmartBack";
 import {
   useDeleteCustomerMutation,
   useListCustomersQuery,
@@ -69,7 +70,7 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
       <CustomerDetailPage
         customer={detailCustomer}
         isRtl={isRtl}
-        onBack={() => router.push(customerHref())}
+        onBack={() => navigateBackOrFallback(router, customerHref())}
       />
     );
   }

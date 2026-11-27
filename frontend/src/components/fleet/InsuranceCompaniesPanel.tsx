@@ -7,6 +7,7 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { insuranceCompanyHref, parseFleetResourceRoute } from "@/lib/workspace/resourceRoutes";
+import { navigateBackOrFallback } from "@/lib/workspace/useSmartBack";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { LabeledInput } from "@/components/ui/LabeledInput";
 import { getFleetText } from "@/lib/i18n/fleetText";
@@ -148,13 +149,13 @@ export function InsuranceCompaniesPanel({ isRtl }: InsuranceCompaniesPanelProps)
           <InsuranceCompanyDetailPage
             company={selectedCompany}
             isRtl={isRtl}
-            onBack={() => router.push(insuranceCompanyHref())}
+            onBack={() => navigateBackOrFallback(router, insuranceCompanyHref())}
           />
         ) : (
           <ResourceFeedback
             isRtl={isRtl}
             isLoading={isLoading}
-            onBack={() => router.push(insuranceCompanyHref())}
+            onBack={() => navigateBackOrFallback(router, insuranceCompanyHref())}
             loadingTitle={isRtl ? "جارٍ تحميل ملف شركة التأمين..." : "Loading insurance company..."}
             backLabel={isRtl ? "العودة لشركات التأمين" : "Back to Insurance Companies"}
           />

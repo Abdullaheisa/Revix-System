@@ -4,6 +4,7 @@ import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { parseFleetResourceRoute, purchaseOrderHref, vehicleHref } from "@/lib/workspace/resourceRoutes";
+import { navigateBackOrFallback } from "@/lib/workspace/useSmartBack";
 import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
 import { useGetPurchaseOrderQuery } from "@/store/api/fleetApi";
 import NextImage from "next/image";
@@ -170,8 +171,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
   };
 
   const closePoDetails = () => {
-
-    syncPoUrl({}, true);
+    navigateBackOrFallback(router, purchaseOrderHref());
   };
 
   const closeCreatePo = () => {

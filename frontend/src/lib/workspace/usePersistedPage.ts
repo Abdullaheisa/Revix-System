@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setRoutePage } from "@/store/slices/workspaceSlice";
@@ -17,16 +17,27 @@ export function usePersistedPage(routeKey: string): [number, (nextPage: number) 
   );
 
   const searchParams = useSearchParams();
-  const page = normalizePage(searchParams.get("page"));
+  const urlPageParam = searchParams.get("page");
+  const lastUrlParamRef = useRef<string | null | undefined>(undefined);
 
-  // The URL also handles Back to page 1, where the page parameter is absent.
+  // Sync from URL only on initial mount or when the URL query param genuinely changes
+  // (e.g., browser Back/Forward), never overwriting an in-app setPage() call.
   useEffect(() => {
-    if (savedPage !== page) dispatch(setRoutePage({ routeKey, page }));
-  }, [routeKey, dispatch, page, savedPage]);
+    if (lastUrlParamRef.current === urlPageParam) return;
+    lastUrlParamRef.current = urlPageParam;
+    if (urlPageParam !== null) {
+      const urlPage = normalizePage(urlPageParam);
+      if (savedPage !== urlPage) {
+        dispatch(setRoutePage({ routeKey, page: urlPage }));
+      }
+    }
+  }, [routeKey, dispatch, urlPageParam, savedPage]);
 
   const setPage = useCallback(
     (nextPage: number) => {
       const safePage = normalizePage(nextPage);
+      const nextParam = safePage <= 1 ? null : String(safePage);
+      lastUrlParamRef.current = nextParam;
       dispatch(setRoutePage({ routeKey, page: safePage }));
 
       if (typeof window !== "undefined") {
@@ -36,11 +47,15 @@ export function usePersistedPage(routeKey: string): [number, (nextPage: number) 
         } else {
           url.searchParams.set("page", String(safePage));
         }
-        window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+        window.history.replaceState(
+          window.history.state,
+          "",
+          url.pathname + url.search + url.hash,
+        );
       }
     },
     [routeKey, dispatch],
   );
 
-  return [page, setPage];
+  return [savedPage, setPage];
 }
