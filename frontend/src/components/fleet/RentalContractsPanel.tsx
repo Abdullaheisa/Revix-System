@@ -52,6 +52,7 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
       return (
         c.contractNumber.toLowerCase().includes(q) ||
         (c.customerName && c.customerName.toLowerCase().includes(q)) ||
+        (c.vehicleAssetCode && c.vehicleAssetCode.toLowerCase().includes(q)) ||
         (c.vehiclePlate && c.vehiclePlate.toLowerCase().includes(q)) ||
         (c.vehicleName && c.vehicleName.toLowerCase().includes(q))
       );
@@ -98,7 +99,7 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder={isRtl ? "بحث بالعقد، العميل، اللوحة..." : "Search contract, customer, plate..."}
+              placeholder={isRtl ? "بحث بالعقد، العميل، رقم الأصل، اللوحة..." : "Search contract, customer, Asset ID, plate..."}
               className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
             />
           </div>
