@@ -174,21 +174,23 @@ export function ContractActionsMenu({
             <span>{isRtl ? "سند مرتجع" : "Refund Voucher"}</span>
           </button>
 
-          {contract.status === "active" && (
+          {contract.status !== "cancelled" && (
             <>
               <div className="my-1 border-t border-slate-100" />
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false);
-                  onCompleteContract(contract);
-                }}
-                className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-start font-semibold text-revix-primary hover:bg-emerald-50/70"
-              >
-                <RevixIcon name="check" size={14} />
-                <span>{isRtl ? "استلام وإغلاق" : "Return & Close"}</span>
-              </button>
+              {contract.status === "active" && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    onCompleteContract(contract);
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-start font-semibold text-revix-primary hover:bg-emerald-50/70"
+                >
+                  <RevixIcon name="check" size={14} />
+                  <span>{isRtl ? "استلام وإغلاق" : "Return & Close"}</span>
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"
