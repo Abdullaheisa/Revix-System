@@ -3934,6 +3934,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       createdAt: new Date(String(r.created_at)),
       updatedAt: new Date(String(r.updated_at)),
       vehicleName: (r.vehicle_name as string | null) ?? null,
+      vehicleAssetCode: (r.vehicle_asset_code as string | null) ?? null,
       vehiclePlate: (r.vehicle_plate as string | null) ?? null,
       fromBranchName: (r.from_branch_name as string | null) ?? null,
       toBranchName: (r.to_branch_name as string | null) ?? null,
@@ -3950,6 +3951,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
   ): Promise<VehicleMovementRecord[]> {
     let query = `
       SELECT vm.*,
+             fv.asset_code AS vehicle_asset_code,
              fv.license_plate AS vehicle_plate,
              CONCAT_WS(' ', vv.make, vv.model, vv.trim, vv.model_year) AS vehicle_name,
              fb.name AS from_branch_name,

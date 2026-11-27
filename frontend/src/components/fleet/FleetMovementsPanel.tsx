@@ -208,18 +208,53 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
   const [receiveMovement, { isLoading: isReceiving }] = useReceiveMovementMutation();
   const [cancelMovement] = useCancelMovementMutation();
 
+  const { data: vehiclesData } = useListVehiclesQuery();
   const movements = useMemo(() => data?.data ?? [], [data?.data]);
+  const companyStockVehicles = useMemo(
+    () =>
+      (vehiclesData?.data ?? []).filter(
+        (v) => !v.isPartnerVehicle && !v.branchId && v.status !== "on_rent",
+      ),
+    [vehiclesData?.data],
+  );
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isDispatchOpen, setIsDispatchOpen] = useState(false);
+  const [dispatchInitialVehicle, setDispatchInitialVehicle] = useState<FleetVehicleDto | null>(null);
   const [receivingRow, setReceivingRow] = useState<VehicleMovementDto | null>(null);
   const [arrivalOdometerKm, setArrivalOdometerKm] = useState(0);
   const [receiveNotes, setReceiveNotes] = useState("");
   const [receiveError, setReceiveError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return movements;
-    return movements.filter((m) => m.status === statusFilter);
-  }, [movements, statusFilter]);
+    const q = searchQuery.trim().toLowerCase();
+    return movements.filter((m) => {
+      if (statusFilter !== "all" && m.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        m.movementNumber.toLowerCase().includes(q) ||
+        (m.vehicleAssetCode && m.vehicleAssetCode.toLowerCase().includes(q)) ||
+        (m.vehiclePlate && m.vehiclePlate.toLowerCase().includes(q)) ||
+        (m.vehicleName && m.vehicleName.toLowerCase().includes(q)) ||
+        (m.driverName && m.driverName.toLowerCase().includes(q))
+      );
+    });
+  }, [movements, statusFilter, searchQuery]);
+
+  const filteredCompanyStock = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return companyStockVehicles;
+    return companyStockVehicles.filter((v) => {
+      const model = v.variant
+        ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}`.toLowerCase()
+        : "";
+      return (
+        (v.assetCode && v.assetCode.toLowerCase().includes(q)) ||
+        v.licensePlate.toLowerCase().includes(q) ||
+        model.includes(q)
+      );
+    });
+  }, [companyStockVehicles, searchQuery]);
 
   const openReceive = (m: VehicleMovementDto) => {
     setReceivingRow(m);
@@ -256,19 +291,70 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsDispatchOpen(true)}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-colors"
-        >
-          <RevixIcon name="plus" size={14} />
-          <span>{isRtl ? "حركة / نقل سيارة" : "Dispatch Movement"}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-64">
+            <RevixIcon
+              name="search"
+              size={14}
+              className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                isRtl
+                  ? "بحث برقم الأصل، اللوحة، رقم الحركة..."
+                  : "Search Asset ID, plate, movement #..."
+              }
+              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDispatchInitialVehicle(null);
+              setIsDispatchOpen(true);
+            }}
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover transition-colors"
+          >
+            <RevixIcon name="plus" size={14} />
+            <span>{isRtl ? "حركة / نقل سيارة" : "Dispatch Movement"}</span>
+          </button>
+        </div>
       </div>
+
+      {companyStockVehicles.length > 0 && statusFilter !== "company_stock" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300/70 bg-amber-50/70 px-4 py-2.5 text-xs shrink-0">
+          <div className="flex items-center gap-2 text-amber-900 font-medium">
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-200 px-1.5 font-mono text-[11px] font-bold text-amber-950">
+              {companyStockVehicles.length}
+            </span>
+            <span>
+              {isRtl
+                ? "سيارة في مخزون الشركة لم يتم نقلها لفرع بعد."
+                : "vehicle(s) in Company Stock waiting to be dispatched to a branch."}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("company_stock")}
+            className="cursor-pointer rounded-lg border border-amber-400 bg-white px-3 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100 transition-colors"
+          >
+            {isRtl ? "عرض مخزون الشركة" : "View Company Stock"}
+          </button>
+        </div>
+      )}
 
       <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-revix-border">
         {[
           { id: "all", ar: "الكل", en: "All", count: movements.length },
+          {
+            id: "company_stock",
+            ar: "مخزون الشركة (بانتظار النقل)",
+            en: "Company Stock (Pending)",
+            count: companyStockVehicles.length,
+          },
           {
             id: "in_transit",
             ar: "في الطريق",
@@ -304,6 +390,83 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
       </nav>
 
       <div className="flex min-h-0 flex-initial flex-col overflow-hidden rounded-xl border border-revix-border bg-revix-white">
+        {statusFilter === "company_stock" ? (
+          <DataTable fitAvailableHeight className="text-xs">
+            <thead>
+              <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
+                <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">Asset ID</th>
+                <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "السيارة / الموديل" : "Vehicle / Model"}</th>
+                <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "رقم اللوحة" : "Plate"}</th>
+                <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "اللون" : "Color"}</th>
+                <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "العداد" : "Odometer"}</th>
+                <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الموقع الحالي" : "Current Location"}</th>
+                <th scope="col" className="sticky top-0 z-10 whitespace-nowrap bg-revix-surface px-3 py-3 text-end font-semibold">{isRtl ? "إجراء" : "Action"}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-revix-border/60">
+              {filteredCompanyStock.length === 0 ? (
+                <TableEmptyRow
+                  colSpan={7}
+                  title={isRtl ? "لا توجد سيارات في مخزون الشركة" : "No vehicles in Company Stock"}
+                  description={
+                    isRtl
+                      ? "تم نقل جميع السيارات إلى الفروع."
+                      : "All vehicles have been dispatched to branches."
+                  }
+                />
+              ) : (
+                filteredCompanyStock.map((v) => {
+                  const modelTitle = v.variant
+                    ? `${v.variant.make} ${v.variant.model} ${v.variant.trim} ${v.variant.modelYear}`.replace(/\s+/g, " ").trim()
+                    : "—";
+                  return (
+                    <tr key={v.id} className="hover:bg-revix-surface/35">
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span
+                          dir="ltr"
+                          className="inline-block rounded bg-revix-accent-soft px-2 py-0.5 font-mono text-xs font-bold text-revix-primary"
+                        >
+                          {v.assetCode || "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 font-bold text-revix-dark">{modelTitle}</td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span
+                          dir="ltr"
+                          className="inline-block rounded border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-semibold text-revix-dark"
+                        >
+                          {v.licensePlate}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-revix-secondary">{v.color || "—"}</td>
+                      <td className="px-3 py-3 font-mono text-revix-dark">
+                        {Number(v.mileageOdometer || 0).toLocaleString()} km
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 border border-amber-200">
+                          {isRtl ? "مخزون الشركة" : "Company Stock"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDispatchInitialVehicle(v);
+                            setIsDispatchOpen(true);
+                          }}
+                          className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg bg-revix-primary px-3 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
+                        >
+                          <RevixIcon name="plus" size={12} />
+                          <span>{isRtl ? "نقل لفرع" : "Dispatch"}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </DataTable>
+        ) : (
         <DataTable fitAvailableHeight className="text-xs">
           <thead>
             <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
@@ -347,8 +510,21 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
                     </td>
                     <td className="px-3 py-3">
                       <div className="font-bold text-revix-dark">{m.vehicleName || "—"}</div>
-                      <div className="mt-0.5 inline-block rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-semibold text-revix-secondary" dir="ltr">
-                        {m.vehiclePlate || "—"}
+                      <div className="mt-1 flex items-center gap-1.5">
+                        {m.vehicleAssetCode && (
+                          <span
+                            className="inline-block rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary"
+                            dir="ltr"
+                          >
+                            {m.vehicleAssetCode}
+                          </span>
+                        )}
+                        <span
+                          className="inline-block rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-semibold text-revix-secondary"
+                          dir="ltr"
+                        >
+                          {m.vehiclePlate || "—"}
+                        </span>
                       </div>
                     </td>
                     <td className="px-3 py-3">
@@ -450,12 +626,18 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
               )}
             </tbody>
           </DataTable>
+        )}
       </div>
 
       <DispatchMovementModal
+        key={dispatchInitialVehicle?.id ?? "new"}
         isOpen={isDispatchOpen}
         isRtl={isRtl}
-        onClose={() => setIsDispatchOpen(false)}
+        initialVehicle={dispatchInitialVehicle}
+        onClose={() => {
+          setIsDispatchOpen(false);
+          setDispatchInitialVehicle(null);
+        }}
       />
 
       <StudioModal

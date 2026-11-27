@@ -565,6 +565,7 @@ export interface VehicleMovementDto {
   createdAt: string;
   updatedAt: string;
   vehicleName?: string | null;
+  vehicleAssetCode?: string | null;
   vehiclePlate?: string | null;
   fromBranchName?: string | null;
   toBranchName?: string | null;

@@ -298,6 +298,7 @@ export interface VehicleMovementRecord {
   createdAt: Date;
   updatedAt: Date;
   vehicleName?: string | null;
+  vehicleAssetCode?: string | null;
   vehiclePlate?: string | null;
   fromBranchName?: string | null;
   toBranchName?: string | null;
