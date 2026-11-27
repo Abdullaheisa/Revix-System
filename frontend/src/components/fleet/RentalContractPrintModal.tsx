@@ -272,6 +272,22 @@ export function RentalContractPrintModal({
       return;
     }
 
+    const contractLabel = isRtl ? "عقد إيجار" : "Rental Contract";
+    const safeNumber = (contract?.contractNumber || "Contract")
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .trim();
+    const safeCustomer = (contract?.customerName || "")
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .trim();
+    const pdfTitle = [contractLabel, safeNumber, safeCustomer]
+      .filter(Boolean)
+      .join(" - ");
+    const escapedPdfTitle = pdfTitle
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
     const stylesHtml = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"))
       .map((el) => el.outerHTML)
       .join("\n");
@@ -282,7 +298,7 @@ export function RentalContractPrintModal({
 <head>
   <meta charset="utf-8" />
   <base href="${window.location.origin}/" />
-  <title>${contract?.contractNumber ?? "Contract"}</title>
+  <title>${escapedPdfTitle}</title>
   ${stylesHtml}
   <style>
     @page { size: A4 portrait; margin: 0; }
@@ -328,10 +344,14 @@ export function RentalContractPrintModal({
 </html>`);
     doc.close();
 
+    const prevDocumentTitle = document.title;
+    document.title = pdfTitle;
+
     setTimeout(() => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
       setTimeout(() => {
+        document.title = prevDocumentTitle;
         if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
       }, 1500);
     }, 350);
