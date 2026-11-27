@@ -208,7 +208,6 @@ export function RentalContractPrintModal({
     null;
 
   const lesseeSignatureUrl = savedCustomerSig || contract.customerSignatureDataUrl || null;
-  const canPromptCustomerSign = !lesseeSignatureUrl && contract.status === "active";
   const canPromptEmployeeSign = !lessorSignatureUrl && canCurrentUserSignAsEmployee;
 
   const dailyKmLabel =
@@ -397,16 +396,6 @@ export function RentalContractPrintModal({
               >
                 <RevixIcon name="check" size={13} />
                 <span>{isRtl ? "توقيع الموظف (مطلوب)" : "Employee Sign (Required)"}</span>
-              </button>
-            )}
-            {canPromptCustomerSign && (
-              <button
-                type="button"
-                onClick={() => setSignTarget("customer")}
-                className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/50 bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100"
-              >
-                <RevixIcon name="check" size={13} />
-                <span>{isRtl ? "توقيع العميل (يحفظ للعميل)" : "Customer Sign (Save to Profile)"}</span>
               </button>
             )}
             <button
@@ -685,7 +674,6 @@ export function RentalContractPrintModal({
                 labelAr="توقيع المستأجر"
                 signatureDataUrl={lesseeSignatureUrl}
                 subLabel={contract.customerName}
-                onClick={canPromptCustomerSign ? () => setSignTarget("customer") : undefined}
               />
             </div>
 
@@ -763,7 +751,6 @@ export function RentalContractPrintModal({
                 labelAr="توقيع المستأجر"
                 signatureDataUrl={lesseeSignatureUrl}
                 subLabel={contract.customerName}
-                onClick={canPromptCustomerSign ? () => setSignTarget("customer") : undefined}
               />
             </div>
 
@@ -906,7 +893,6 @@ export function RentalContractPrintModal({
                   labelAr="توقيع العميل عند الاستلام"
                   signatureDataUrl={lesseeSignatureUrl}
                   subLabel={contract.customerName}
-                  onClick={canPromptCustomerSign ? () => setSignTarget("customer") : undefined}
                 />
                 <SignatureBox labelEn="Employee (Return)" labelAr="توقيع الموظف عند التسليم" />
                 <SignatureBox labelEn="Customer (Return)" labelAr="توقيع العميل عند التسليم" />

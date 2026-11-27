@@ -3546,7 +3546,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       status: r.status as RentalContractStatus,
       startDate: this.formatPgDate(r.start_date),
       endDate: this.formatPgDate(r.end_date),
-      pickupOdometer: Number(r.pickup_odometer ?? 0),
+      pickupOdometer: Number(r.pickup_odometer || r.vehicle_mileage_odometer || 0),
       returnOdometer: r.return_odometer != null ? Number(r.return_odometer) : null,
       dailyRate: Number(r.daily_rate ?? 0),
       totalDays: Number(r.total_days ?? 1),
@@ -3616,10 +3616,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
               vv.model_year AS vehicle_model_year,
               vv.category AS vehicle_category,
               fv.color AS vehicle_color,
-              fv.insurance_company AS vehicle_insurance_company,
-              fv.insurance_expiry AS vehicle_insurance_expiry,
-              fv.daily_km_limit AS vehicle_daily_km_limit,
-              fv.extra_km_rate AS vehicle_extra_km_rate,
+              fv.mileage_odometer AS vehicle_mileage_odometer,
+              COALESCE(NULLIF(TRIM(fv.insurance_company), ''), vip.provider_name) AS vehicle_insurance_company,
+              COALESCE(fv.insurance_expiry, vip.end_date) AS vehicle_insurance_expiry,
+              COALESCE(NULLIF(fv.daily_km_limit, 0), vv.daily_km_limit, 0) AS vehicle_daily_km_limit,
+              COALESCE(NULLIF(fv.extra_km_rate, 0), vv.extra_km_rate, 0) AS vehicle_extra_km_rate,
               cu.full_name AS customer_name,
               cu.phone AS customer_phone,
               cu.secondary_phone AS customer_secondary_phone,
@@ -3637,6 +3638,13 @@ export class PostgresAuthDataStore implements AuthDataStore {
        FROM rental_contracts rc
        JOIN fleet_vehicles fv ON fv.id = rc.vehicle_id
        LEFT JOIN vehicle_variants vv ON vv.id = fv.variant_id
+       LEFT JOIN LATERAL (
+         SELECT provider_name, end_date
+         FROM vehicle_insurance_policies
+         WHERE vehicle_id = fv.id AND company_id = rc.company_id
+         ORDER BY end_date DESC NULLS LAST, created_at DESC
+         LIMIT 1
+       ) vip ON TRUE
        JOIN customers cu ON cu.id = rc.customer_id
        LEFT JOIN branches br ON br.id = rc.branch_id
        LEFT JOIN companies comp ON comp.id = rc.company_id
