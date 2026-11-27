@@ -1897,6 +1897,63 @@ export class FleetService {
     return updated;
   }
 
+  async listContractVouchers(actor: TenantActor, contractId: string) {
+    return this.store.listContractVouchers(actor.company.id, contractId);
+  }
+
+  async createContractVoucher(
+    actor: TenantActor,
+    contractId: string,
+    input: {
+      voucherType: "receipt" | "payment" | "refund";
+      amount: number;
+      paymentMethod: "cash" | "knet" | "link" | "bank_transfer" | "cheque";
+      paymentDate: string;
+      referenceNo?: string | null;
+      bankName?: string | null;
+      description?: string | null;
+    },
+  ) {
+    const contracts = await this.store.listRentalContracts(actor.company.id);
+    const contract = contracts.find((c) => c.id === contractId);
+    if (!contract) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    if (!Number.isFinite(input.amount) || input.amount <= 0) {
+      throw new FleetServiceError(400, "INVALID_AMOUNT", "Voucher amount must be greater than zero.");
+    }
+    const created = await this.store.createContractVoucher({
+      companyId: actor.company.id,
+      branchId: contract.branchId,
+      contractId: contract.id,
+      voucherType: input.voucherType,
+      amount: input.amount,
+      currencyCode: contract.currencyCode || actor.company.baseCurrency || "EGP",
+      paymentMethod: input.paymentMethod,
+      paymentDate: input.paymentDate || new Date().toISOString().slice(0, 10),
+      referenceNo: input.referenceNo ?? null,
+      bankName: input.bankName ?? null,
+      description: input.description ?? null,
+      createdByUserId: actor.user.id,
+    });
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: contract.branchId,
+      actorUserId: actor.user.id,
+      action: `fleet.contract_voucher_${input.voucherType}`,
+      entityType: "contract_voucher",
+      entityId: created.id,
+      metadata: {
+        contractId: contract.id,
+        contractNumber: contract.contractNumber,
+        voucherNumber: created.voucherNumber,
+        amount: created.amount,
+        paymentMethod: created.paymentMethod,
+      },
+    });
+    return created;
+  }
+
   async listAuditLogs(
     actor: TenantActor,
     filter?: {

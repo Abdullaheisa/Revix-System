@@ -1,6 +1,7 @@
 import { mapCompanyRoleRow, mapCompanyMembershipRow, mapEmployeeInvitationRow, mapNetworkLinkRow, mapPermittedBranchRow, mapNetworkInvitationRow, mapVehicleVariantRow, mapVendorRow, mapPurchaseOrderRow, mapPurchaseOrderItemRow, mapFleetVehicleRow, mapVehiclePhotoRow, mapRentalInclusionRow, mapUserRow, mapSessionRow, mapActionTokenRow, mapCompanyRow, mapBranchRow, type DbUserRow, type DbSessionRow, type DbActionTokenRow, type DbCompanyRow, type DbBranchRow, type DbCompanyRoleRow, type DbCompanyMembershipRow, type DbEmployeeInvitationRow, type DbNetworkLinkRow, type DbPermittedBranchRow, type DbNetworkInvitationRow, type DbVehicleVariantRow, type DbVendorRow, type DbPurchaseOrderRow, type DbPurchaseOrderItemRow, type DbFleetVehicleRow, type DbVehiclePhotoRow, type DbRentalInclusionRow } from "./postgres/rowMappers.ts";
 import crypto from "node:crypto";
 import pg from "pg";
+import type { ContractVoucherRecord, ContractVoucherType, VoucherPaymentMethod } from "./contracts/rentals.ts";
 import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, AuthDataStore, BranchRecord, CompanyMembershipRecord, CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CompanyOperatingMode, CompanyRecord, CompanyRoleRecord, CreateBranchInput, CreateCompanyInput, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, CreateFleetPriceListInput, CreateFleetVehicleInput, CreateNetworkInvitationInput, CreateNetworkLinkInput, CreatePurchaseOrderInput, CreateRentalInclusionInput, CreateVehicleBodyStyleInput, CreateVehicleColorInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, CreateVendorInput, CustomerRecord, DriverRecord, EmployeeInvitationRecord, FleetPriceListRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord, PurchaseOrderItemRecord, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, RentalContractRecord, RentalContractStatus, RentalInclusionRecord, SessionRecord, UpdateBranchInput, UpdateCompanyInput, UpdateCompanyMembershipInput, UpdateCompanyRoleInput, UpdateFleetPriceListInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, UpdateVendorInput, UserRecord, UserStatus, VehicleBodyStyleRecord, VehicleCategory, VehicleColorRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord, VendorCategory, VendorRecord } from "./store.ts";
 
 
@@ -3897,6 +3898,107 @@ export class PostgresAuthDataStore implements AuthDataStore {
 
     const list = await this.listRentalContracts(companyId);
     return list.find((c) => c.id === contractId) ?? null;
+  }
+
+  private mapContractVoucherRow(r: Record<string, unknown>): ContractVoucherRecord {
+    return {
+      id: String(r.id),
+      companyId: String(r.company_id),
+      branchId: (r.branch_id as string | null) ?? null,
+      contractId: String(r.contract_id),
+      contractNumber: (r.contract_number as string | undefined) ?? undefined,
+      customerName: (r.customer_name as string | undefined) ?? undefined,
+      voucherNumber: String(r.voucher_number),
+      voucherType: r.voucher_type as ContractVoucherType,
+      amount: Number(r.amount ?? 0),
+      currencyCode: String(r.currency_code || "EGP"),
+      paymentMethod: r.payment_method as VoucherPaymentMethod,
+      paymentDate: this.formatPgDate(r.payment_date),
+      referenceNo: (r.reference_no as string | null) ?? null,
+      bankName: (r.bank_name as string | null) ?? null,
+      description: (r.description as string | null) ?? null,
+      createdByUserId: (r.created_by_user_id as string | null) ?? null,
+      createdByUserName: (r.created_by_user_name as string | null) ?? null,
+      createdByUserSignatureDataUrl: (r.created_by_user_signature_data_url as string | null) ?? null,
+      createdAt: new Date(String(r.created_at)),
+    };
+  }
+
+  async listContractVouchers(
+    companyId: string,
+    contractId: string,
+  ): Promise<ContractVoucherRecord[]> {
+    const res = await this.pool.query(
+      `SELECT cv.*,
+              rc.contract_number,
+              cu.full_name AS customer_name,
+              COALESCE(u.full_name, u.email) AS created_by_user_name,
+              u.signature_data_url AS created_by_user_signature_data_url
+       FROM contract_vouchers cv
+       JOIN rental_contracts rc ON rc.id = cv.contract_id
+       JOIN customers cu ON cu.id = rc.customer_id
+       LEFT JOIN users u ON u.id = cv.created_by_user_id
+       WHERE cv.company_id = $1 AND cv.contract_id = $2
+       ORDER BY cv.created_at DESC`,
+      [companyId, contractId],
+    );
+    return res.rows.map((r) => this.mapContractVoucherRow(r));
+  }
+
+  async createContractVoucher(input: {
+    companyId: string;
+    branchId: string | null;
+    contractId: string;
+    voucherType: ContractVoucherType;
+    amount: number;
+    currencyCode: string;
+    paymentMethod: VoucherPaymentMethod;
+    paymentDate: string;
+    referenceNo?: string | null;
+    bankName?: string | null;
+    description?: string | null;
+    createdByUserId?: string | null;
+  }): Promise<ContractVoucherRecord> {
+    const prefix =
+      input.voucherType === "receipt"
+        ? "RV"
+        : input.voucherType === "payment"
+          ? "PV"
+          : "RF";
+    const countRes = await this.pool.query<{ cnt: number }>(
+      `SELECT COUNT(*)::int AS cnt FROM contract_vouchers WHERE company_id = $1 AND voucher_type = $2`,
+      [input.companyId, input.voucherType],
+    );
+    const nextNum = Number(countRes.rows[0]?.cnt ?? 0) + 1;
+    const voucherNumber = `${prefix}-${String(nextNum).padStart(4, "0")}`;
+
+    const res = await this.pool.query(
+      `INSERT INTO contract_vouchers
+        (company_id, branch_id, contract_id, voucher_number, voucher_type,
+         amount, currency_code, payment_method, payment_date,
+         reference_no, bank_name, description, created_by_user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       RETURNING *`,
+      [
+        input.companyId,
+        input.branchId,
+        input.contractId,
+        voucherNumber,
+        input.voucherType,
+        input.amount,
+        input.currencyCode,
+        input.paymentMethod,
+        input.paymentDate,
+        input.referenceNo?.trim() || null,
+        input.bankName?.trim() || null,
+        input.description?.trim() || null,
+        input.createdByUserId || null,
+      ],
+    );
+
+    const list = await this.listContractVouchers(input.companyId, input.contractId);
+    const created = list.find((v) => v.id === res.rows[0]!.id);
+    return created ?? this.mapContractVoucherRow(res.rows[0]!);
   }
 
   // --- Drivers Directory ---

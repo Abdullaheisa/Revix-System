@@ -4,7 +4,13 @@ import type { CompanyMembershipRecord, CompanyRoleRecord, CreateCompanyMembershi
 import type { CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CreateNetworkInvitationInput, CreateNetworkLinkInput, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord } from "./contracts/network.ts";
 import type { CreateFleetPriceListInput, CreateFleetVehicleInput, CreateRentalInclusionInput, CreateVehicleBodyStyleInput, CreateVehicleColorInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, DriverRecord, FleetPriceListRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, RentalInclusionRecord, UpdateFleetPriceListInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, VehicleBodyStyleRecord, VehicleCategory, VehicleColorRecord, VehicleInspectionRecord, VehicleInsurancePolicyRecord, VehicleLifecycleProfile, VehicleMaintenanceLogRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord } from "./contracts/fleet.ts";
 import type { CreatePurchaseOrderInput, CreateVendorInput, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, UpdateVendorInput, VendorCategory, VendorRecord } from "./contracts/purchasing.ts";
-import type { CustomerRecord, RentalContractRecord } from "./contracts/rentals.ts";
+import type {
+  ContractVoucherRecord,
+  ContractVoucherType,
+  CustomerRecord,
+  RentalContractRecord,
+  VoucherPaymentMethod,
+} from "./contracts/rentals.ts";
 
 export interface AuthDataStore {
   findUserByEmail(email: string): Promise<UserRecord | null>;
@@ -559,6 +565,24 @@ export interface AuthDataStore {
     contractId: string,
     cancelledByUserId?: string | null,
   ): Promise<RentalContractRecord | null>;
+  listContractVouchers(
+    companyId: string,
+    contractId: string,
+  ): Promise<ContractVoucherRecord[]>;
+  createContractVoucher(input: {
+    companyId: string;
+    branchId: string | null;
+    contractId: string;
+    voucherType: ContractVoucherType;
+    amount: number;
+    currencyCode: string;
+    paymentMethod: VoucherPaymentMethod;
+    paymentDate: string;
+    referenceNo?: string | null;
+    bankName?: string | null;
+    description?: string | null;
+    createdByUserId?: string | null;
+  }): Promise<ContractVoucherRecord>;
 
   recordAuditLog(input: AuditLogInput): Promise<void>;
   listAuditLogs(

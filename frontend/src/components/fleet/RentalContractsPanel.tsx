@@ -12,6 +12,7 @@ import {
 import {
   useCancelRentalContractMutation,
   useListRentalContractsQuery,
+  type ContractVoucherType,
   type RentalContractDto,
   type RentalContractStatus,
 } from "@/store/api/fleetApi";
@@ -24,6 +25,8 @@ import { Button } from "@/components/ui/Button";
 import { CreateRentalContractPage } from "./CreateRentalContractPage";
 import { CompleteContractModal } from "./CompleteContractModal";
 import { RentalContractPrintModal } from "./RentalContractPrintModal";
+import { ContractVoucherModal } from "./vouchers/ContractVoucherModal";
+import { ContractActionsMenu } from "./ContractActionsMenu";
 
 interface RentalContractsPanelProps {
   isRtl: boolean;
@@ -50,6 +53,10 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
   const [printingContract, setPrintingContract] = useState<RentalContractDto | null>(null);
   const [cancellingContract, setCancellingContract] = useState<RentalContractDto | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [voucherModal, setVoucherModal] = useState<{
+    contract: RentalContractDto;
+    type: ContractVoucherType;
+  } | null>(null);
 
   const contracts = useMemo(() => contractsData?.data ?? [], [contractsData?.data]);
 
@@ -249,36 +256,17 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                     )}
                   </td>
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                    <div className="inline-flex items-center justify-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setPrintingContract(c)}
-                        className="h-8 cursor-pointer rounded-md border border-revix-border bg-white px-2.5 text-[11px] font-semibold text-revix-dark hover:bg-revix-surface"
-                      >
-                        {isRtl ? "طباعة / توقيع" : "Print / Sign"}
-                      </button>
-                      {c.status === "active" && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => setCompletingContract(c)}
-                            className="h-8 cursor-pointer rounded-md bg-revix-primary px-2.5 text-[11px] font-semibold text-white hover:bg-revix-primary-hover"
-                          >
-                            {isRtl ? "استلام وإغلاق" : "Return"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCancelError(null);
-                              setCancellingContract(c);
-                            }}
-                            className="h-8 cursor-pointer rounded-md border border-red-200 bg-white px-2.5 text-[11px] font-semibold text-red-600 hover:bg-red-50"
-                          >
-                            {isRtl ? "إلغاء" : "Cancel"}
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    <ContractActionsMenu
+                      contract={c}
+                      isRtl={isRtl}
+                      onPrintContract={setPrintingContract}
+                      onOpenVoucher={(contract, type) => setVoucherModal({ contract, type })}
+                      onCompleteContract={setCompletingContract}
+                      onCancelContract={(contract) => {
+                        setCancelError(null);
+                        setCancellingContract(contract);
+                      }}
+                    />
                   </td>
                 </tr>
               );
@@ -309,6 +297,13 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
         isRtl={isRtl}
         onClose={() => setPrintingContract(null)}
         onSigned={(updated) => setPrintingContract(updated)}
+      />
+
+      <ContractVoucherModal
+        contract={voucherModal?.contract ?? null}
+        initialVoucherType={voucherModal?.type ?? "receipt"}
+        isRtl={isRtl}
+        onClose={() => setVoucherModal(null)}
       />
 
       {cancellingContract && (

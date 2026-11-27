@@ -417,6 +417,31 @@ export interface RentalContractDto {
   currencyCode?: string;
 }
 
+export type ContractVoucherType = "receipt" | "payment" | "refund";
+export type VoucherPaymentMethod = "cash" | "knet" | "link" | "bank_transfer" | "cheque";
+
+export interface ContractVoucherDto {
+  id: string;
+  companyId: string;
+  branchId: string | null;
+  contractId: string;
+  contractNumber?: string;
+  customerName?: string;
+  voucherNumber: string;
+  voucherType: ContractVoucherType;
+  amount: number;
+  currencyCode: string;
+  paymentMethod: VoucherPaymentMethod;
+  paymentDate: string;
+  referenceNo: string | null;
+  bankName: string | null;
+  description: string | null;
+  createdByUserId: string | null;
+  createdByUserName?: string | null;
+  createdByUserSignatureDataUrl?: string | null;
+  createdAt: string;
+}
+
 export interface InsuranceCompanyDto {
   id: string;
   companyId: string;
@@ -1485,6 +1510,32 @@ export const fleetApi = baseApi.injectEndpoints({
       invalidatesTags: ["RentalContract", "Fleet"],
     }),
 
+    listContractVouchers: builder.query<ApiResponse<ContractVoucherDto[]>, string>({
+      query: (contractId) => `/fleet/contracts/${contractId}/vouchers`,
+      providesTags: ["RentalContract"],
+    }),
+
+    createContractVoucher: builder.mutation<
+      { ok: boolean; data: ContractVoucherDto },
+      {
+        contractId: string;
+        voucherType: ContractVoucherType;
+        amount: number;
+        paymentMethod: VoucherPaymentMethod;
+        paymentDate: string;
+        referenceNo?: string | null;
+        bankName?: string | null;
+        description?: string | null;
+      }
+    >({
+      query: ({ contractId, ...body }) => ({
+        url: `/fleet/contracts/${contractId}/vouchers`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["RentalContract"],
+    }),
+
     // --- Drivers Directory ---
     listDrivers: builder.query<ApiResponse<DriverDto[]>, void>({
       query: () => "/fleet/drivers",
@@ -1752,6 +1803,8 @@ export const {
   useSignRentalContractMutation,
   useCompleteRentalContractMutation,
   useCancelRentalContractMutation,
+  useListContractVouchersQuery,
+  useCreateContractVoucherMutation,
   useSignPurchaseOrderMutation,
   useListVehicleMakesQuery,
   useCreateVehicleMakeMutation,

@@ -2,6 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type {
+  ContractVoucherRecord,
+  ContractVoucherType,
+  VoucherPaymentMethod,
+} from "./contracts/rentals.ts";
+import type {
   ActionTokenRecord,
   ActionTokenType,
   AuditLogInput,
@@ -110,6 +115,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
   private readonly vehicleColorsById = new Map<string, VehicleColorRecord>();
   private readonly vehicleBodyStylesById = new Map<string, VehicleBodyStyleRecord>();
   private readonly fleetPriceListsById = new Map<string, FleetPriceListRecord>();
+  private readonly contractVouchersById = new Map<string, ContractVoucherRecord>();
   public readonly auditLogs: AuditLogRecord[] = [];
   private readonly persistFilePath: string | null;
 
@@ -2382,12 +2388,78 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     return updated;
   }
 
-  async cancelRentalContract(companyId: string, contractId: string) {
+  async cancelRentalContract(companyId: string, contractId: string, cancelledByUserId?: string | null) {
     const existing = this.contractsById.get(contractId);
     if (!existing || existing.companyId !== companyId) return null;
-    const updated = { ...existing, status: "cancelled", updatedAt: new Date() };
+    const updated = {
+      ...existing,
+      status: "cancelled",
+      cancelledByUserId: cancelledByUserId ?? null,
+      cancelledAt: new Date(),
+      updatedAt: new Date(),
+    };
     this.contractsById.set(contractId, updated);
     return updated;
+  }
+
+  async listContractVouchers(
+    companyId: string,
+    contractId: string,
+  ): Promise<ContractVoucherRecord[]> {
+    return Array.from(this.contractVouchersById.values())
+      .filter((v) => v.companyId === companyId && v.contractId === contractId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async createContractVoucher(input: {
+    companyId: string;
+    branchId: string | null;
+    contractId: string;
+    voucherType: ContractVoucherType;
+    amount: number;
+    currencyCode: string;
+    paymentMethod: VoucherPaymentMethod;
+    paymentDate: string;
+    referenceNo?: string | null;
+    bankName?: string | null;
+    description?: string | null;
+    createdByUserId?: string | null;
+  }): Promise<ContractVoucherRecord> {
+    const prefix =
+      input.voucherType === "receipt"
+        ? "RV"
+        : input.voucherType === "payment"
+          ? "PV"
+          : "RF";
+    const sameTypeCount = Array.from(this.contractVouchersById.values()).filter(
+      (v) => v.companyId === input.companyId && v.voucherType === input.voucherType,
+    ).length;
+    const voucherNumber = `${prefix}-${String(sameTypeCount + 1).padStart(4, "0")}`;
+    const contract = this.contractsById.get(input.contractId);
+    const creator = input.createdByUserId ? this.usersById.get(input.createdByUserId) : undefined;
+    const record: ContractVoucherRecord = {
+      id: crypto.randomUUID(),
+      companyId: input.companyId,
+      branchId: input.branchId,
+      contractId: input.contractId,
+      contractNumber: contract?.contractNumber,
+      customerName: contract?.customerName,
+      voucherNumber,
+      voucherType: input.voucherType,
+      amount: input.amount,
+      currencyCode: input.currencyCode,
+      paymentMethod: input.paymentMethod,
+      paymentDate: input.paymentDate,
+      referenceNo: input.referenceNo ?? null,
+      bankName: input.bankName ?? null,
+      description: input.description ?? null,
+      createdByUserId: input.createdByUserId ?? null,
+      createdByUserName: creator?.fullName ?? null,
+      createdByUserSignatureDataUrl: creator?.signatureDataUrl ?? null,
+      createdAt: new Date(),
+    };
+    this.contractVouchersById.set(record.id, record);
+    return record;
   }
 
   async updateVariantPricingTiers(

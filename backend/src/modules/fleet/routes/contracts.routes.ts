@@ -141,5 +141,65 @@ router.post(
       }
     },
   );
+
+  router.get(
+    "/contracts/:id/vouchers",
+    guards.requirePermission("sales", "read"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id || !UUID_REGEX.test(id)) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_CONTRACT_ID", message: "Invalid contract ID." } });
+        return;
+      }
+      try {
+        const vouchers = await fleetService.listContractVouchers(req.tenantActor!, id!);
+        res.status(200).json({ ok: true, data: vouchers });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
+  router.post(
+    "/contracts/:id/vouchers",
+    guards.requirePermission("sales", "create"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id || !UUID_REGEX.test(id)) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_CONTRACT_ID", message: "Invalid contract ID." } });
+        return;
+      }
+      const voucherType = req.body?.voucherType;
+      const paymentMethod = req.body?.paymentMethod;
+      if (voucherType !== "receipt" && voucherType !== "payment" && voucherType !== "refund") {
+        res.status(400).json({ ok: false, error: { code: "INVALID_VOUCHER_TYPE", message: "Invalid voucher type." } });
+        return;
+      }
+      if (
+        paymentMethod !== "cash" &&
+        paymentMethod !== "knet" &&
+        paymentMethod !== "link" &&
+        paymentMethod !== "bank_transfer" &&
+        paymentMethod !== "cheque"
+      ) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_PAYMENT_METHOD", message: "Invalid payment method." } });
+        return;
+      }
+      try {
+        const created = await fleetService.createContractVoucher(req.tenantActor!, id!, {
+          voucherType,
+          amount: Number(req.body?.amount ?? 0),
+          paymentMethod,
+          paymentDate: String(req.body?.paymentDate ?? new Date().toISOString().slice(0, 10)),
+          referenceNo: typeof req.body?.referenceNo === "string" ? req.body.referenceNo.trim() || null : null,
+          bankName: typeof req.body?.bankName === "string" ? req.body.bankName.trim() || null : null,
+          description: typeof req.body?.description === "string" ? req.body.description.trim() || null : null,
+        });
+        res.status(201).json({ ok: true, data: created });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
 }
 

@@ -88,3 +88,28 @@ export interface RentalContractRecord {
   branchName?: string;
   currencyCode?: string;
 }
+
+export type ContractVoucherType = "receipt" | "payment" | "refund";
+export type VoucherPaymentMethod = "cash" | "knet" | "link" | "bank_transfer" | "cheque";
+
+export interface ContractVoucherRecord {
+  id: string;
+  companyId: string;
+  branchId: string | null;
+  contractId: string;
+  contractNumber?: string;
+  customerName?: string;
+  voucherNumber: string;
+  voucherType: ContractVoucherType;
+  amount: number;
+  currencyCode: string;
+  paymentMethod: VoucherPaymentMethod;
+  paymentDate: string;
+  referenceNo: string | null;
+  bankName: string | null;
+  description: string | null;
+  createdByUserId: string | null;
+  createdByUserName?: string | null;
+  createdByUserSignatureDataUrl?: string | null;
+  createdAt: Date;
+}
