@@ -475,74 +475,72 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                 </div>
 
                 {selectedCustomer && (
-                  <div className="grid grid-cols-2 gap-3 rounded-xl border border-emerald-900/10 bg-emerald-50/55 p-3.5 sm:grid-cols-4 text-xs">
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "كود العميل" : "Customer ID"}
+                  <div className="grid grid-cols-2 gap-2.5 rounded-xl border border-emerald-900/10 bg-emerald-50/45 p-3 sm:grid-cols-4 text-xs">
+                    {[
+                      {
+                        label: isRtl ? "كود العميل" : "Customer ID",
+                        value: selectedCustomer.customerCode || "—",
+                        mono: true,
+                        highlight: true,
+                      },
+                      {
+                        label: isRtl ? "الاسم الكامل" : "Full Name",
+                        value: selectedCustomer.fullName,
+                      },
+                      {
+                        label: isRtl ? "الهاتف" : "Phone",
+                        value: selectedCustomer.phone,
+                        mono: true,
+                      },
+                      {
+                        label: isRtl ? "البريد الإلكتروني" : "Email",
+                        value: selectedCustomer.email || "—",
+                      },
+                      {
+                        label: isRtl ? "الهوية / الجواز" : "National ID",
+                        value: `${selectedCustomer.nationalId || "—"}${selectedCustomer.nationalIdExpiry ? ` (${selectedCustomer.nationalIdExpiry})` : ""}`,
+                        mono: true,
+                      },
+                      {
+                        label: isRtl ? "رقم الرخصة" : "Driver License",
+                        value: selectedCustomer.driverLicenseNo || "—",
+                        mono: true,
+                      },
+                      {
+                        label: isRtl ? "انتهاء الرخصة" : "License Expiry",
+                        value: selectedCustomer.licenseExpiry || "—",
+                        mono: true,
+                      },
+                      {
+                        label: isRtl ? "العنوان / الجنسية" : "Address / Nat.",
+                        value:
+                          [selectedCustomer.nationality, selectedCustomer.address]
+                            .filter(Boolean)
+                            .join(" · ") || "—",
+                      },
+                    ].map((tile) => (
+                      <div
+                        key={tile.label}
+                        className="rounded-lg border border-emerald-900/10 bg-white/90 px-3 py-2 text-start"
+                      >
+                        <div className="text-[10.5px] font-medium text-slate-500">
+                          {tile.label}
+                        </div>
+                        <div
+                          className={`mt-0.5 truncate font-semibold ${
+                            tile.highlight ? "text-revix-primary font-bold" : "text-revix-dark"
+                          } ${tile.mono ? "font-mono" : ""}`}
+                        >
+                          {tile.mono ? (
+                            <span dir="ltr" className="inline-block">
+                              {tile.value}
+                            </span>
+                          ) : (
+                            tile.value
+                          )}
+                        </div>
                       </div>
-                      <div className="font-mono font-bold text-revix-primary mt-0.5" dir="ltr">
-                        {selectedCustomer.customerCode || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "الاسم الكامل" : "Full Name"}
-                      </div>
-                      <div className="font-semibold text-revix-dark mt-0.5 truncate">
-                        {selectedCustomer.fullName}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "الهاتف" : "Phone"}
-                      </div>
-                      <div className="font-mono font-semibold text-revix-dark mt-0.5" dir="ltr">
-                        {selectedCustomer.phone}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "البريد الإلكتروني" : "Email"}
-                      </div>
-                      <div className="truncate text-revix-dark mt-0.5">
-                        {selectedCustomer.email || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "الهوية / الجواز" : "National ID"}
-                      </div>
-                      <div className="font-mono text-revix-dark mt-0.5" dir="ltr">
-                        {selectedCustomer.nationalId || "—"}
-                        {selectedCustomer.nationalIdExpiry ? ` (${selectedCustomer.nationalIdExpiry})` : ""}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "رقم الرخصة" : "Driver License"}
-                      </div>
-                      <div className="font-mono text-revix-dark mt-0.5" dir="ltr">
-                        {selectedCustomer.driverLicenseNo || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "انتهاء الرخصة" : "License Expiry"}
-                      </div>
-                      <div className="font-mono text-revix-dark mt-0.5" dir="ltr">
-                        {selectedCustomer.licenseExpiry || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "العنوان / الجنسية" : "Address / Nat."}
-                      </div>
-                      <div className="truncate text-revix-dark mt-0.5">
-                        {[selectedCustomer.nationality, selectedCustomer.address]
-                          .filter(Boolean)
-                          .join(" · ") || "—"}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 )}
 
@@ -713,57 +711,70 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                 </div>
 
                 {selectedVehicle && (
-                  <div className="grid grid-cols-2 gap-3 rounded-xl border border-emerald-900/10 bg-emerald-50/55 p-3.5 sm:grid-cols-4 text-xs">
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">Asset ID</div>
-                      <div className="font-mono font-bold text-revix-primary mt-0.5" dir="ltr">
-                        {selectedVehicle.assetCode || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "رقم اللوحة" : "License Plate"}
-                      </div>
-                      <div className="font-mono font-bold text-revix-dark mt-0.5" dir="ltr">
-                        {selectedVehicle.licensePlate}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">{isRtl ? "الموديل" : "Model"}</div>
-                      <div className="truncate font-semibold text-revix-dark mt-0.5">
-                        {selectedVehicle.variant
+                  <div className="grid grid-cols-2 gap-2.5 rounded-xl border border-emerald-900/10 bg-emerald-50/45 p-3 sm:grid-cols-4 text-xs">
+                    {[
+                      {
+                        label: "Asset ID",
+                        value: selectedVehicle.assetCode || "—",
+                        mono: true,
+                        highlight: true,
+                      },
+                      {
+                        label: isRtl ? "رقم اللوحة" : "License Plate",
+                        value: selectedVehicle.licensePlate,
+                        mono: true,
+                      },
+                      {
+                        label: isRtl ? "الموديل" : "Model",
+                        value: selectedVehicle.variant
                           ? `${selectedVehicle.variant.make} ${selectedVehicle.variant.model} ${selectedVehicle.variant.modelYear}`
-                          : "—"}
+                          : "—",
+                      },
+                      {
+                        label: isRtl ? "الفرع" : "Branch",
+                        value: selectedVehicle.branchName || "—",
+                      },
+                      {
+                        label: isRtl ? "اللون" : "Color",
+                        value: selectedVehicle.color || "—",
+                      },
+                      {
+                        label: isRtl ? "العداد" : "Odometer",
+                        value: `${selectedVehicle.mileageOdometer.toLocaleString()} km`,
+                        mono: true,
+                      },
+                      {
+                        label: isRtl ? "أسعار الشرائح (1–2 / 3–7 / 8+)" : "Tier Rates (1–2 / 3–7 / 8+)",
+                        value: `${Number(selectedVehicle.dailyRate1to2 || 0).toLocaleString()} / ${Number(selectedVehicle.dailyRate3to7 || 0).toLocaleString()} / ${Number(selectedVehicle.dailyRate8Plus || 0).toLocaleString()}`,
+                        mono: true,
+                        highlight: true,
+                        span2: true,
+                      },
+                    ].map((tile) => (
+                      <div
+                        key={tile.label}
+                        className={`rounded-lg border border-emerald-900/10 bg-white/90 px-3 py-2 text-start ${
+                          tile.span2 ? "col-span-2" : ""
+                        }`}
+                      >
+                        <div className="text-[10.5px] font-medium text-slate-500">
+                          {tile.label}
+                        </div>
+                        <div
+                          className={`mt-0.5 truncate font-semibold ${
+                            tile.highlight ? "text-revix-primary font-bold" : "text-revix-dark"
+                          } ${tile.mono ? "font-mono" : ""}`}
+                        >
+                          {tile.mono ? (
+                            <span dir="ltr" className="inline-block">
+                              {tile.value}
+                            </span>
+                          ) : (
+                            tile.value
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">{isRtl ? "الفرع" : "Branch"}</div>
-                      <div className="truncate font-semibold text-revix-dark mt-0.5">
-                        {selectedVehicle.branchName || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">{isRtl ? "اللون" : "Color"}</div>
-                      <div className="font-semibold text-revix-dark mt-0.5">
-                        {selectedVehicle.color || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10.5px] text-slate-500">{isRtl ? "العداد" : "Odometer"}</div>
-                      <div className="font-mono font-semibold text-revix-dark mt-0.5">
-                        {selectedVehicle.mileageOdometer.toLocaleString()} km
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <div className="text-[10.5px] text-slate-500">
-                        {isRtl ? "أسعار الشرائح (1–2 / 3–7 / 8+)" : "Tier Rates (1–2 / 3–7 / 8+)"}
-                      </div>
-                      <div className="font-mono text-xs font-bold text-revix-primary mt-0.5" dir="ltr">
-                        {Number(selectedVehicle.dailyRate1to2 || 0).toLocaleString()} /{" "}
-                        {Number(selectedVehicle.dailyRate3to7 || 0).toLocaleString()} /{" "}
-                        {Number(selectedVehicle.dailyRate8Plus || 0).toLocaleString()}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 )}
 
