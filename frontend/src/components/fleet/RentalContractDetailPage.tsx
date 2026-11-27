@@ -237,20 +237,25 @@ export function RentalContractDetailPage({
                 {isRtl ? st.ar : st.en}
               </span>
             </div>
-            <p className="mt-0.5 font-mono text-xs text-slate-500" dir="ltr">
-              {contract.startDate} → {contract.endDate} (
-              {contract.actualDays ?? contract.totalDays} {isRtl ? "يوم" : "d"})
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="font-mono" dir="ltr">
+                {contract.startDate} → {contract.endDate}
+              </span>
+              <span>•</span>
+              <span>
+                {contract.actualDays ?? contract.totalDays} {isRtl ? "أيام" : "day(s)"}
+              </span>
             </p>
           </div>
         </div>
 
         {/* Compact Action Bar: Print + Return (if active) + More Menu */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="secondary"
             onClick={() => setPrintingContract(contract)}
-            className="h-9 rounded-xl px-3.5 text-xs"
+            className="!min-h-0 h-9 rounded-xl px-3.5 py-0 text-xs"
           >
             <RevixIcon name="file-text" size={14} />
             <span>{isRtl ? "طباعة / توقيع" : "Print / Sign"}</span>
@@ -261,7 +266,7 @@ export function RentalContractDetailPage({
               type="button"
               variant="primary"
               onClick={() => setCompletingContract(contract)}
-              className="h-9 rounded-xl px-4 text-xs"
+              className="!min-h-0 h-9 rounded-xl px-4 py-0 text-xs"
             >
               <span>{isRtl ? "استلام وإغلاق" : "Return & Close"}</span>
             </Button>
@@ -271,7 +276,7 @@ export function RentalContractDetailPage({
             <button
               type="button"
               onClick={() => setActionsMenuOpen((v) => !v)}
-              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50"
             >
               <span>{isRtl ? "السندات والمزيد" : "Vouchers & More"}</span>
               <RevixIcon name="chevron-down" size={14} />
