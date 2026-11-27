@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormField";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixSelect } from "@/components/ui/RevixSelect";
-import { StudioModal, MASTER_LABEL_CLASS } from "@/components/shared/workspace";
+import {
+  DetailTileGrid,
+  StudioModal,
+  MASTER_LABEL_CLASS,
+} from "@/components/shared/workspace";
 import {
   useCreateContractVoucherMutation,
   useListContractVouchersQuery,
@@ -80,8 +84,6 @@ export function ContractVoucherModal({
   const company = ctx?.data?.company ?? null;
   const currentUser = ctx?.data?.user ?? null;
 
-  const [voucherType, setVoucherType] =
-    useState<ContractVoucherType>(initialVoucherType);
   const [amount, setAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<VoucherPaymentMethod>("cash");
   const [paymentDate, setPaymentDate] = useState<string>(() =>
@@ -89,7 +91,6 @@ export function ContractVoucherModal({
   );
   const [referenceNo, setReferenceNo] = useState("");
   const [bankName, setBankName] = useState("");
-  const [description, setDescription] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeSavedVoucher, setActiveSavedVoucher] =
     useState<ContractVoucherDto | null>(null);
@@ -101,22 +102,22 @@ export function ContractVoucherModal({
 
   useEffect(() => {
     if (!contract) return;
-    setVoucherType(initialVoucherType);
     setAmount(getDefaultAmount(contract, initialVoucherType));
     setPaymentMethod("cash");
     setPaymentDate(new Date().toISOString().slice(0, 10));
     setReferenceNo("");
     setBankName("");
-    setDescription(getDefaultDescription(contract, initialVoucherType, isRtl));
     setErrorMsg(null);
     setActiveSavedVoucher(null);
-  }, [contract, initialVoucherType, isRtl]);
+  }, [contract, initialVoucherType]);
 
   if (!contract) return null;
 
+  const voucherType = initialVoucherType;
   const currency = contract.currencyCode || company?.baseCurrency || "EGP";
   const vouchers = vouchersRes?.data ?? [];
   const meta = VOUCHER_TYPE_META[voucherType];
+  const dynamicDescription = getDefaultDescription(contract, voucherType, isRtl);
 
   const previewSheet: VoucherSheetData = activeSavedVoucher
     ? {
@@ -155,7 +156,7 @@ export function ContractVoucherModal({
         contractNumber: contract.contractNumber,
         referenceNo,
         bankName,
-        description,
+        description: dynamicDescription,
         employeeName: currentUser?.fullName || contract.createdByUserName,
         employeeSignatureDataUrl: currentUser?.signatureDataUrl || null,
       };
@@ -178,9 +179,8 @@ export function ContractVoucherModal({
     }, 80);
   }
 
-  async function handleSaveAndPrint(e: FormEvent) {
-    e.preventDefault();
-    if (!contract) return;
+  async function handleSaveAndPrint() {
+    if (!contract || activeSavedVoucher) return;
     setErrorMsg(null);
 
     if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
@@ -201,7 +201,7 @@ export function ContractVoucherModal({
         paymentDate,
         referenceNo: referenceNo.trim() || null,
         bankName: bankName.trim() || null,
-        description: description.trim() || null,
+        description: dynamicDescription,
       }).unwrap();
 
       setActiveSavedVoucher(res.data);
@@ -250,66 +250,61 @@ export function ContractVoucherModal({
           />
         )}
 
-        {/* Voucher Input Form */}
-        <form
-          onSubmit={handleSaveAndPrint}
-          className="rounded-xl border border-revix-border bg-revix-surface/40 p-4 space-y-3"
-        >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <div>
-              <label className={MASTER_LABEL_CLASS}>
-                {isRtl ? "نوع السند" : "Voucher Type"}
-              </label>
-              <RevixSelect
-                size="sm"
-                isRtl={isRtl}
-                value={voucherType}
-                onChange={(e) => {
-                  const nextType = e.target.value as ContractVoucherType;
-                  setActiveSavedVoucher(null);
-                  setVoucherType(nextType);
-                  setAmount(getDefaultAmount(contract, nextType));
-                  setDescription(getDefaultDescription(contract, nextType, isRtl));
-                }}
-                buttonClassName="h-10 rounded-lg text-xs"
-                options={[
-                  { value: "receipt", label: isRtl ? "سند قبض" : "Receipt Voucher" },
-                  { value: "payment", label: isRtl ? "سند دفع" : "Payment Voucher" },
-                  { value: "refund", label: isRtl ? "سند مرتجع" : "Refund Voucher" },
-                ]}
-              />
-            </div>
+        {/* Read-Only Dynamic Contract Data */}
+        <div className="rounded-xl border border-revix-border bg-revix-surface/50 p-4 space-y-3">
+          <DetailTileGrid
+            columns={4}
+            items={[
+              {
+                label: isRtl ? "نوع السند" : "Voucher Type",
+                value: (
+                  <span
+                    className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-bold ${meta.badgeCls}`}
+                  >
+                    {isRtl ? meta.ar : meta.en}
+                  </span>
+                ),
+              },
+              {
+                label: isRtl ? "رقم العقد" : "Contract #",
+                value: <span className="font-mono">{contract.contractNumber}</span>,
+              },
+              {
+                label: isRtl ? "اسم العميل" : "Customer Name",
+                value: contract.customerName || "—",
+              },
+              {
+                label: isRtl ? "إجمالي العقد" : "Contract Total",
+                value: (
+                  <span className="font-mono">
+                    {Number(contract.totalAmount || 0).toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+            ]}
+          />
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+            <span className="font-semibold text-slate-500">
+              {isRtl ? "وذلك عن: " : "For: "}
+            </span>
+            <span className="font-semibold text-slate-900">{dynamicDescription}</span>
+          </div>
+        </div>
 
-            <FormInput
-              label={isRtl ? "اسم العميل" : "Customer Name"}
-              value={contract.customerName || "—"}
-              readOnly
-              className="bg-slate-50 font-semibold text-slate-700"
-            />
-
-            <FormInput
-              label={isRtl ? "رقم العقد" : "Contract #"}
-              value={contract.contractNumber}
-              readOnly
-              className="bg-slate-50 font-mono font-bold text-revix-primary"
-            />
-
+        {/* Manual Payment Entry Fields (No auto-submit on Enter) */}
+        <div className="rounded-xl border border-revix-border bg-white p-4 space-y-4">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
             <FormInput
               type="number"
               min={0.01}
               step="0.01"
-              required
-              label={isRtl ? `المبلغ (${currency})` : `Amount (${currency})`}
+              disabled={Boolean(activeSavedVoucher)}
+              label={isRtl ? `المبلغ (${currency}) *` : `Amount (${currency}) *`}
               value={amount || ""}
-              onChange={(e) => {
-                setActiveSavedVoucher(null);
-                setAmount(Number(e.target.value) || 0);
-              }}
+              onChange={(e) => setAmount(Number(e.target.value) || 0)}
               className="font-mono font-bold"
             />
-          </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <div>
               <label className={MASTER_LABEL_CLASS}>
                 {isRtl ? "طريقة الدفع *" : "Payment Method *"}
@@ -317,11 +312,11 @@ export function ContractVoucherModal({
               <RevixSelect
                 size="sm"
                 isRtl={isRtl}
+                disabled={Boolean(activeSavedVoucher)}
                 value={paymentMethod}
-                onChange={(e) => {
-                  setActiveSavedVoucher(null);
-                  setPaymentMethod(e.target.value as VoucherPaymentMethod);
-                }}
+                onChange={(e) =>
+                  setPaymentMethod(e.target.value as VoucherPaymentMethod)
+                }
                 buttonClassName="h-10 rounded-lg text-xs"
                 options={[
                   { value: "cash", label: isRtl ? "كاش" : "Cash" },
@@ -335,69 +330,73 @@ export function ContractVoucherModal({
 
             <FormInput
               type="date"
-              required
+              disabled={Boolean(activeSavedVoucher)}
               label={isRtl ? "تاريخ الدفع *" : "Payment Date *"}
               value={paymentDate}
-              onChange={(e) => {
-                setActiveSavedVoucher(null);
-                setPaymentDate(e.target.value);
-              }}
+              onChange={(e) => setPaymentDate(e.target.value)}
               className="font-mono"
             />
 
             <FormInput
+              disabled={Boolean(activeSavedVoucher)}
               label={isRtl ? "رقم الشيك / المرجع" : "Cheque / Ref No."}
               value={referenceNo}
-              onChange={(e) => {
-                setActiveSavedVoucher(null);
-                setReferenceNo(e.target.value);
-              }}
+              onChange={(e) => setReferenceNo(e.target.value)}
               placeholder={isRtl ? "اختياري..." : "Optional..."}
               className="font-mono"
             />
 
             <FormInput
+              disabled={Boolean(activeSavedVoucher)}
               label={isRtl ? "البنك" : "Bank"}
               value={bankName}
-              onChange={(e) => {
-                setActiveSavedVoucher(null);
-                setBankName(e.target.value);
-              }}
+              onChange={(e) => setBankName(e.target.value)}
               placeholder={isRtl ? "اسم البنك..." : "Bank name..."}
             />
           </div>
 
-          <FormInput
-            label={isRtl ? "وذلك عن (البيان)" : "For (Description)"}
-            value={description}
-            onChange={(e) => {
-              setActiveSavedVoucher(null);
-              setDescription(e.target.value);
-            }}
-          />
-
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-3">
             <Button type="button" variant="secondary" onClick={onClose}>
               {isRtl ? "إغلاق" : "Close"}
             </Button>
-            {activeSavedVoucher && (
+
+            {activeSavedVoucher ? (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setActiveSavedVoucher(null);
+                    setReferenceNo("");
+                    setBankName("");
+                  }}
+                >
+                  {isRtl ? "إنشاء سند جديد" : "New Voucher"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => printCurrentVoucher(previewSheet)}
+                >
+                  <RevixIcon name="file-text" size={14} />
+                  <span>{isRtl ? "طباعة السند" : "Print Voucher"}</span>
+                </Button>
+              </>
+            ) : (
               <Button
                 type="button"
-                variant="secondary"
-                onClick={() => printCurrentVoucher(previewSheet)}
+                variant="primary"
+                isLoading={isSaving}
+                onClick={handleSaveAndPrint}
               >
                 <RevixIcon name="file-text" size={14} />
-                <span>{isRtl ? "إعادة الطباعة" : "Reprint"}</span>
+                <span>
+                  {isRtl ? "حفظ وطباعة السند" : "Save & Print Voucher"}
+                </span>
               </Button>
             )}
-            <Button type="submit" isLoading={isSaving}>
-              <RevixIcon name="file-text" size={14} />
-              <span>
-                {isRtl ? "حفظ وطباعة السند" : "Save & Print Voucher"}
-              </span>
-            </Button>
           </div>
-        </form>
+        </div>
 
         {/* Live Voucher Preview */}
         <div className="space-y-2">
