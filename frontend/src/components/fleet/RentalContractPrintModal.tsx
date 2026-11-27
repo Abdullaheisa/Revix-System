@@ -281,6 +281,7 @@ export function RentalContractPrintModal({
 <html>
 <head>
   <meta charset="utf-8" />
+  <base href="${window.location.origin}/" />
   <title>${contract?.contractNumber ?? "Contract"}</title>
   ${stylesHtml}
   <style>
@@ -771,28 +772,14 @@ export function RentalContractPrintModal({
                   </div>
                 </div>
 
-                {/* Car Inspection Diagram SVG */}
-                <div className="col-span-8 flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50/40 p-2">
-                  <svg viewBox="0 0 360 175" className="w-full max-w-[340px] h-40 stroke-slate-600 fill-none">
-                    {/* Top View Center */}
-                    <rect x="110" y="55" width="140" height="65" rx="16" strokeWidth="1.6" />
-                    <rect x="142" y="64" width="76" height="47" rx="8" strokeWidth="1.2" />
-                    <line x1="142" y1="64" x2="128" y2="57" strokeWidth="1" />
-                    <line x1="142" y1="111" x2="128" y2="118" strokeWidth="1" />
-                    <line x1="218" y1="64" x2="235" y2="57" strokeWidth="1" />
-                    <line x1="218" y1="111" x2="235" y2="118" strokeWidth="1" />
-                    {/* Left Side Profile (Top) */}
-                    <path d="M 105 40 L 255 40 L 245 20 L 200 12 L 145 12 L 120 24 Z" strokeWidth="1.4" />
-                    <circle cx="140" cy="40" r="10" strokeWidth="1.4" fill="#ffffff" />
-                    <circle cx="225" cy="40" r="10" strokeWidth="1.4" fill="#ffffff" />
-                    {/* Right Side Profile (Bottom) */}
-                    <path d="M 105 135 L 255 135 L 245 155 L 200 163 L 145 163 L 120 151 Z" strokeWidth="1.4" />
-                    <circle cx="140" cy="135" r="10" strokeWidth="1.4" fill="#ffffff" />
-                    <circle cx="225" cy="135" r="10" strokeWidth="1.4" fill="#ffffff" />
-                    {/* Front & Rear */}
-                    <rect x="55" y="65" width="38" height="45" rx="8" strokeWidth="1.4" />
-                    <rect x="267" y="65" width="38" height="45" rx="8" strokeWidth="1.4" />
-                  </svg>
+                {/* Car Inspection Diagram */}
+                <div className="col-span-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/car-inspection-blueprint.jpg"
+                    alt="Vehicle Inspection Diagram"
+                    className="h-44 w-full max-w-[420px] object-contain"
+                  />
                 </div>
               </div>
             </div>
