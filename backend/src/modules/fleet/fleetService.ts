@@ -1863,7 +1863,11 @@ export class FleetService {
   }
 
   async cancelRentalContract(actor: TenantActor, contractId: string) {
-    const updated = await this.store.cancelRentalContract(actor.company.id, contractId);
+    const updated = await this.store.cancelRentalContract(
+      actor.company.id,
+      contractId,
+      actor.user.id,
+    );
     if (!updated) {
       throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
     }

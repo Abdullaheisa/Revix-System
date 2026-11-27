@@ -57,6 +57,9 @@ export interface RentalContractRecord {
   createdByUserId: string | null;
   createdByUserName?: string | null;
   createdByUserSignatureDataUrl?: string | null;
+  cancelledByUserId?: string | null;
+  cancelledByUserName?: string | null;
+  cancelledAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   // Enriched presentation fields

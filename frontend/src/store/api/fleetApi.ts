@@ -394,6 +394,9 @@ export interface RentalContractDto {
   createdByUserId?: string | null;
   createdByUserName?: string | null;
   createdByUserSignatureDataUrl?: string | null;
+  cancelledByUserId?: string | null;
+  cancelledByUserName?: string | null;
+  cancelledAt?: string | null;
   vehicleMake?: string;
   vehicleModel?: string;
   vehicleModelYear?: number;

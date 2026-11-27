@@ -19,6 +19,8 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { CreateRentalContractPage } from "./CreateRentalContractPage";
 import { CompleteContractModal } from "./CompleteContractModal";
 import { RentalContractPrintModal } from "./RentalContractPrintModal";
@@ -38,7 +40,7 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
   const pathname = usePathname();
   const resourceRoute = parseFleetResourceRoute(pathname);
   const { data: contractsData, isLoading } = useListRentalContractsQuery();
-  const [cancelContract] = useCancelRentalContractMutation();
+  const [cancelContract, { isLoading: isCancelling }] = useCancelRentalContractMutation();
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -46,6 +48,8 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
   const pageSize = 15;
   const [completingContract, setCompletingContract] = useState<RentalContractDto | null>(null);
   const [printingContract, setPrintingContract] = useState<RentalContractDto | null>(null);
+  const [cancellingContract, setCancellingContract] = useState<RentalContractDto | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const contracts = useMemo(() => contractsData?.data ?? [], [contractsData?.data]);
 
@@ -238,6 +242,11 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                     <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.cls}`}>
                       {isRtl ? st.ar : st.en}
                     </span>
+                    {c.status === "cancelled" && c.cancelledByUserName && (
+                      <div className="mt-0.5 text-[10px] text-rose-600">
+                        {isRtl ? "ألغاه:" : "By:"} {c.cancelledByUserName}
+                      </div>
+                    )}
                   </td>
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
                     <div className="inline-flex items-center justify-center gap-1.5">
@@ -259,7 +268,10 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                           </button>
                           <button
                             type="button"
-                            onClick={() => cancelContract(c.id)}
+                            onClick={() => {
+                              setCancelError(null);
+                              setCancellingContract(c);
+                            }}
                             className="h-8 cursor-pointer rounded-md border border-red-200 bg-white px-2.5 text-[11px] font-semibold text-red-600 hover:bg-red-50"
                           >
                             {isRtl ? "إلغاء" : "Cancel"}
@@ -298,6 +310,96 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
         onClose={() => setPrintingContract(null)}
         onSigned={(updated) => setPrintingContract(updated)}
       />
+
+      {cancellingContract && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[2px]"
+          onClick={() => !isCancelling && setCancellingContract(null)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-revix-border bg-white shadow-2xl"
+            dir={isRtl ? "rtl" : "ltr"}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-rose-100 bg-rose-50/70 px-5 py-3.5">
+              <div className="flex items-center gap-2 text-rose-800">
+                <RevixIcon name="info" size={16} />
+                <h3 className="text-sm font-bold">
+                  {isRtl
+                    ? `تأكيد إلغاء العقد ${cancellingContract.contractNumber}`
+                    : `Confirm Cancellation (${cancellingContract.contractNumber})`}
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={() => setCancellingContract(null)}
+                className="cursor-pointer rounded-lg p-1 text-rose-500 hover:bg-rose-100"
+              >
+                <RevixIcon name="x" size={15} />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 p-5 text-xs">
+              {cancelError && <Alert variant="error" message={cancelError} />}
+
+              <p className="leading-relaxed text-slate-700">
+                {isRtl
+                  ? "هل أنت متأكد من إلغاء هذا العقد؟ سيتم تحرير السيارة وإعادتها للحالة المتاحة، كما سيتم تسجيل اسمك كالموظف الذي قام بالإلغاء."
+                  : "Are you sure you want to cancel this contract? The vehicle will be released back to available status, and your name will be recorded as the cancelling employee."}
+              </p>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 space-y-1">
+                <div className="font-bold text-slate-900">
+                  {cancellingContract.customerName || "—"}
+                </div>
+                <div className="text-slate-600">
+                  {cancellingContract.vehicleName} —{" "}
+                  <span className="font-mono font-semibold">{cancellingContract.vehiclePlate}</span>
+                </div>
+                <div className="font-mono text-[11px] text-slate-500">
+                  {cancellingContract.startDate} → {cancellingContract.endDate}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isCancelling}
+                  onClick={() => setCancellingContract(null)}
+                >
+                  {isRtl ? "تراجع" : "Keep Contract"}
+                </Button>
+                <button
+                  type="button"
+                  disabled={isCancelling}
+                  onClick={async () => {
+                    setCancelError(null);
+                    try {
+                      await cancelContract(cancellingContract.id).unwrap();
+                      setCancellingContract(null);
+                    } catch {
+                      setCancelError(
+                        isRtl ? "تعذر إلغاء العقد." : "Failed to cancel contract.",
+                      );
+                    }
+                  }}
+                  className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-rose-600 px-4 text-xs font-bold text-white transition-colors hover:bg-rose-700 disabled:opacity-60"
+                >
+                  {isCancelling
+                    ? isRtl
+                      ? "جاري الإلغاء..."
+                      : "Cancelling..."
+                    : isRtl
+                      ? "تأكيد الإلغاء"
+                      : "Confirm Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

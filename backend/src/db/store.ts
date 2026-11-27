@@ -557,6 +557,7 @@ export interface AuthDataStore {
   cancelRentalContract(
     companyId: string,
     contractId: string,
+    cancelledByUserId?: string | null,
   ): Promise<RentalContractRecord | null>;
 
   recordAuditLog(input: AuditLogInput): Promise<void>;
