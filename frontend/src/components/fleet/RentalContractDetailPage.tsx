@@ -12,6 +12,7 @@ import {
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { DetailTileGrid } from "@/components/shared/workspace";
 import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
 import {
   customerHref,
@@ -398,42 +399,45 @@ export function RentalContractDetailPage({
 
       {activeTab === "overview" && (
         <div className="space-y-5">
-          {/* Clean Financial KPI Strip */}
-          <div className="grid grid-cols-2 divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs sm:grid-cols-4 sm:divide-y-0 sm:divide-x sm:rtl:divide-x-reverse">
-            <div className="p-4">
-              <div className="text-[11px] font-medium text-slate-500">
-                {isRtl ? "إجمالي العقد" : "Total Amount"}
-              </div>
-              <div className="mt-1 font-mono text-lg font-extrabold text-slate-900" dir="ltr">
-                {Number(contract.totalAmount || 0).toLocaleString()} {currency}
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="text-[11px] font-medium text-slate-500">
-                {isRtl ? "المدفوع" : "Paid Amount"}
-              </div>
-              <div className="mt-1 font-mono text-lg font-bold text-emerald-700" dir="ltr">
-                {Number(contract.paidAmount || 0).toLocaleString()} {currency}
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="text-[11px] font-medium text-slate-500">
-                {isRtl ? "المتبقي" : "Remaining"}
-              </div>
-              <div className="mt-1 font-mono text-lg font-bold text-amber-600" dir="ltr">
-                {remaining.toLocaleString()} {currency}
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="text-[11px] font-medium text-slate-500">
-                {isRtl ? "إيجار اليوم / الديبوزت" : "Daily Rate / Deposit"}
-              </div>
-              <div className="mt-1 font-mono text-sm font-bold text-slate-800" dir="ltr">
-                {Number(contract.dailyRate || 0).toLocaleString()} /{" "}
-                {Number(contract.depositAmount || 0).toLocaleString()} {currency}
-              </div>
-            </div>
-          </div>
+          {/* Financial KPI Cards */}
+          <DetailTileGrid
+            columns={4}
+            items={[
+              {
+                label: isRtl ? "إجمالي العقد" : "Total Amount",
+                value: (
+                  <span className="font-mono font-extrabold" dir="ltr">
+                    {Number(contract.totalAmount || 0).toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+              {
+                label: isRtl ? "المدفوع" : "Paid Amount",
+                value: (
+                  <span className="font-mono font-bold text-emerald-700" dir="ltr">
+                    {Number(contract.paidAmount || 0).toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+              {
+                label: isRtl ? "المتبقي" : "Remaining",
+                value: (
+                  <span className="font-mono font-bold text-amber-600" dir="ltr">
+                    {remaining.toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+              {
+                label: isRtl ? "إيجار اليوم / الديبوزت" : "Daily Rate / Deposit",
+                value: (
+                  <span className="font-mono font-bold" dir="ltr">
+                    {Number(contract.dailyRate || 0).toLocaleString()} /{" "}
+                    {Number(contract.depositAmount || 0).toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+            ]}
+          />
 
           {/* Customer & Vehicle Clean Specification Cards */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
