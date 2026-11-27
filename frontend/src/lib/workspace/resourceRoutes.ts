@@ -79,6 +79,11 @@ export function customerHref(id?: string | null): string {
   return `/workspace/fleet/customers/${encodeURIComponent(id)}`;
 }
 
+export function rentalContractHref(id?: string | null): string {
+  if (!id) return "/workspace/fleet/rental-contracts";
+  return `/workspace/fleet/rental-contracts/${encodeURIComponent(id)}`;
+}
+
 export function rentalContractNewHref(params?: {
   vehicleId?: string | null;
   customerId?: string | null;

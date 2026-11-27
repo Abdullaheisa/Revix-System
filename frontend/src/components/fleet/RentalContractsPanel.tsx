@@ -6,6 +6,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import {
   customerHref,
   parseFleetResourceRoute,
+  rentalContractHref,
   rentalContractNewHref,
   vehicleHref,
 } from "@/lib/workspace/resourceRoutes";
@@ -23,6 +24,7 @@ import { RevixPagination } from "@/components/ui/RevixPagination";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { CreateRentalContractPage } from "./CreateRentalContractPage";
+import { RentalContractDetailPage } from "./RentalContractDetailPage";
 import { CompleteContractModal } from "./CompleteContractModal";
 import { RentalContractPrintModal } from "./RentalContractPrintModal";
 import { ContractVoucherModal } from "./vouchers/ContractVoucherModal";
@@ -89,6 +91,14 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
 
   if (resourceRoute?.resource === "rental-contracts" && resourceRoute.action === "create") {
     return <CreateRentalContractPage isRtl={isRtl} />;
+  }
+
+  if (
+    resourceRoute?.resource === "rental-contracts" &&
+    resourceRoute.action === "detail" &&
+    resourceRoute.id
+  ) {
+    return <RentalContractDetailPage contractId={resourceRoute.id} isRtl={isRtl} />;
   }
 
   return (
@@ -186,12 +196,12 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
               return (
                 <tr key={c.id} className="transition-colors hover:bg-revix-surface/60">
                   <td className="py-2.5 px-3 whitespace-nowrap">
-                    <div className="font-mono font-bold text-revix-primary">{c.contractNumber}</div>
-                    {c.createdByUserName && (
-                      <div className="mt-0.5 text-[10px] text-revix-muted">
-                        {isRtl ? "بواسطة:" : "By:"} {c.createdByUserName}
-                      </div>
-                    )}
+                    <Link
+                      href={rentalContractHref(c.id)}
+                      className="font-mono font-bold text-revix-primary hover:underline"
+                    >
+                      {c.contractNumber}
+                    </Link>
                   </td>
                   <td className="py-2.5 px-3">
                     {c.customerId ? (
@@ -250,16 +260,6 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                     <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.cls}`}>
                       {isRtl ? st.ar : st.en}
                     </span>
-                    {c.status === "completed" && c.receivedByUserName && (
-                      <div className="mt-0.5 text-[10px] text-blue-700">
-                        {isRtl ? "استلمها:" : "Received by:"} {c.receivedByUserName}
-                      </div>
-                    )}
-                    {c.status === "cancelled" && c.cancelledByUserName && (
-                      <div className="mt-0.5 text-[10px] text-rose-600">
-                        {isRtl ? "ألغاه:" : "By:"} {c.cancelledByUserName}
-                      </div>
-                    )}
                   </td>
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
                     <ContractActionsMenu

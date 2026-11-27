@@ -447,6 +447,24 @@ export interface ContractVoucherDto {
   createdAt: string;
 }
 
+export interface ContractAuditLogDto {
+  id: string;
+  actorUserId: string | null;
+  actorName?: string | null;
+  actorEmail?: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface RentalContractDetailsDto {
+  contract: RentalContractDto;
+  vouchers: ContractVoucherDto[];
+  auditLogs: ContractAuditLogDto[];
+}
+
 export interface InsuranceCompanyDto {
   id: string;
   companyId: string;
@@ -1445,6 +1463,14 @@ export const fleetApi = baseApi.injectEndpoints({
       providesTags: ["RentalContract"],
     }),
 
+    getRentalContractDetails: builder.query<
+      { ok: boolean; data: RentalContractDetailsDto },
+      string
+    >({
+      query: (id) => `/fleet/contracts/${id}/details`,
+      providesTags: ["RentalContract"],
+    }),
+
     createRentalContract: builder.mutation<
       { ok: boolean; data: RentalContractDto },
       {
@@ -1807,6 +1833,7 @@ export const {
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
   useListRentalContractsQuery,
+  useGetRentalContractDetailsQuery,
   useCreateRentalContractMutation,
   useSignRentalContractMutation,
   useCompleteRentalContractMutation,

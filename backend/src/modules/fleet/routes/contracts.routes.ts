@@ -42,6 +42,24 @@ router.get(
     },
   );
 
+  router.get(
+    "/contracts/:id/details",
+    guards.requirePermission("sales", "read"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id || !UUID_REGEX.test(id)) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_CONTRACT_ID", message: "Invalid contract ID." } });
+        return;
+      }
+      try {
+        const details = await fleetService.getRentalContractDetails(req.tenantActor!, id!);
+        res.status(200).json({ ok: true, data: details });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
 router.post(
     "/contracts",
     guards.requirePermission("sales", "create"),

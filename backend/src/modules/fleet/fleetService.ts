@@ -1909,6 +1909,36 @@ export class FleetService {
     return updated;
   }
 
+  async getRentalContractDetails(actor: TenantActor, contractId: string) {
+    const contracts = await this.store.listRentalContracts(actor.company.id);
+    const contract = contracts.find((c) => c.id === contractId);
+    if (!contract) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    const [vouchers, contractLogs, voucherLogs] = await Promise.all([
+      this.store.listContractVouchers(actor.company.id, contractId),
+      this.store.listAuditLogs(actor.company.id, {
+        entityType: "rental_contract",
+        entityId: contractId,
+        limit: 100,
+      }),
+      this.store.listAuditLogs(actor.company.id, {
+        entityType: "contract_voucher",
+        limit: 200,
+      }),
+    ]);
+    const voucherIds = new Set(vouchers.map((v) => v.id));
+    const relatedVoucherLogs = voucherLogs.filter(
+      (log) =>
+        (log.entityId ? voucherIds.has(log.entityId) : false) ||
+        (log.metadata as { contractId?: string } | undefined)?.contractId === contractId,
+    );
+    const auditLogs = [...contractLogs, ...relatedVoucherLogs].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    return { contract, vouchers, auditLogs };
+  }
+
   async listContractVouchers(actor: TenantActor, contractId: string) {
     return this.store.listContractVouchers(actor.company.id, contractId);
   }

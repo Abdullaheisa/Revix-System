@@ -6,7 +6,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { DetailTileGrid } from "@/components/shared/workspace";
-import { vehicleHref } from "@/lib/workspace/resourceRoutes";
+import { rentalContractHref, vehicleHref } from "@/lib/workspace/resourceRoutes";
 import {
   useListRentalContractsQuery,
   type CustomerDto,
@@ -335,9 +335,13 @@ export function CustomerDetailPage({
                   return (
                     <tr key={c.id} className="hover:bg-revix-surface/40">
                       <td className="whitespace-nowrap px-3.5 py-3">
-                        <div className="font-mono font-bold text-revix-primary" dir="ltr">
+                        <Link
+                          href={rentalContractHref(c.id)}
+                          className="font-mono font-bold text-revix-primary hover:underline"
+                          dir="ltr"
+                        >
                           {c.contractNumber}
-                        </div>
+                        </Link>
                         <div className="font-mono text-[11px] font-semibold text-revix-dark" dir="ltr">
                           {Number(c.totalAmount).toLocaleString()} {currency}
                         </div>

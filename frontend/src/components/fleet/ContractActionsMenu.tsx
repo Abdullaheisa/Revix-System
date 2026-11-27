@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@/i18n/navigation";
 import type { ContractVoucherType, RentalContractDto } from "@/store/api/fleetApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { rentalContractHref } from "@/lib/workspace/resourceRoutes";
 
 interface ContractActionsMenuProps {
   contract: RentalContractDto;
@@ -105,6 +107,16 @@ export function ContractActionsMenu({
           style={{ top: coords.top, left: coords.left }}
           className="fixed z-50 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 text-xs shadow-xl"
         >
+          <Link
+            href={rentalContractHref(contract.id)}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-start font-semibold text-revix-primary hover:bg-emerald-50/60"
+          >
+            <RevixIcon name="eye" size={14} />
+            <span>{isRtl ? "عرض تفاصيل العقد" : "View Contract Details"}</span>
+          </Link>
+
           <button
             type="button"
             role="menuitem"
