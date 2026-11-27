@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import {
   useCancelRentalContractMutation,
@@ -12,8 +12,6 @@ import {
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { RevixIcon } from "@/components/ui/RevixIcons";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { DetailTileGrid } from "@/components/shared/workspace";
 import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
 import {
   customerHref,
@@ -114,13 +112,40 @@ function formatAuditMetadata(log: ContractAuditLogDto, isRtl: boolean): string {
     parts.push(`${isRtl ? "المبلغ:" : "Amount:"} ${Number(m.amount).toLocaleString()}`);
   }
   if (m.paymentMethod) {
-    const pm = PAYMENT_METHOD_LABELS[String(m.paymentMethod) as keyof typeof PAYMENT_METHOD_LABELS];
+    const pm =
+      PAYMENT_METHOD_LABELS[
+        String(m.paymentMethod) as keyof typeof PAYMENT_METHOD_LABELS
+      ];
     parts.push(pm ? (isRtl ? pm.ar : pm.en) : String(m.paymentMethod));
   }
   if (m.returnOdometer != null) {
-    parts.push(`${isRtl ? "عداد العودة:" : "Return ODO:"} ${Number(m.returnOdometer).toLocaleString()} km`);
+    parts.push(
+      `${isRtl ? "عداد العودة:" : "Return ODO:"} ${Number(m.returnOdometer).toLocaleString()} km`,
+    );
   }
   return parts.join(" • ");
+}
+
+function InfoRow({
+  label,
+  value,
+  ltr = false,
+}: {
+  label: string;
+  value: ReactNode;
+  ltr?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-2.5 text-xs">
+      <span className="shrink-0 text-slate-500">{label}</span>
+      <span
+        dir={ltr ? "ltr" : undefined}
+        className="text-end font-semibold text-slate-900"
+      >
+        {value}
+      </span>
+    </div>
+  );
 }
 
 export function RentalContractDetailPage({
@@ -128,13 +153,8 @@ export function RentalContractDetailPage({
   isRtl,
 }: RentalContractDetailPageProps) {
   const router = useRouter();
-  const {
-    data,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = useGetRentalContractDetailsQuery(contractId);
+  const { data, isLoading, isFetching, error, refetch } =
+    useGetRentalContractDetailsQuery(contractId);
 
   const [cancelContract, { isLoading: isCancelling }] =
     useCancelRentalContractMutation();
@@ -149,7 +169,10 @@ export function RentalContractDetailPage({
   } | null>(null);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "vouchers" | "activity">("overview");
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "vouchers" | "activity">(
+    "overview",
+  );
 
   const handleBack = () =>
     navigateBackOrFallback(router, rentalContractHref());
@@ -164,7 +187,9 @@ export function RentalContractDetailPage({
           void refetch();
         }}
         onBack={handleBack}
-        loadingTitle={isRtl ? "جارٍ تحميل تفاصيل العقد..." : "Loading contract details..."}
+        loadingTitle={
+          isRtl ? "جارٍ تحميل تفاصيل العقد..." : "Loading contract details..."
+        }
         backLabel={isRtl ? "العودة لعقود التأجير" : "Back to Contracts"}
       />
     );
@@ -184,25 +209,25 @@ export function RentalContractDetailPage({
 
   return (
     <div
-      className="mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-4 overflow-y-auto pb-10"
+      className="mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-5 overflow-y-auto pb-10"
       dir={isRtl ? "rtl" : "ltr"}
     >
-      {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border pb-4 shrink-0">
+      {/* Clean Top Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 shrink-0">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
             onClick={handleBack}
             title={isRtl ? "رجوع" : "Back"}
             aria-label={isRtl ? "رجوع" : "Back"}
-            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface"
+            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50"
           >
             <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={15} />
           </button>
 
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="font-mono text-xl font-extrabold text-revix-dark">
+              <h1 className="font-mono text-xl font-extrabold tracking-tight text-slate-900">
                 {contract.contractNumber}
               </h1>
               <span
@@ -211,74 +236,120 @@ export function RentalContractDetailPage({
                 {isRtl ? st.ar : st.en}
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-revix-secondary">
-              {contract.startDate} → {contract.endDate} ({contract.actualDays ?? contract.totalDays}{" "}
-              {isRtl ? "يوم" : "day(s)"})
+            <p className="mt-0.5 font-mono text-xs text-slate-500" dir="ltr">
+              {contract.startDate} → {contract.endDate} (
+              {contract.actualDays ?? contract.totalDays} {isRtl ? "يوم" : "d"})
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Compact Action Bar: Print + Return (if active) + More Menu */}
+        <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="secondary"
             onClick={() => setPrintingContract(contract)}
+            className="h-9 rounded-xl px-3.5 text-xs"
           >
             <RevixIcon name="file-text" size={14} />
             <span>{isRtl ? "طباعة / توقيع" : "Print / Sign"}</span>
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setVoucherModal({ contract, type: "receipt" })}
-          >
-            <span>{isRtl ? "سند قبض" : "Receipt"}</span>
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setVoucherModal({ contract, type: "payment" })}
-          >
-            <span>{isRtl ? "سند دفع" : "Payment"}</span>
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setVoucherModal({ contract, type: "refund" })}
-          >
-            <span>{isRtl ? "سند مرتجع" : "Refund"}</span>
-          </Button>
+
           {contract.status === "active" && (
             <Button
               type="button"
               variant="primary"
               onClick={() => setCompletingContract(contract)}
+              className="h-9 rounded-xl px-4 text-xs"
             >
               <span>{isRtl ? "استلام وإغلاق" : "Return & Close"}</span>
             </Button>
           )}
-          {contract.status !== "cancelled" && (
+
+          <div className="relative">
             <button
               type="button"
-              onClick={() => {
-                setCancelError(null);
-                setIsCancelOpen(true);
-              }}
-              className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-rose-200 bg-rose-50 px-3.5 text-xs font-bold text-rose-700 hover:bg-rose-100"
+              onClick={() => setActionsMenuOpen((v) => !v)}
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              {isRtl ? "إلغاء العقد" : "Cancel Contract"}
+              <span>{isRtl ? "السندات والمزيد" : "Vouchers & More"}</span>
+              <RevixIcon name="chevron-down" size={14} />
             </button>
-          )}
+
+            {actionsMenuOpen && (
+              <div
+                onMouseLeave={() => setActionsMenuOpen(false)}
+                className={`absolute top-full z-30 mt-1.5 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 text-xs shadow-xl ${
+                  isRtl ? "left-0" : "right-0"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActionsMenuOpen(false);
+                    setVoucherModal({ contract, type: "receipt" });
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-start font-medium text-emerald-800 hover:bg-emerald-50/70"
+                >
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span>{isRtl ? "سند قبض" : "Receipt Voucher"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActionsMenuOpen(false);
+                    setVoucherModal({ contract, type: "payment" });
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-start font-medium text-amber-800 hover:bg-amber-50/70"
+                >
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span>{isRtl ? "سند دفع" : "Payment Voucher"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActionsMenuOpen(false);
+                    setVoucherModal({ contract, type: "refund" });
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-start font-medium text-rose-700 hover:bg-rose-50/70"
+                >
+                  <span className="h-2 w-2 rounded-full bg-rose-500" />
+                  <span>{isRtl ? "سند مرتجع" : "Refund Voucher"}</span>
+                </button>
+
+                {contract.status !== "cancelled" && (
+                  <>
+                    <div className="my-1 border-t border-slate-100" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        setCancelError(null);
+                        setIsCancelOpen(true);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-start font-semibold text-rose-600 hover:bg-rose-50"
+                    >
+                      <RevixIcon name="x" size={14} />
+                      <span>{isRtl ? "إلغاء العقد" : "Cancel Contract"}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Page Tabs */}
       <nav
-        className="flex gap-1 border-b border-revix-border shrink-0 overflow-x-auto"
+        className="flex gap-1 border-b border-slate-200 shrink-0 overflow-x-auto"
         aria-label={isRtl ? "تبويبات تفاصيل العقد" : "Contract detail tabs"}
       >
         {[
-          { id: "overview" as const, label: isRtl ? "نظرة عامة والتفاصيل" : "Overview & Details" },
+          {
+            id: "overview" as const,
+            label: isRtl ? "نظرة عامة والتفاصيل" : "Overview & Details",
+          },
           {
             id: "vouchers" as const,
             label: isRtl ? "السندات المالية" : "Financial Vouchers",
@@ -299,7 +370,7 @@ export function RentalContractDetailPage({
               className={`inline-flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-xs transition-colors ${
                 isActive
                   ? "border-revix-primary font-bold text-revix-primary"
-                  : "border-transparent font-medium text-revix-secondary hover:text-revix-dark"
+                  : "border-transparent font-medium text-slate-500 hover:text-slate-900"
               }`}
             >
               <span>{tab.label}</span>
@@ -308,7 +379,7 @@ export function RentalContractDetailPage({
                   className={`rounded-md px-1.5 py-0.5 font-mono text-[10.5px] font-semibold ${
                     isActive
                       ? "bg-emerald-50 text-revix-primary"
-                      : "bg-revix-surface text-revix-secondary"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {tab.count}
@@ -320,51 +391,52 @@ export function RentalContractDetailPage({
       </nav>
 
       {activeTab === "overview" && (
-        <>
-          {/* Financial & Activity Statistics */}
-          <DetailTileGrid
-            columns={4}
-            items={[
-              {
-                label: isRtl ? "الإجمالي" : "Total Amount",
-                value: (
-                  <span className="font-mono font-extrabold">
-                    {Number(contract.totalAmount || 0).toLocaleString()} {currency}
-                  </span>
-                ),
-              },
-              {
-                label: isRtl ? "المدفوع" : "Paid Amount",
-                value: (
-                  <span className="font-mono font-bold text-emerald-700">
-                    {Number(contract.paidAmount || 0).toLocaleString()} {currency}
-                  </span>
-                ),
-              },
-              {
-                label: isRtl ? "المتبقي" : "Remaining Balance",
-                value: (
-                  <span className="font-mono font-bold text-amber-700">
-                    {remaining.toLocaleString()} {currency}
-                  </span>
-                ),
-              },
-              {
-                label: isRtl ? "السندات / الحركات" : "Vouchers / Actions",
-                value: (
-                  <span className="font-mono">
-                    {vouchers.length} / {auditLogs.length}
-                  </span>
-                ),
-              },
-            ]}
-          />
+        <div className="space-y-5">
+          {/* Clean Financial KPI Strip */}
+          <div className="grid grid-cols-2 divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs sm:grid-cols-4 sm:divide-y-0 sm:divide-x sm:rtl:divide-x-reverse">
+            <div className="p-4">
+              <div className="text-[11px] font-medium text-slate-500">
+                {isRtl ? "إجمالي العقد" : "Total Amount"}
+              </div>
+              <div className="mt-1 font-mono text-lg font-extrabold text-slate-900" dir="ltr">
+                {Number(contract.totalAmount || 0).toLocaleString()} {currency}
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="text-[11px] font-medium text-slate-500">
+                {isRtl ? "المدفوع" : "Paid Amount"}
+              </div>
+              <div className="mt-1 font-mono text-lg font-bold text-emerald-700" dir="ltr">
+                {Number(contract.paidAmount || 0).toLocaleString()} {currency}
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="text-[11px] font-medium text-slate-500">
+                {isRtl ? "المتبقي" : "Remaining"}
+              </div>
+              <div className="mt-1 font-mono text-lg font-bold text-amber-600" dir="ltr">
+                {remaining.toLocaleString()} {currency}
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="text-[11px] font-medium text-slate-500">
+                {isRtl ? "إيجار اليوم / الديبوزت" : "Daily Rate / Deposit"}
+              </div>
+              <div className="mt-1 font-mono text-sm font-bold text-slate-800" dir="ltr">
+                {Number(contract.dailyRate || 0).toLocaleString()} /{" "}
+                {Number(contract.depositAmount || 0).toLocaleString()} {currency}
+              </div>
+            </div>
+          </div>
 
-          {/* Customer & Vehicle Full Details */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <SectionCard
-              title={isRtl ? "بيانات العميل الكاملة" : "Customer Details"}
-              rightSlot={
+          {/* Customer & Vehicle Clean Specification Cards */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {/* Customer Card */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+                <h2 className="text-sm font-bold text-slate-900">
+                  {isRtl ? "بيانات العميل" : "Customer Details"}
+                </h2>
                 <Link
                   href={customerHref(contract.customerId)}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-revix-primary hover:underline"
@@ -372,63 +444,67 @@ export function RentalContractDetailPage({
                   <span>{isRtl ? "فتح ملف العميل" : "Open Customer"}</span>
                   <RevixIcon name="arrow-up-right" size={13} />
                 </Link>
-              }
-            >
-              <DetailTileGrid
-                columns={2}
-                items={[
-                  {
-                    label: isRtl ? "اسم العميل" : "Full Name",
-                    value: (
-                      <Link
-                        href={customerHref(contract.customerId)}
-                        className="font-bold text-revix-primary hover:underline"
-                      >
-                        {contract.customerName || "—"}
-                      </Link>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "رقم الهاتف" : "Phone",
-                    value: <span className="font-mono">{contract.customerPhone || "—"}</span>,
-                  },
-                  {
-                    label: isRtl ? "الجنسية" : "Nationality",
-                    value: contract.customerNationality || "—",
-                  },
-                  {
-                    label: isRtl ? "الهوية / الرقم المدني" : "National ID",
-                    value: (
-                      <span className="font-mono">
-                        {contract.customerNationalId || "—"}
-                        {contract.customerNationalIdExpiry
-                          ? ` (${contract.customerNationalIdExpiry})`
-                          : ""}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "رقم الرخصة" : "Driver License",
-                    value: (
-                      <span className="font-mono">
-                        {contract.customerDriverLicenseNo || "—"}
-                        {contract.customerLicenseExpiry
-                          ? ` (${contract.customerLicenseExpiry})`
-                          : ""}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "عنوان السكن" : "Home Address",
-                    value: contract.customerAddress || "—",
-                  },
-                ]}
-              />
-            </SectionCard>
+              </div>
+              <div className="divide-y divide-slate-100 px-5 py-1">
+                <InfoRow
+                  label={isRtl ? "الاسم الكامل" : "Full Name"}
+                  value={
+                    <Link
+                      href={customerHref(contract.customerId)}
+                      className="text-revix-primary hover:underline"
+                    >
+                      {contract.customerName || "—"}
+                    </Link>
+                  }
+                />
+                <InfoRow
+                  label={isRtl ? "رقم الهاتف" : "Phone"}
+                  value={contract.customerPhone || "—"}
+                  ltr
+                />
+                <InfoRow
+                  label={isRtl ? "الجنسية" : "Nationality"}
+                  value={contract.customerNationality || "—"}
+                />
+                <InfoRow
+                  label={isRtl ? "الهوية / الرقم المدني" : "National ID"}
+                  value={
+                    contract.customerNationalId
+                      ? `${contract.customerNationalId}${
+                          contract.customerNationalIdExpiry
+                            ? ` (${contract.customerNationalIdExpiry})`
+                            : ""
+                        }`
+                      : "—"
+                  }
+                  ltr
+                />
+                <InfoRow
+                  label={isRtl ? "رقم الرخصة" : "Driver License"}
+                  value={
+                    contract.customerDriverLicenseNo
+                      ? `${contract.customerDriverLicenseNo}${
+                          contract.customerLicenseExpiry
+                            ? ` (${contract.customerLicenseExpiry})`
+                            : ""
+                        }`
+                      : "—"
+                  }
+                  ltr
+                />
+                <InfoRow
+                  label={isRtl ? "عنوان السكن" : "Address"}
+                  value={contract.customerAddress || "—"}
+                />
+              </div>
+            </div>
 
-            <SectionCard
-              title={isRtl ? "بيانات السيارة الكاملة" : "Vehicle Details"}
-              rightSlot={
+            {/* Vehicle Card */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+                <h2 className="text-sm font-bold text-slate-900">
+                  {isRtl ? "بيانات السيارة" : "Vehicle Details"}
+                </h2>
                 <Link
                   href={vehicleHref(contract.vehicleId)}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-revix-primary hover:underline"
@@ -436,137 +512,117 @@ export function RentalContractDetailPage({
                   <span>{isRtl ? "فتح ملف السيارة" : "Open Vehicle"}</span>
                   <RevixIcon name="arrow-up-right" size={13} />
                 </Link>
-              }
-            >
-              <DetailTileGrid
-                columns={2}
-                items={[
-                  {
-                    label: isRtl ? "السيارة" : "Vehicle",
-                    value: (
-                      <Link
-                        href={vehicleHref(contract.vehicleId)}
-                        className="font-bold text-revix-primary hover:underline"
-                      >
-                        {contract.vehicleName || "—"}
-                      </Link>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "رقم اللوحة / الأصل" : "Plate / Asset ID",
-                    value: (
-                      <span className="font-mono">
-                        {contract.vehiclePlate || "—"}{" "}
-                        {contract.vehicleAssetCode ? `[${contract.vehicleAssetCode}]` : ""}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "عداد الخروج" : "Pickup Odometer",
-                    value: (
-                      <span className="font-mono">
-                        {Number(contract.pickupOdometer || 0).toLocaleString()} km
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "عداد العودة / المسافة" : "Return Odometer / Driven",
-                    value: (
-                      <span className="font-mono">
-                        {contract.returnOdometer != null
-                          ? `${Number(contract.returnOdometer).toLocaleString()} km (${drivenKm?.toLocaleString()} km)`
-                          : "—"}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "شركة التأمين" : "Insurance",
-                    value: contract.vehicleInsuranceCompany || "—",
-                  },
-                  {
-                    label: isRtl ? "انتهاء التأمين" : "Insurance Expiry",
-                    value: (
-                      <span className="font-mono">
-                        {contract.vehicleInsuranceExpiry || "—"}
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </SectionCard>
+              </div>
+              <div className="divide-y divide-slate-100 px-5 py-1">
+                <InfoRow
+                  label={isRtl ? "السيارة" : "Vehicle"}
+                  value={
+                    <Link
+                      href={vehicleHref(contract.vehicleId)}
+                      className="text-revix-primary hover:underline"
+                    >
+                      {contract.vehicleName || "—"}
+                    </Link>
+                  }
+                />
+                <InfoRow
+                  label={isRtl ? "رقم اللوحة / الأصل" : "Plate / Asset ID"}
+                  value={`${contract.vehiclePlate || "—"}${
+                    contract.vehicleAssetCode ? ` (${contract.vehicleAssetCode})` : ""
+                  }`}
+                />
+                <InfoRow
+                  label={isRtl ? "عداد الخروج" : "Pickup Odometer"}
+                  value={`${Number(contract.pickupOdometer || 0).toLocaleString()} km`}
+                  ltr
+                />
+                <InfoRow
+                  label={isRtl ? "عداد العودة / المسافة" : "Return Odometer"}
+                  value={
+                    contract.returnOdometer != null
+                      ? `${Number(contract.returnOdometer).toLocaleString()} km (${drivenKm?.toLocaleString()} km)`
+                      : "—"
+                  }
+                  ltr
+                />
+                <InfoRow
+                  label={isRtl ? "شركة التأمين" : "Insurance"}
+                  value={contract.vehicleInsuranceCompany || "—"}
+                />
+                <InfoRow
+                  label={isRtl ? "انتهاء التأمين" : "Insurance Expiry"}
+                  value={contract.vehicleInsuranceExpiry || "—"}
+                  ltr
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Return Handover & Uploaded Contract Scan */}
+          {/* Return & Handover Card (when closed) */}
           {(contract.status === "completed" || contract.returnContractImageUrl) && (
-            <SectionCard
-              title={isRtl ? "بيانات الاستلام والإغلاق" : "Return & Handover Summary"}
-            >
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <div className="lg:col-span-2">
-                  <DetailTileGrid
-                    columns={2}
-                    items={[
-                      {
-                        label: isRtl ? "الموظف المستلم" : "Receiving Employee",
-                        value: contract.receivedByUserName || contract.createdByUserName || "—",
-                      },
-                      {
-                        label: isRtl ? "تاريخ ووقت الإعادة" : "Returned At",
-                        value: (
-                          <span className="font-mono">
-                            {contract.returnedAt
-                              ? formatCompanyDateTime(contract.returnedAt)
-                              : "—"}
-                          </span>
-                        ),
-                      },
-                      {
-                        label: isRtl ? "أيام الإيجار الفعلية" : "Actual Days",
-                        value: (
-                          <span className="font-mono">
-                            {contract.actualDays ?? contract.totalDays} {isRtl ? "يوم" : "d"}
-                          </span>
-                        ),
-                      },
-                      {
-                        label: isRtl ? "حالة السيارة عند العودة" : "Return Condition",
-                        value: contract.returnCondition || "—",
-                      },
-                    ]}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+              <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+                <h2 className="text-sm font-bold text-slate-900">
+                  {isRtl ? "بيانات الاستلام والإغلاق" : "Return & Handover Summary"}
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 gap-5 p-5 lg:grid-cols-3">
+                <div className="divide-y divide-slate-100 lg:col-span-2">
+                  <InfoRow
+                    label={isRtl ? "الموظف المستلم" : "Receiving Employee"}
+                    value={contract.receivedByUserName || contract.createdByUserName || "—"}
+                  />
+                  <InfoRow
+                    label={isRtl ? "تاريخ ووقت الإعادة" : "Returned At"}
+                    value={
+                      contract.returnedAt
+                        ? formatCompanyDateTime(contract.returnedAt)
+                        : "—"
+                    }
+                    ltr
+                  />
+                  <InfoRow
+                    label={isRtl ? "أيام الإيجار الفعلية" : "Actual Days"}
+                    value={`${contract.actualDays ?? contract.totalDays} ${isRtl ? "يوم" : "d"}`}
+                  />
+                  <InfoRow
+                    label={isRtl ? "حالة السيارة عند العودة" : "Return Condition"}
+                    value={contract.returnCondition || "—"}
                   />
                 </div>
                 {contract.returnContractImageUrl && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-center">
-                    <div className="mb-1.5 text-[11px] font-bold text-slate-700">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
+                    <div className="mb-2 text-[11px] font-bold text-slate-700">
                       {isRtl ? "صورة العقد بعد التسليم" : "Signed Return Contract"}
                     </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={contract.returnContractImageUrl}
                       alt="Signed return contract"
-                      className="mx-auto max-h-36 rounded-lg object-contain"
+                      className="mx-auto max-h-40 rounded-lg object-contain"
                     />
                   </div>
                 )}
               </div>
-            </SectionCard>
+            </div>
           )}
-        </>
+        </div>
       )}
 
       {activeTab === "vouchers" && (
-        <SectionCard
-          title={
-            isRtl
-              ? `السندات المالية (${vouchers.length})`
-              : `Financial Vouchers (${vouchers.length})`
-          }
-          rightSlot={
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+            <h2 className="text-sm font-bold text-slate-900">
+              {isRtl
+                ? `السندات المالية (${vouchers.length})`
+                : `Financial Vouchers (${vouchers.length})`}
+            </h2>
             <div className="flex flex-wrap items-center gap-1.5">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setVoucherModal({ contract, type: "receipt" })}
+                className="h-8 text-xs"
               >
                 {isRtl ? "+ سند قبض" : "+ Receipt"}
               </Button>
@@ -574,6 +630,7 @@ export function RentalContractDetailPage({
                 type="button"
                 variant="secondary"
                 onClick={() => setVoucherModal({ contract, type: "payment" })}
+                className="h-8 text-xs"
               >
                 {isRtl ? "+ سند دفع" : "+ Payment"}
               </Button>
@@ -581,25 +638,26 @@ export function RentalContractDetailPage({
                 type="button"
                 variant="secondary"
                 onClick={() => setVoucherModal({ contract, type: "refund" })}
+                className="h-8 text-xs"
               >
                 {isRtl ? "+ سند مرتجع" : "+ Refund"}
               </Button>
             </div>
-          }
-        >
+          </div>
+
           {vouchers.length === 0 ? (
-            <div className="py-10 text-center text-xs text-revix-secondary">
+            <div className="py-12 text-center text-xs text-slate-500">
               {isRtl ? "لا توجد سندات مسجلة لهذا العقد بعد." : "No vouchers recorded yet."}
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 px-5">
               {vouchers.map((v) => {
                 const vMeta = VOUCHER_TYPE_META[v.voucherType];
                 const pm = PAYMENT_METHOD_LABELS[v.paymentMethod];
                 return (
                   <div
                     key={v.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3 text-xs"
+                    className="flex flex-wrap items-center justify-between gap-3 py-3.5 text-xs"
                   >
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -611,7 +669,7 @@ export function RentalContractDetailPage({
                         >
                           {isRtl ? vMeta.ar : vMeta.en}
                         </span>
-                        <span className="font-mono text-sm font-extrabold text-slate-900">
+                        <span className="font-mono text-sm font-extrabold text-slate-900" dir="ltr">
                           {v.amount.toLocaleString()} {v.currencyCode}
                         </span>
                       </div>
@@ -619,7 +677,9 @@ export function RentalContractDetailPage({
                         {isRtl ? pm.ar : pm.en} • {v.paymentDate}
                         {v.referenceNo ? ` • ${isRtl ? "مرجع:" : "Ref:"} ${v.referenceNo}` : ""}
                         {v.bankName ? ` • ${v.bankName}` : ""}
-                        {v.createdByUserName ? ` • ${isRtl ? "بواسطة:" : "By:"} ${v.createdByUserName}` : ""}
+                        {v.createdByUserName
+                          ? ` • ${isRtl ? "بواسطة:" : "By:"} ${v.createdByUserName}`
+                          : ""}
                       </div>
                       {v.description && (
                         <div className="text-[11px] text-slate-500">{v.description}</div>
@@ -630,33 +690,35 @@ export function RentalContractDetailPage({
               })}
             </div>
           )}
-        </SectionCard>
+        </div>
       )}
 
       {activeTab === "activity" && (
-        <SectionCard
-          title={
-            isRtl
-              ? `سجل إجراءات الموظفين (${auditLogs.length})`
-              : `Employee Activity Log (${auditLogs.length})`
-          }
-        >
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+          <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+            <h2 className="text-sm font-bold text-slate-900">
+              {isRtl
+                ? `سجل إجراءات الموظفين (${auditLogs.length})`
+                : `Employee Activity Log (${auditLogs.length})`}
+            </h2>
+          </div>
+
           {auditLogs.length === 0 ? (
-            <div className="py-10 text-center text-xs text-revix-secondary">
+            <div className="py-12 text-center text-xs text-slate-500">
               {isRtl ? "لا توجد حركات مسجلة." : "No recorded actions yet."}
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 px-5">
               {auditLogs.map((log) => {
                 const meta = getActionMeta(log.action, isRtl);
                 const details = formatAuditMetadata(log, isRtl);
                 return (
-                  <div key={log.id} className="flex items-start gap-3 py-3 text-xs">
+                  <div key={log.id} className="flex items-start gap-3 py-3.5 text-xs">
                     <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${meta.cls}`} />
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-bold text-slate-900">{meta.label}</span>
-                        <span className="font-mono text-[11px] text-slate-500">
+                        <span className="font-mono text-[11px] text-slate-500" dir="ltr">
                           {formatCompanyDateTime(log.createdAt)}
                         </span>
                       </div>
@@ -673,7 +735,7 @@ export function RentalContractDetailPage({
               })}
             </div>
           )}
-        </SectionCard>
+        </div>
       )}
 
       {/* Modals */}
@@ -703,7 +765,7 @@ export function RentalContractDetailPage({
           onClick={() => !isCancelling && setIsCancelOpen(false)}
         >
           <div
-            className="w-full max-w-md overflow-hidden rounded-2xl border border-revix-border bg-white shadow-2xl"
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-rose-100 bg-rose-50/70 px-5 py-3.5">
