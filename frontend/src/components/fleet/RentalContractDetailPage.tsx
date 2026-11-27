@@ -23,6 +23,7 @@ import { formatCompanyDateTime } from "@/lib/date/companyDate";
 import { CompleteContractModal } from "./CompleteContractModal";
 import { RentalContractPrintModal } from "./RentalContractPrintModal";
 import { ContractVoucherModal } from "./vouchers/ContractVoucherModal";
+import { ActivityTimeline } from "./ActivityTimeline";
 import {
   PAYMENT_METHOD_LABELS,
   VOUCHER_TYPE_META,
@@ -694,48 +695,18 @@ export function RentalContractDetailPage({
       )}
 
       {activeTab === "activity" && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
-          <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
-            <h2 className="text-sm font-bold text-slate-900">
-              {isRtl
-                ? `سجل إجراءات الموظفين (${auditLogs.length})`
-                : `Employee Activity Log (${auditLogs.length})`}
-            </h2>
-          </div>
-
-          {auditLogs.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-500">
-              {isRtl ? "لا توجد حركات مسجلة." : "No recorded actions yet."}
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 px-5">
-              {auditLogs.map((log) => {
-                const meta = getActionMeta(log.action, isRtl);
-                const details = formatAuditMetadata(log, isRtl);
-                return (
-                  <div key={log.id} className="flex items-start gap-3 py-3.5 text-xs">
-                    <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${meta.cls}`} />
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-bold text-slate-900">{meta.label}</span>
-                        <span className="font-mono text-[11px] text-slate-500" dir="ltr">
-                          {formatCompanyDateTime(log.createdAt)}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-600">
-                        {isRtl ? "الموظف:" : "Employee:"}{" "}
-                        <span className="font-semibold text-slate-800">
-                          {log.actorName || log.actorEmail || "—"}
-                        </span>
-                        {details ? ` • ${details}` : ""}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <ActivityTimeline
+          entityType="rental_contract"
+          entityId={contract.id}
+          isRtl={isRtl}
+          title={isRtl ? "سجل إجراءات العقد" : "Contract Activity Timeline"}
+          participantsLabel={isRtl ? "مسؤولو العقد" : "Contract Participants"}
+          participants={[
+            { label: isRtl ? "أنشأ العقد" : "Created by", value: contract.createdByUserName },
+            { label: isRtl ? "استلم السيارة" : "Received by", value: contract.receivedByUserName },
+            { label: isRtl ? "ألغى العقد" : "Cancelled by", value: contract.cancelledByUserName },
+          ]}
+        />
       )}
 
       {/* Modals */}
