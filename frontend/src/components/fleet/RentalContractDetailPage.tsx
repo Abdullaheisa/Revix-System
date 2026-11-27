@@ -212,11 +212,11 @@ export function RentalContractDetailPage({
 
   return (
     <div
-      className="mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-5 overflow-y-auto pb-10"
+      className="mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-3.5 overflow-hidden"
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Clean Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 shrink-0">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -399,7 +399,7 @@ export function RentalContractDetailPage({
       </nav>
 
       {activeTab === "overview" && (
-        <div className="space-y-5">
+        <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto pr-0.5">
           {/* Financial KPI Cards */}
           <DetailTileGrid
             columns={4}
