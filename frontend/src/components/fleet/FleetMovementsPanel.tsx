@@ -195,12 +195,29 @@ export function DispatchMovementModal({
   const { data: ctx } = useGetWorkspaceContextQuery();
   const branches: BranchDto[] = useMemo(() => ctx?.data?.branches ?? [], [ctx?.data?.branches]);
   const { data: vehiclesData } = useListVehiclesQuery();
+  const { data: movementsData } = useListMovementsQuery();
   const { data: driversData } = useListDriversQuery();
   const [dispatchMovement, { isLoading }] = useDispatchMovementMutation();
 
+  const inTransitVehicleIds = useMemo(
+    () =>
+      new Set(
+        (movementsData?.data ?? [])
+          .filter((m) => m.status === "in_transit")
+          .map((m) => m.vehicleId),
+      ),
+    [movementsData?.data],
+  );
+
   const vehicles = useMemo(
-    () => (vehiclesData?.data ?? []).filter((v) => !v.isPartnerVehicle && v.status !== "on_rent"),
-    [vehiclesData?.data],
+    () =>
+      (vehiclesData?.data ?? []).filter(
+        (v) =>
+          !v.isPartnerVehicle &&
+          v.status !== "on_rent" &&
+          (!inTransitVehicleIds.has(v.id) || v.id === initialVehicle?.id),
+      ),
+    [vehiclesData?.data, inTransitVehicleIds, initialVehicle?.id],
   );
   const drivers = useMemo(
     () => (driversData?.data ?? []).filter((d) => d.status === "active"),
@@ -361,12 +378,23 @@ export function FleetMovementsPanel({ isRtl }: FleetMovementsPanelProps) {
 
   const { data: vehiclesData } = useListVehiclesQuery();
   const movements = useMemo(() => data?.data ?? [], [data?.data]);
+  const inTransitVehicleIds = useMemo(
+    () =>
+      new Set(
+        movements.filter((m) => m.status === "in_transit").map((m) => m.vehicleId),
+      ),
+    [movements],
+  );
   const companyStockVehicles = useMemo(
     () =>
       (vehiclesData?.data ?? []).filter(
-        (v) => !v.isPartnerVehicle && !v.branchId && v.status !== "on_rent",
+        (v) =>
+          !v.isPartnerVehicle &&
+          !v.branchId &&
+          v.status !== "on_rent" &&
+          !inTransitVehicleIds.has(v.id),
       ),
-    [vehiclesData?.data],
+    [vehiclesData?.data, inTransitVehicleIds],
   );
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
