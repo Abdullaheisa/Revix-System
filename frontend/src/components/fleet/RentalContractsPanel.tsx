@@ -29,7 +29,7 @@ interface RentalContractsPanelProps {
 
 const STATUS_BADGE: Record<RentalContractStatus, { ar: string; en: string; cls: string }> = {
   active: { ar: "ساري", en: "Active", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  completed: { ar: "مكتمل", en: "Completed", cls: "border-blue-200 bg-blue-50 text-blue-700" },
+  completed: { ar: "مغلق", en: "Closed", cls: "border-blue-200 bg-blue-50 text-blue-700" },
   draft: { ar: "مسودة", en: "Draft", cls: "border-slate-200 bg-slate-50 text-slate-700" },
   cancelled: { ar: "ملغي", en: "Cancelled", cls: "border-red-200 bg-red-50 text-red-700" },
 };
@@ -124,7 +124,7 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
         {[
           { id: "all", ar: "الكل", en: "All" },
           { id: "active", ar: "ساري", en: "Active" },
-          { id: "completed", ar: "مكتمل", en: "Completed" },
+          { id: "completed", ar: "مغلق", en: "Closed" },
           { id: "cancelled", ar: "ملغي", en: "Cancelled" },
         ].map((tab) => (
           <button
@@ -150,9 +150,12 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
           <thead>
             <tr className="border-b border-revix-border bg-revix-surface/70 text-revix-secondary font-semibold">
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "رقم العقد" : "Contract #"}</th>
-              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "العميل" : "Customer"}</th>
-              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "السيارة" : "Vehicle"}</th>
-              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الفترة" : "Dates"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "اسم العميل" : "Customer"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "رقم اللوحة" : "Plate No."}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "نوع السيارة" : "Vehicle Type"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "بداية العقد" : "Start Date"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "نهاية العقد المتوقعة" : "Expected End"}</th>
+              <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold">{isRtl ? "عدد الأيام" : "Days"}</th>
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-start font-semibold">{isRtl ? "الإجمالي" : "Total"}</th>
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold">{isRtl ? "الحالة" : "Status"}</th>
               <th scope="col" className="sticky top-0 z-10 select-none overflow-hidden whitespace-nowrap bg-revix-surface px-3 py-3 text-center font-semibold">{isRtl ? "إجراءات" : "Actions"}</th>
@@ -160,10 +163,10 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
           </thead>
           <tbody className="divide-y divide-revix-border/60">
             {isLoading ? (
-              <tr><td colSpan={7} className="h-48 text-center text-xs text-revix-secondary">{isRtl ? "جاري التحميل..." : "Loading..."}</td></tr>
+              <tr><td colSpan={10} className="h-48 text-center text-xs text-revix-secondary">{isRtl ? "جاري التحميل..." : "Loading..."}</td></tr>
             ) : paginated.length === 0 ? (
               <TableEmptyRow
-                colSpan={7}
+                colSpan={10}
                 title={isRtl ? "لا توجد عقود تأجير مطابقة" : "No matching rental contracts"}
               />
             ) : paginated.map((c) => {
@@ -193,42 +196,40 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                       <div className="font-mono text-[11px] text-revix-secondary">{c.customerPhone}</div>
                     )}
                   </td>
-                  <td className="py-2.5 px-3">
+                  <td className="py-2.5 px-3 whitespace-nowrap">
                     {c.vehicleId ? (
-                      <Link href={vehicleHref(c.vehicleId)} className="group block">
-                        <div className="font-semibold text-revix-dark transition-colors group-hover:text-revix-primary group-hover:underline">
-                          {c.vehicleName || "—"}
-                        </div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                          {c.vehicleAssetCode && (
-                            <span className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary" dir="ltr">
-                              {c.vehicleAssetCode}
-                            </span>
-                          )}
-                          <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
-                            {c.vehiclePlate}
-                          </span>
-                        </div>
+                      <Link
+                        href={vehicleHref(c.vehicleId)}
+                        className="inline-block rounded border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-bold text-revix-dark transition-colors hover:border-revix-primary/40 hover:text-revix-primary"
+                      >
+                        {c.vehiclePlate || "—"}
                       </Link>
                     ) : (
-                      <>
-                        <div className="font-semibold text-revix-dark">{c.vehicleName || "—"}</div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                          {c.vehicleAssetCode && (
-                            <span className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary" dir="ltr">
-                              {c.vehicleAssetCode}
-                            </span>
-                          )}
-                          <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
-                            {c.vehiclePlate}
-                          </span>
-                        </div>
-                      </>
+                      <span className="inline-block rounded border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-bold text-revix-dark">
+                        {c.vehiclePlate || "—"}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3">
+                    {c.vehicleId ? (
+                      <Link
+                        href={vehicleHref(c.vehicleId)}
+                        className="font-semibold text-revix-dark transition-colors hover:text-revix-primary hover:underline"
+                      >
+                        {c.vehicleName || "—"}
+                      </Link>
+                    ) : (
+                      <div className="font-semibold text-revix-dark">{c.vehicleName || "—"}</div>
                     )}
                   </td>
                   <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">
-                    <div>{c.startDate} → {c.endDate}</div>
-                    <div className="text-[11px]">{c.totalDays} {isRtl ? "يوم" : "d"}</div>
+                    {c.startDate}
+                  </td>
+                  <td className="py-2.5 px-3 font-mono text-revix-secondary whitespace-nowrap">
+                    {c.endDate}
+                  </td>
+                  <td className="py-2.5 px-3 text-center font-mono font-semibold text-revix-dark whitespace-nowrap">
+                    {c.totalDays} {isRtl ? "يوم" : "d"}
                   </td>
                   <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap" dir="ltr">
                     {c.totalAmount.toLocaleString()} {c.currencyCode || ""}
