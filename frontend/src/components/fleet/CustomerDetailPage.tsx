@@ -34,8 +34,8 @@ const STATUS_BADGE: Record<
     cls: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   completed: {
-    ar: "مكتمل",
-    en: "Completed",
+    ar: "مغلق",
+    en: "Closed",
     cls: "border-blue-200 bg-blue-50 text-blue-700",
   },
   draft: {
@@ -290,19 +290,22 @@ export function CustomerDetailPage({
                   {isRtl ? "رقم العقد" : "Contract #"}
                 </th>
                 <th className="whitespace-nowrap px-3.5 py-2.5 text-start">
-                  {isRtl ? "المركبة" : "Vehicle"}
+                  {isRtl ? "رقم اللوحة" : "Plate No."}
                 </th>
                 <th className="whitespace-nowrap px-3.5 py-2.5 text-start">
-                  {isRtl ? "المدة والتواريخ" : "Dates"}
+                  {isRtl ? "نوع السيارة" : "Vehicle Type"}
                 </th>
                 <th className="whitespace-nowrap px-3.5 py-2.5 text-start">
-                  {isRtl ? "منشئ العقد" : "Created By"}
+                  {isRtl ? "بداية العقد" : "Start Date"}
+                </th>
+                <th className="whitespace-nowrap px-3.5 py-2.5 text-start">
+                  {isRtl ? "نهاية العقد المتوقعة" : "Expected End"}
                 </th>
                 <th className="whitespace-nowrap px-3.5 py-2.5 text-center">
-                  {isRtl ? "العداد (استلام ← عودة)" : "Odometer (Out → In)"}
+                  {isRtl ? "عدد الأيام" : "Days"}
                 </th>
-                <th className="whitespace-nowrap px-3.5 py-2.5 text-center">
-                  {isRtl ? "حالة التسليم" : "Return Condition"}
+                <th className="whitespace-nowrap px-3.5 py-2.5 text-start">
+                  {isRtl ? "الإجمالي" : "Total"}
                 </th>
                 <th className="whitespace-nowrap px-3.5 py-2.5 text-center">
                   {isRtl ? "الحالة" : "Status"}
@@ -315,13 +318,13 @@ export function CustomerDetailPage({
             <tbody className="divide-y divide-revix-border/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-xs text-revix-secondary">
+                  <td colSpan={9} className="py-10 text-center text-xs text-revix-secondary">
                     {isRtl ? "جاري التحميل..." : "Loading..."}
                   </td>
                 </tr>
               ) : customerContracts.length === 0 ? (
                 <TableEmptyRow
-                  colSpan={8}
+                  colSpan={9}
                   title={isRtl ? "لا توجد عقود مسجلة لهذا العميل" : "No contracts for this customer"}
                   description={
                     isRtl
@@ -333,7 +336,7 @@ export function CustomerDetailPage({
                 customerContracts.map((c) => {
                   const st = STATUS_BADGE[c.status] || STATUS_BADGE.active;
                   return (
-                    <tr key={c.id} className="hover:bg-revix-surface/40">
+                    <tr key={c.id} className="transition-colors hover:bg-revix-surface/40">
                       <td className="whitespace-nowrap px-3.5 py-3">
                         <Link
                           href={rentalContractHref(c.id)}
@@ -342,9 +345,14 @@ export function CustomerDetailPage({
                         >
                           {c.contractNumber}
                         </Link>
-                        <div className="font-mono text-[11px] font-semibold text-revix-dark" dir="ltr">
-                          {Number(c.totalAmount).toLocaleString()} {currency}
-                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-3.5 py-3">
+                        <Link
+                          href={vehicleHref(c.vehicleId)}
+                          className="inline-block rounded border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-[11px] font-bold text-revix-dark transition-colors hover:border-revix-primary/40 hover:text-revix-primary"
+                        >
+                          {c.vehiclePlate || "—"}
+                        </Link>
                       </td>
                       <td className="px-3.5 py-3">
                         <Link
@@ -353,47 +361,18 @@ export function CustomerDetailPage({
                         >
                           {c.vehicleName || "—"}
                         </Link>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                          {c.vehicleAssetCode && (
-                            <span
-                              dir="ltr"
-                              className="rounded bg-revix-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-primary"
-                            >
-                              {c.vehicleAssetCode}
-                            </span>
-                          )}
-                          <span className="rounded border border-revix-border bg-revix-surface px-1.5 py-0.5 font-mono text-[10px] font-bold text-revix-dark">
-                            {c.vehiclePlate}
-                          </span>
-                        </div>
                       </td>
-                      <td className="whitespace-nowrap px-3.5 py-3 font-mono text-revix-secondary" dir="ltr">
-                        <div>
-                          {c.startDate} → {c.endDate}
-                        </div>
-                        <div className="text-[11px]">
-                          {c.totalDays} {isRtl ? "يوم" : "d"}
-                        </div>
+                      <td className="whitespace-nowrap px-3.5 py-3 font-mono text-revix-secondary">
+                        {c.startDate}
                       </td>
-                      <td className="whitespace-nowrap px-3.5 py-3 text-revix-dark">
-                        {c.createdByUserName || "—"}
+                      <td className="whitespace-nowrap px-3.5 py-3 font-mono text-revix-secondary">
+                        {c.endDate}
                       </td>
-                      <td className="whitespace-nowrap px-3.5 py-3 text-center font-mono">
-                        <span className="font-semibold text-revix-dark">
-                          {c.pickupOdometer.toLocaleString()}
-                        </span>
-                        <span className="mx-1 text-revix-muted">→</span>
-                        <span className="font-semibold text-emerald-700">
-                          {c.returnOdometer != null ? c.returnOdometer.toLocaleString() : "—"}
-                        </span>
+                      <td className="whitespace-nowrap px-3.5 py-3 text-center font-mono font-semibold text-revix-dark">
+                        {c.totalDays} {isRtl ? "يوم" : "d"}
                       </td>
-                      <td className="px-3.5 py-3 text-center">
-                        <div>{renderConditionBadge(c.returnCondition, isRtl)}</div>
-                        {c.notes && (
-                          <div className="mt-1 max-w-[180px] truncate text-[10.5px] text-revix-secondary mx-auto">
-                            {c.notes}
-                          </div>
-                        )}
+                      <td className="whitespace-nowrap px-3.5 py-3 font-mono font-bold text-revix-dark" dir="ltr">
+                        {Number(c.totalAmount).toLocaleString()} {c.currencyCode || currency}
                       </td>
                       <td className="whitespace-nowrap px-3.5 py-3 text-center">
                         <span
@@ -403,13 +382,21 @@ export function CustomerDetailPage({
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-3.5 py-3 text-end">
-                        <button
-                          type="button"
-                          onClick={() => setPrintingContract(c)}
-                          className="h-8 cursor-pointer rounded-md border border-revix-border bg-white px-2.5 text-[11px] font-semibold text-revix-dark hover:bg-revix-surface"
-                        >
-                          {isRtl ? "طباعة / توقيع" : "Print / Sign"}
-                        </button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <Link
+                            href={rentalContractHref(c.id)}
+                            className="inline-flex h-8 items-center rounded-md border border-revix-border bg-white px-2.5 text-[11px] font-semibold text-revix-primary hover:bg-revix-surface"
+                          >
+                            {isRtl ? "التفاصيل" : "Details"}
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setPrintingContract(c)}
+                            className="h-8 cursor-pointer rounded-md border border-revix-border bg-white px-2.5 text-[11px] font-semibold text-revix-dark hover:bg-revix-surface"
+                          >
+                            {isRtl ? "طباعة / توقيع" : "Print / Sign"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
