@@ -375,6 +375,12 @@ export interface RentalContractDto {
   depositAmount: number;
   notes: string | null;
   returnCondition?: string | null;
+  secondDriverName?: string | null;
+  secondDriverLicenseNo?: string | null;
+  sponsorName?: string | null;
+  sponsorNationalId?: string | null;
+  sponsorPhone?: string | null;
+  returnedAt?: string | null;
   customerSignatureDataUrl?: string | null;
   signedAt?: string | null;
   createdAt: string;
@@ -1421,6 +1427,11 @@ export const fleetApi = baseApi.injectEndpoints({
         paidAmount?: number;
         depositAmount?: number;
         notes?: string | null;
+        secondDriverName?: string | null;
+        secondDriverLicenseNo?: string | null;
+        sponsorName?: string | null;
+        sponsorNationalId?: string | null;
+        sponsorPhone?: string | null;
         customerSignatureDataUrl?: string | null;
       }
     >({

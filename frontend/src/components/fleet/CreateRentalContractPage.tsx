@@ -127,6 +127,12 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
   const [discount, setDiscount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState("");
+  const [secondDriverName, setSecondDriverName] = useState("");
+  const [secondDriverLicenseNo, setSecondDriverLicenseNo] = useState("");
+  const [sponsorName, setSponsorName] = useState("");
+  const [sponsorNationalId, setSponsorNationalId] = useState("");
+  const [sponsorPhone, setSponsorPhone] = useState("");
+  const [showExtraParties, setShowExtraParties] = useState(false);
   const [createdContract, setCreatedContract] = useState<RentalContractDto | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -299,6 +305,11 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         depositAmount: Number(depositAmount) || 0,
         paidAmount: Number(paidAmount) || 0,
         notes: notes.trim() || null,
+        secondDriverName: secondDriverName.trim() || null,
+        secondDriverLicenseNo: secondDriverLicenseNo.trim() || null,
+        sponsorName: sponsorName.trim() || null,
+        sponsorNationalId: sponsorNationalId.trim() || null,
+        sponsorPhone: sponsorPhone.trim() || null,
       }).unwrap();
       setCreatedContract(res.data);
     } catch (err: unknown) {
@@ -990,6 +1001,99 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                     placeholder={isRtl ? "ملاحظات التسليم أو الشروط..." : "Pickup notes or terms..."}
                     className="h-10 w-full rounded-lg border border-revix-border px-3 text-xs"
                   />
+                </div>
+
+                <div className="rounded-xl border border-revix-border bg-revix-surface/40 p-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowExtraParties((v) => !v)}
+                    className="flex w-full cursor-pointer items-center justify-between text-xs font-semibold text-revix-dark"
+                  >
+                    <span>
+                      {isRtl
+                        ? "بيانات السائق الثاني والكفيل (اختياري)"
+                        : "Second Driver & Sponsor Details (Optional)"}
+                    </span>
+                    <span className="text-[11px] font-medium text-revix-primary">
+                      {showExtraParties
+                        ? isRtl
+                          ? "إخفاء"
+                          : "Hide"
+                        : isRtl
+                          ? "إضافة"
+                          : "Add"}
+                    </span>
+                  </button>
+
+                  {showExtraParties && (
+                    <div className="mt-3 space-y-3 border-t border-revix-border pt-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-revix-dark">
+                            {isRtl ? "اسم السائق الثاني" : "Second Driver Name"}
+                          </label>
+                          <input
+                            type="text"
+                            value={secondDriverName}
+                            onChange={(e) => setSecondDriverName(e.target.value)}
+                            placeholder={isRtl ? "الاسم الكامل..." : "Full name..."}
+                            className="h-9 w-full rounded-lg border border-revix-border bg-white px-3 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-revix-dark">
+                            {isRtl ? "رقم رخصة السائق الثاني" : "Second Driver License No."}
+                          </label>
+                          <input
+                            type="text"
+                            value={secondDriverLicenseNo}
+                            onChange={(e) => setSecondDriverLicenseNo(e.target.value)}
+                            placeholder={isRtl ? "رقم الرخصة..." : "License number..."}
+                            className="h-9 w-full rounded-lg border border-revix-border bg-white px-3 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-revix-dark">
+                            {isRtl ? "اسم الكفيل" : "Sponsor Name"}
+                          </label>
+                          <input
+                            type="text"
+                            value={sponsorName}
+                            onChange={(e) => setSponsorName(e.target.value)}
+                            placeholder={isRtl ? "اسم الكفيل..." : "Sponsor name..."}
+                            className="h-9 w-full rounded-lg border border-revix-border bg-white px-3 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-revix-dark">
+                            {isRtl ? "الرقم المدني للكفيل" : "Sponsor Civil ID"}
+                          </label>
+                          <input
+                            type="text"
+                            value={sponsorNationalId}
+                            onChange={(e) => setSponsorNationalId(e.target.value)}
+                            placeholder={isRtl ? "الرقم المدني..." : "Civil ID..."}
+                            className="h-9 w-full rounded-lg border border-revix-border bg-white px-3 font-mono text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-revix-dark">
+                            {isRtl ? "هاتف الكفيل" : "Sponsor Phone"}
+                          </label>
+                          <input
+                            type="text"
+                            value={sponsorPhone}
+                            onChange={(e) => setSponsorPhone(e.target.value)}
+                            placeholder={isRtl ? "رقم الهاتف..." : "Phone..."}
+                            className="h-9 w-full rounded-lg border border-revix-border bg-white px-3 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

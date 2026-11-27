@@ -498,8 +498,17 @@ export function RentalContractPrintModal({
                     <span>بيانات السائق الثاني</span>
                   </div>
                   <div className="px-2.5 py-1.5 space-y-1">
-                    <BilingualRow labelEn="License No." labelAr="رقم الرخصة" value="" />
-                    <BilingualRow labelEn="Driver Name" labelAr="اسم السائق" value="" />
+                    <BilingualRow
+                      labelEn="License No."
+                      labelAr="رقم الرخصة"
+                      value={contract.secondDriverLicenseNo}
+                      mono
+                    />
+                    <BilingualRow
+                      labelEn="Driver Name"
+                      labelAr="اسم السائق"
+                      value={contract.secondDriverName}
+                    />
                   </div>
                 </div>
 
@@ -509,9 +518,23 @@ export function RentalContractPrintModal({
                     <span>بيانات الكفيل</span>
                   </div>
                   <div className="px-2.5 py-1.5 space-y-1">
-                    <BilingualRow labelEn="Civil ID" labelAr="الرقم المدني" value="" />
-                    <BilingualRow labelEn="Name" labelAr="الاسم" value="" />
-                    <BilingualRow labelEn="Phone" labelAr="تلفون" value="" />
+                    <BilingualRow
+                      labelEn="Civil ID"
+                      labelAr="الرقم المدني"
+                      value={contract.sponsorNationalId}
+                      mono
+                    />
+                    <BilingualRow
+                      labelEn="Name"
+                      labelAr="الاسم"
+                      value={contract.sponsorName}
+                    />
+                    <BilingualRow
+                      labelEn="Phone"
+                      labelAr="تلفون"
+                      value={contract.sponsorPhone}
+                      mono
+                    />
                   </div>
                 </div>
 
@@ -524,17 +547,44 @@ export function RentalContractPrintModal({
                     <BilingualRow
                       labelEn="Odometer"
                       labelAr="العداد"
-                      value={contract.returnOdometer != null ? `${contract.returnOdometer} km` : ""}
+                      value={
+                        contract.returnOdometer != null
+                          ? `${Number(contract.returnOdometer).toLocaleString()} km`
+                          : ""
+                      }
                       mono
                     />
-                    <BilingualRow labelEn="Date / Time" labelAr="التاريخ / الوقت" value="" />
+                    <BilingualRow
+                      labelEn="Date / Time"
+                      labelAr="التاريخ / الوقت"
+                      value={
+                        contract.returnedAt
+                          ? new Date(contract.returnedAt).toLocaleString("en-GB", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : ""
+                      }
+                      mono
+                    />
                     <BilingualRow
                       labelEn="Employee"
                       labelAr="الموظف"
-                      value={contract.createdByUserName || ""}
+                      value={contract.status === "completed" ? contract.createdByUserName || "" : ""}
                     />
                     <div className="pt-1 flex items-center justify-between text-[10px] font-bold text-slate-700">
                       <span>Lessee&apos;s Signature</span>
+                      {contract.status === "completed" && lesseeSignatureUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={lesseeSignatureUrl}
+                          alt="Lessee Return Signature"
+                          className="max-h-7 max-w-[110px] object-contain"
+                        />
+                      ) : null}
                       <span>توقيع المستأجر</span>
                     </div>
                   </div>
@@ -625,7 +675,11 @@ export function RentalContractPrintModal({
                 subLabel={contract.createdByUserName}
                 onClick={canPromptEmployeeSign ? () => setSignTarget("employee") : undefined}
               />
-              <SignatureBox labelEn="Sponsor's Signature" labelAr="توقيع الكفيل" />
+              <SignatureBox
+                labelEn="Sponsor's Signature"
+                labelAr="توقيع الكفيل"
+                subLabel={contract.sponsorName}
+              />
               <SignatureBox
                 labelEn="Lessee's Signature"
                 labelAr="توقيع المستأجر"
@@ -699,7 +753,11 @@ export function RentalContractPrintModal({
                 subLabel={contract.createdByUserName}
                 onClick={canPromptEmployeeSign ? () => setSignTarget("employee") : undefined}
               />
-              <SignatureBox labelEn="Sponsor's Signature" labelAr="توقيع الكفيل" />
+              <SignatureBox
+                labelEn="Sponsor's Signature"
+                labelAr="توقيع الكفيل"
+                subLabel={contract.sponsorName}
+              />
               <SignatureBox
                 labelEn="Lessee's Signature"
                 labelAr="توقيع المستأجر"

@@ -1612,6 +1612,11 @@ export class FleetService {
       paidAmount?: number;
       depositAmount?: number;
       notes?: string | null;
+      secondDriverName?: string | null;
+      secondDriverLicenseNo?: string | null;
+      sponsorName?: string | null;
+      sponsorNationalId?: string | null;
+      sponsorPhone?: string | null;
       customerSignatureDataUrl?: string | null;
     },
   ) {
@@ -1734,6 +1739,11 @@ export class FleetService {
       paidAmount: Number(input.paidAmount ?? 0),
       depositAmount,
       notes: input.notes ?? null,
+      secondDriverName: input.secondDriverName ?? null,
+      secondDriverLicenseNo: input.secondDriverLicenseNo ?? null,
+      sponsorName: input.sponsorName ?? null,
+      sponsorNationalId: input.sponsorNationalId ?? null,
+      sponsorPhone: input.sponsorPhone ?? null,
       customerSignatureDataUrl: input.customerSignatureDataUrl ?? null,
       createdByUserId: actor.user.id,
     });

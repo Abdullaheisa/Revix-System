@@ -46,6 +46,12 @@ export interface RentalContractRecord {
   depositAmount: number;
   notes: string | null;
   returnCondition?: string | null;
+  secondDriverName?: string | null;
+  secondDriverLicenseNo?: string | null;
+  sponsorName?: string | null;
+  sponsorNationalId?: string | null;
+  sponsorPhone?: string | null;
+  returnedAt?: Date | null;
   customerSignatureDataUrl?: string | null;
   signedAt?: Date | null;
   createdByUserId: string | null;

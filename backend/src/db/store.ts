@@ -530,6 +530,11 @@ export interface AuthDataStore {
     paidAmount?: number;
     depositAmount?: number;
     notes?: string | null;
+    secondDriverName?: string | null;
+    secondDriverLicenseNo?: string | null;
+    sponsorName?: string | null;
+    sponsorNationalId?: string | null;
+    sponsorPhone?: string | null;
     customerSignatureDataUrl?: string | null;
     createdByUserId?: string | null;
   }): Promise<RentalContractRecord>;

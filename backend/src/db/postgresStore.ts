@@ -3527,6 +3527,12 @@ export class PostgresAuthDataStore implements AuthDataStore {
       depositAmount: Number(r.deposit_amount ?? 0),
       notes: (r.notes as string | null) ?? null,
       returnCondition: (r.return_condition as string | null) ?? null,
+      secondDriverName: (r.second_driver_name as string | null) ?? null,
+      secondDriverLicenseNo: (r.second_driver_license_no as string | null) ?? null,
+      sponsorName: (r.sponsor_name as string | null) ?? null,
+      sponsorNationalId: (r.sponsor_national_id as string | null) ?? null,
+      sponsorPhone: (r.sponsor_phone as string | null) ?? null,
+      returnedAt: r.returned_at ? new Date(String(r.returned_at)) : null,
       customerSignatureDataUrl: (r.customer_signature_data_url as string | null) ?? null,
       signedAt: r.signed_at ? new Date(String(r.signed_at)) : null,
       createdByUserId: (r.created_by_user_id as string | null) ?? null,
@@ -3628,6 +3634,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
     paidAmount?: number;
     depositAmount?: number;
     notes?: string | null;
+    secondDriverName?: string | null;
+    secondDriverLicenseNo?: string | null;
+    sponsorName?: string | null;
+    sponsorNationalId?: string | null;
+    sponsorPhone?: string | null;
     customerSignatureDataUrl?: string | null;
     createdByUserId?: string | null;
   }): Promise<RentalContractRecord> {
@@ -3652,8 +3663,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
         (company_id, branch_id, contract_number, vehicle_id, customer_id, status,
          start_date, end_date, pickup_odometer, daily_rate, total_days,
          subtotal, discount, insurance_fee, extra_charges, total_amount, paid_amount, deposit_amount,
-         notes, customer_signature_data_url, signed_at, created_by_user_id)
-       VALUES ($1,$2,$3,$4,$5,'active',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::text, CASE WHEN $19::text IS NOT NULL THEN NOW() ELSE NULL END, $20)
+         notes, second_driver_name, second_driver_license_no, sponsor_name, sponsor_national_id, sponsor_phone,
+         customer_signature_data_url, signed_at, created_by_user_id)
+       VALUES ($1,$2,$3,$4,$5,'active',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24::text, CASE WHEN $24::text IS NOT NULL THEN NOW() ELSE NULL END, $25)
        RETURNING *`,
       [
         input.companyId,
@@ -3674,6 +3686,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.paidAmount ?? 0,
         input.depositAmount ?? 0,
         input.notes?.trim() || null,
+        input.secondDriverName?.trim() || null,
+        input.secondDriverLicenseNo?.trim() || null,
+        input.sponsorName?.trim() || null,
+        input.sponsorNationalId?.trim() || null,
+        input.sponsorPhone?.trim() || null,
         effectiveSignature,
         input.createdByUserId || null,
       ],
@@ -3768,6 +3785,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
            paid_amount = COALESCE($4, paid_amount),
            return_condition = COALESCE($5, return_condition),
            notes = COALESCE($6, notes),
+           returned_at = NOW(),
            updated_at = NOW()
        WHERE id = $7 AND company_id = $8`,
       [

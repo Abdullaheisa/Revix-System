@@ -60,6 +60,11 @@ router.post(
           paidAmount: req.body?.paidAmount != null ? Number(req.body.paidAmount) : 0,
           depositAmount: req.body?.depositAmount != null ? Number(req.body.depositAmount) : 0,
           notes: req.body?.notes ?? null,
+          secondDriverName: typeof req.body?.secondDriverName === "string" ? req.body.secondDriverName.trim() || null : null,
+          secondDriverLicenseNo: typeof req.body?.secondDriverLicenseNo === "string" ? req.body.secondDriverLicenseNo.trim() || null : null,
+          sponsorName: typeof req.body?.sponsorName === "string" ? req.body.sponsorName.trim() || null : null,
+          sponsorNationalId: typeof req.body?.sponsorNationalId === "string" ? req.body.sponsorNationalId.trim() || null : null,
+          sponsorPhone: typeof req.body?.sponsorPhone === "string" ? req.body.sponsorPhone.trim() || null : null,
           customerSignatureDataUrl:
             typeof req.body?.customerSignatureDataUrl === "string" && req.body.customerSignatureDataUrl.trim()
               ? req.body.customerSignatureDataUrl.trim()
