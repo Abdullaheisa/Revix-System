@@ -25,6 +25,9 @@
     "react-redux": "^9.2.0",
     "three": "^0.187.0"
   },
+  "overrides": {
+    "uuid": "^11.1.1"
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^20",
