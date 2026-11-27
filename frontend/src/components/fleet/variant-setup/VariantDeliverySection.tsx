@@ -2,7 +2,7 @@
 
 import { SectionCard } from "@/components/ui/SectionCard";
 import { RevixSelect } from "@/components/ui/RevixSelect";
-import { MASTER_INPUT_CLASS, MASTER_LABEL_CLASS } from "@/components/shared/workspace";
+import { MASTER_LABEL_CLASS } from "@/components/shared/workspace";
 
 interface VariantDeliverySectionProps {
   isRtl: boolean;
@@ -10,12 +10,6 @@ interface VariantDeliverySectionProps {
   setLocationType: (v: string) => void;
   fuelPolicy: string;
   setFuelPolicy: (v: string) => void;
-  mileagePolicy: "unlimited" | "limited";
-  setMileagePolicy: (v: "unlimited" | "limited") => void;
-  dailyKmLimit: number;
-  setDailyKmLimit: (v: number) => void;
-  extraKmRate: number;
-  setExtraKmRate: (v: number) => void;
   deliveryPolicy: string;
   setDeliveryPolicy: (v: string) => void;
   instantConfirmation: boolean;
@@ -28,12 +22,6 @@ export function VariantDeliverySection({
   setLocationType,
   fuelPolicy,
   setFuelPolicy,
-  mileagePolicy,
-  setMileagePolicy,
-  dailyKmLimit,
-  setDailyKmLimit,
-  extraKmRate,
-  setExtraKmRate,
   deliveryPolicy,
   setDeliveryPolicy,
   instantConfirmation,
@@ -41,7 +29,7 @@ export function VariantDeliverySection({
 }: VariantDeliverySectionProps) {
   return (
     <SectionCard title={isRtl ? "٤. التسليم والسياسات (Delivery & Policies)" : "4. Delivery & Policies"}>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 text-xs">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 text-xs">
         <div>
           <label className={MASTER_LABEL_CLASS}>
             {isRtl ? "مكان / طريقة التسليم" : "Pickup / Delivery"}
@@ -75,55 +63,7 @@ export function VariantDeliverySection({
             ]}
           />
         </div>
-        <div>
-          <label className={MASTER_LABEL_CLASS}>
-            {isRtl ? "سياسة الكيلومترات" : "Mileage Policy"}
-          </label>
-          <RevixSelect
-            size="sm"
-            isRtl={isRtl}
-            value={mileagePolicy}
-            onChange={(e) => setMileagePolicy(e.target.value as "unlimited" | "limited")}
-            buttonClassName="h-10 rounded-lg text-xs"
-            options={[
-              { value: "unlimited", label: isRtl ? "كيلومترات مفتوحة" : "Unlimited" },
-              { value: "limited", label: isRtl ? "حد يومي محدد" : "Daily Limit" },
-            ]}
-          />
-        </div>
       </div>
-
-      {mileagePolicy === "limited" && (
-        <div className="mt-4 grid grid-cols-2 gap-4 text-xs">
-          <div>
-            <label className={MASTER_LABEL_CLASS}>
-              {isRtl ? "الحد اليومي (كم)" : "Daily KM Limit"}
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={dailyKmLimit === 0 ? "" : dailyKmLimit}
-              placeholder="250"
-              onChange={(e) => setDailyKmLimit(Number(e.target.value) || 0)}
-              className={`${MASTER_INPUT_CLASS} font-mono`}
-            />
-          </div>
-          <div>
-            <label className={MASTER_LABEL_CLASS}>
-              {isRtl ? "سعر الكيلومتر الإضافي" : "Extra KM Rate"}
-            </label>
-            <input
-              type="number"
-              min={0}
-              step="0.5"
-              value={extraKmRate === 0 ? "" : extraKmRate}
-              placeholder="0"
-              onChange={(e) => setExtraKmRate(Number(e.target.value) || 0)}
-              className={`${MASTER_INPUT_CLASS} font-mono`}
-            />
-          </div>
-        </div>
-      )}
 
       <div className="mt-4 text-xs">
         <label className={MASTER_LABEL_CLASS}>

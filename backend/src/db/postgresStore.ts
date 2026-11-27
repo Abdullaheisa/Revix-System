@@ -1673,9 +1673,13 @@ export class PostgresAuthDataStore implements AuthDataStore {
         daily_rate_3_to_7: string | null;
         daily_rate_8_plus: string | null;
         damage_excess: string | null;
+        mileage_policy: "unlimited" | "limited" | null;
+        daily_km_limit: number | null;
+        extra_km_rate: string | null;
         photo_url: string | null;
       }>(
-        `SELECT daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess, photo_url
+        `SELECT daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
+                mileage_policy, daily_km_limit, extra_km_rate, photo_url
          FROM vehicle_variants WHERE id = $1 AND company_id = $2`,
         [itemRow.variant_id, poRow.company_id],
       );
@@ -1699,6 +1703,15 @@ export class PostgresAuthDataStore implements AuthDataStore {
               Number(inheritedPricing.damage_excess) > 0
                 ? inheritedPricing.damage_excess
                 : (variantDefaults?.damage_excess ?? "0"),
+            mileage_policy: inheritedPricing.mileage_policy ?? variantDefaults?.mileage_policy ?? "unlimited",
+            daily_km_limit:
+              inheritedPricing.daily_km_limit != null && Number(inheritedPricing.daily_km_limit) > 0
+                ? inheritedPricing.daily_km_limit
+                : (variantDefaults?.daily_km_limit ?? 0),
+            extra_km_rate:
+              Number(inheritedPricing.extra_km_rate) > 0
+                ? inheritedPricing.extra_km_rate
+                : (variantDefaults?.extra_km_rate ?? "0"),
             photo_url: inheritedPricing.photo_url ?? variantDefaults?.photo_url ?? null,
           }
         : variantDefaults
@@ -1707,9 +1720,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
               daily_rate_3_to_7: variantDefaults.daily_rate_3_to_7 ?? "0",
               daily_rate_8_plus: variantDefaults.daily_rate_8_plus ?? "0",
               damage_excess: variantDefaults.damage_excess ?? "0",
-              mileage_policy: null,
-              daily_km_limit: null,
-              extra_km_rate: "0",
+              mileage_policy: variantDefaults.mileage_policy ?? "unlimited",
+              daily_km_limit: variantDefaults.daily_km_limit ?? 0,
+              extra_km_rate: variantDefaults.extra_km_rate ?? "0",
               photo_url: variantDefaults.photo_url ?? null,
               location_type: null,
               fuel_policy: null,
@@ -1919,9 +1932,13 @@ export class PostgresAuthDataStore implements AuthDataStore {
       daily_rate_3_to_7: string | null;
       daily_rate_8_plus: string | null;
       damage_excess: string | null;
+      mileage_policy: "unlimited" | "limited" | null;
+      daily_km_limit: number | null;
+      extra_km_rate: string | null;
       photo_url: string | null;
     }>(
-      `SELECT daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess, photo_url
+      `SELECT daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess,
+              mileage_policy, daily_km_limit, extra_km_rate, photo_url
        FROM vehicle_variants WHERE id = $1 AND company_id = $2`,
       [input.variantId, input.companyId],
     );
@@ -1945,6 +1962,15 @@ export class PostgresAuthDataStore implements AuthDataStore {
             Number(inheritedPricing.damage_excess) > 0
               ? inheritedPricing.damage_excess
               : (variantDefaults?.damage_excess ?? "0"),
+          mileage_policy: inheritedPricing.mileage_policy ?? variantDefaults?.mileage_policy ?? "unlimited",
+          daily_km_limit:
+            inheritedPricing.daily_km_limit != null && Number(inheritedPricing.daily_km_limit) > 0
+              ? inheritedPricing.daily_km_limit
+              : (variantDefaults?.daily_km_limit ?? 0),
+          extra_km_rate:
+            Number(inheritedPricing.extra_km_rate) > 0
+              ? inheritedPricing.extra_km_rate
+              : (variantDefaults?.extra_km_rate ?? "0"),
           photo_url: inheritedPricing.photo_url ?? variantDefaults?.photo_url ?? null,
         }
       : variantDefaults
@@ -1953,9 +1979,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
             daily_rate_3_to_7: variantDefaults.daily_rate_3_to_7 ?? "0",
             daily_rate_8_plus: variantDefaults.daily_rate_8_plus ?? "0",
             damage_excess: variantDefaults.damage_excess ?? "0",
-            mileage_policy: null,
-            daily_km_limit: null,
-            extra_km_rate: "0",
+            mileage_policy: variantDefaults.mileage_policy ?? "unlimited",
+            daily_km_limit: variantDefaults.daily_km_limit ?? 0,
+            extra_km_rate: variantDefaults.extra_km_rate ?? "0",
             photo_url: variantDefaults.photo_url ?? null,
             location_type: null,
             fuel_policy: null,
@@ -3015,14 +3041,20 @@ export class PostgresAuthDataStore implements AuthDataStore {
            daily_rate_8_plus = $3,
            damage_excess = $4,
            security_deposit = COALESCE($5, security_deposit),
+           mileage_policy = COALESCE($6, mileage_policy),
+           daily_km_limit = COALESCE($7, daily_km_limit),
+           extra_km_rate = COALESCE($8, extra_km_rate),
            updated_at = NOW()
-       WHERE id = $6 AND company_id = $7`,
+       WHERE id = $9 AND company_id = $10`,
       [
         input.dailyRate1to2,
         input.dailyRate3to7,
         input.dailyRate8Plus,
         input.damageExcess,
         input.securityDeposit ?? null,
+        input.mileagePolicy ?? null,
+        input.dailyKmLimit ?? null,
+        input.extraKmRate ?? null,
         variantId,
         companyId,
       ],

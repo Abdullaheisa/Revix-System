@@ -3,8 +3,12 @@
 import { DataTable } from "@/components/ui/DataTable";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { useMemo, useState, type FormEvent } from "react";
-import { usePathname, useRouter } from "@/i18n/navigation";
-import { parseFleetResourceRoute, priceListVariantHref } from "@/lib/workspace/resourceRoutes";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import {
+  parseFleetResourceRoute,
+  priceListVariantHref,
+  vehicleHref,
+} from "@/lib/workspace/resourceRoutes";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormField";
@@ -176,6 +180,9 @@ export function PriceListPanel({
   const [dailyRate8to30, setDailyRate8to30] = useState<number>(0);
   const [damageExcess, setDamageExcess] = useState<number>(0);
   const [securityDeposit, setSecurityDeposit] = useState<number>(0);
+  const [mileagePolicy, setMileagePolicy] = useState<"unlimited" | "limited">("unlimited");
+  const [dailyKmLimit, setDailyKmLimit] = useState<number>(250);
+  const [extraKmRate, setExtraKmRate] = useState<number>(0);
   const [formError, setFormError] = useState<string | undefined>();
 
   const priceLists = useMemo(() => {
@@ -381,6 +388,9 @@ export function PriceListPanel({
     setDailyRate8to30(target.dailyRate8Plus);
     setDamageExcess(target.damageExcess);
     setSecurityDeposit(target.securityDeposit);
+    setMileagePolicy(target.mileagePolicy ?? "unlimited");
+    setDailyKmLimit(target.dailyKmLimit && target.dailyKmLimit > 0 ? target.dailyKmLimit : 250);
+    setExtraKmRate(target.extraKmRate ?? 0);
     setFormError(undefined);
   }
 
@@ -388,6 +398,8 @@ export function PriceListPanel({
     e.preventDefault();
     if (!editingTarget) return;
     setFormError(undefined);
+    const effectiveKmLimit = mileagePolicy === "limited" ? Number(dailyKmLimit) || 0 : 0;
+    const effectiveExtraRate = mileagePolicy === "limited" ? Number(extraKmRate) || 0 : 0;
     try {
       if (editingTarget.vehicleId) {
         await updateVehiclePricing({
@@ -397,9 +409,9 @@ export function PriceListPanel({
           dailyRate8Plus: Number(dailyRate8to30) || 0,
           damageExcess: Number(damageExcess) || 0,
           securityDeposit: Number(securityDeposit) || 0,
-          mileagePolicy: editingTarget.mileagePolicy ?? "unlimited",
-          dailyKmLimit: editingTarget.dailyKmLimit ?? 0,
-          extraKmRate: editingTarget.extraKmRate ?? 0,
+          mileagePolicy,
+          dailyKmLimit: effectiveKmLimit,
+          extraKmRate: effectiveExtraRate,
         }).unwrap();
       } else {
         await updateVariantPricing({
@@ -409,6 +421,9 @@ export function PriceListPanel({
           dailyRate8Plus: Number(dailyRate8to30) || 0,
           damageExcess: Number(damageExcess) || 0,
           securityDeposit: Number(securityDeposit) || 0,
+          mileagePolicy,
+          dailyKmLimit: effectiveKmLimit,
+          extraKmRate: effectiveExtraRate,
           branchId: editingTarget.branchKey,
         }).unwrap();
       }
@@ -723,6 +738,9 @@ export function PriceListPanel({
                 dailyRate8Plus: selectedVariantRow.dailyRate8Plus,
                 damageExcess: selectedVariantRow.damageExcess,
                 securityDeposit: selectedVariantRow.securityDeposit,
+                mileagePolicy: selectedVariantVehicles[0]?.mileagePolicy ?? "unlimited",
+                dailyKmLimit: Number(selectedVariantVehicles[0]?.dailyKmLimit || 250),
+                extraKmRate: Number(selectedVariantVehicles[0]?.extraKmRate || 0),
               })
             }
             className="inline-flex h-9 cursor-pointer items-center rounded-lg bg-revix-primary px-3.5 text-xs font-semibold text-white hover:bg-revix-primary-hover transition-colors"
@@ -741,13 +759,14 @@ export function PriceListPanel({
                 <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "8+ أيام" : "8+ Days"}</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "تحمل الأضرار" : "Damage Excess"}</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "الديبوزت" : "Deposit"}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "الكيلومترات" : "Mileage"}</th>
                 <th className="whitespace-nowrap px-4 py-2.5 text-end">{isRtl ? "إجراء" : "Action"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-revix-border/80">
               {selectedVariantVehicles.length === 0 ? (
                 <TableEmptyRow
-                  colSpan={7}
+                  colSpan={8}
                   title={isRtl ? "لا توجد سيارات مسجلة لهذه الفئة" : "No vehicles in this variant"}
                   description={
                     isRtl
@@ -758,15 +777,17 @@ export function PriceListPanel({
               ) : (
                 selectedVariantVehicles.map((v) => {
                   const curr = openedList?.currencyCode || defaultCurrency;
+                  const isLimited = v.mileagePolicy === "limited";
                   return (
                     <tr key={v.id} className="transition-colors hover:bg-revix-accent-soft/40">
                       <td className="whitespace-nowrap px-4 py-3 text-start">
-                        <span
+                        <Link
+                          href={vehicleHref(v.id)}
                           dir="ltr"
-                          className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 font-mono text-xs font-bold text-revix-dark"
+                          className="inline-flex items-center gap-1 rounded-md border border-revix-border bg-revix-surface px-2.5 py-0.5 font-mono text-xs font-bold text-revix-primary transition-colors hover:border-revix-primary/50 hover:bg-revix-accent-soft"
                         >
                           {v.assetCode || "—"}
-                        </span>
+                        </Link>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-center font-mono font-semibold text-revix-dark">
                         <span dir="ltr" className="inline-block">
@@ -792,6 +813,24 @@ export function PriceListPanel({
                         <span dir="ltr" className="inline-block">
                           {Number(v.securityDeposit || 0).toLocaleString()} {curr}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-center">
+                        {isLimited ? (
+                          <div className="inline-flex flex-col items-center">
+                            <span className="font-mono text-[11px] font-semibold text-revix-dark" dir="ltr">
+                              {Number(v.dailyKmLimit || 0).toLocaleString()} km/d
+                            </span>
+                            {Number(v.extraKmRate || 0) > 0 && (
+                              <span className="font-mono text-[10px] text-revix-secondary" dir="ltr">
+                                +{Number(v.extraKmRate).toLocaleString()} {curr}/km
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                            {isRtl ? "مفتوح" : "Unlimited"}
+                          </span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-end">
                         <button
@@ -888,6 +927,46 @@ export function PriceListPanel({
                 value={securityDeposit || ""}
                 onChange={(e) => setSecurityDeposit(Number(e.target.value) || 0)}
               />
+            </div>
+
+            <div className="rounded-xl border border-revix-border bg-revix-surface/40 p-3 space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className={MASTER_LABEL_CLASS}>
+                    {isRtl ? "نوع الكيلومترات" : "Mileage Policy"}
+                  </label>
+                  <RevixSelect
+                    size="sm"
+                    isRtl={isRtl}
+                    value={mileagePolicy}
+                    onChange={(e) => setMileagePolicy(e.target.value as "unlimited" | "limited")}
+                    buttonClassName="h-10 rounded-lg text-xs"
+                    options={[
+                      { value: "unlimited", label: isRtl ? "كيلومترات مفتوحة" : "Unlimited" },
+                      { value: "limited", label: isRtl ? "حد يومي محدد" : "Daily Limit" },
+                    ]}
+                  />
+                </div>
+                {mileagePolicy === "limited" && (
+                  <>
+                    <FormInput
+                      type="number"
+                      min={0}
+                      label={isRtl ? "الحد اليومي (كم)" : "Daily KM Limit"}
+                      value={dailyKmLimit || ""}
+                      onChange={(e) => setDailyKmLimit(Number(e.target.value) || 0)}
+                    />
+                    <FormInput
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      label={isRtl ? `سعر الكيلومتر الإضافي (${editingTarget?.currency ?? defaultCurrency})` : `Extra KM Rate (${editingTarget?.currency ?? defaultCurrency})`}
+                      value={extraKmRate || ""}
+                      onChange={(e) => setExtraKmRate(Number(e.target.value) || 0)}
+                    />
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -1049,6 +1128,46 @@ export function PriceListPanel({
               value={securityDeposit || ""}
               onChange={(e) => setSecurityDeposit(Number(e.target.value) || 0)}
             />
+          </div>
+
+          <div className="rounded-xl border border-revix-border bg-revix-surface/40 p-3 space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <label className={MASTER_LABEL_CLASS}>
+                  {isRtl ? "نوع الكيلومترات" : "Mileage Policy"}
+                </label>
+                <RevixSelect
+                  size="sm"
+                  isRtl={isRtl}
+                  value={mileagePolicy}
+                  onChange={(e) => setMileagePolicy(e.target.value as "unlimited" | "limited")}
+                  buttonClassName="h-10 rounded-lg text-xs"
+                  options={[
+                    { value: "unlimited", label: isRtl ? "كيلومترات مفتوحة" : "Unlimited" },
+                    { value: "limited", label: isRtl ? "حد يومي محدد" : "Daily Limit" },
+                  ]}
+                />
+              </div>
+              {mileagePolicy === "limited" && (
+                <>
+                  <FormInput
+                    type="number"
+                    min={0}
+                    label={isRtl ? "الحد اليومي (كم)" : "Daily KM Limit"}
+                    value={dailyKmLimit || ""}
+                    onChange={(e) => setDailyKmLimit(Number(e.target.value) || 0)}
+                  />
+                  <FormInput
+                    type="number"
+                    min={0}
+                    step="0.5"
+                    label={isRtl ? `سعر الكيلومتر الإضافي (${editingTarget?.currency ?? defaultCurrency})` : `Extra KM Rate (${editingTarget?.currency ?? defaultCurrency})`}
+                    value={extraKmRate || ""}
+                    onChange={(e) => setExtraKmRate(Number(e.target.value) || 0)}
+                  />
+                </>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

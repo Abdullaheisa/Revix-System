@@ -72,15 +72,6 @@ export function VariantSetupPage({
   const [fuelPolicy, setFuelPolicy] = useState<string>(
     sampleVehicle?.fuelPolicy ?? "full_to_full",
   );
-  const [mileagePolicy, setMileagePolicy] = useState<"unlimited" | "limited">(
-    sampleVehicle?.mileagePolicy ?? "unlimited",
-  );
-  const [dailyKmLimit, setDailyKmLimit] = useState<number>(
-    sampleVehicle?.dailyKmLimit ?? 250,
-  );
-  const [extraKmRate, setExtraKmRate] = useState<number>(
-    sampleVehicle?.extraKmRate ?? 0,
-  );
   const [deliveryPolicy, setDeliveryPolicy] = useState<string>(
     sampleVehicle?.deliveryPolicy ?? "",
   );
@@ -136,9 +127,6 @@ export function VariantSetupPage({
         inclusions,
         locationType,
         fuelPolicy,
-        mileagePolicy,
-        dailyKmLimit: mileagePolicy === "limited" ? Number(dailyKmLimit) || 0 : 0,
-        extraKmRate: mileagePolicy === "limited" ? Number(extraKmRate) || 0 : 0,
         deliveryPolicy: deliveryPolicy.trim() || null,
         instantConfirmation,
       }).unwrap();
@@ -234,12 +222,6 @@ export function VariantSetupPage({
             setLocationType={setLocationType}
             fuelPolicy={fuelPolicy}
             setFuelPolicy={setFuelPolicy}
-            mileagePolicy={mileagePolicy}
-            setMileagePolicy={setMileagePolicy}
-            dailyKmLimit={dailyKmLimit}
-            setDailyKmLimit={setDailyKmLimit}
-            extraKmRate={extraKmRate}
-            setExtraKmRate={setExtraKmRate}
             deliveryPolicy={deliveryPolicy}
             setDeliveryPolicy={setDeliveryPolicy}
             instantConfirmation={instantConfirmation}
@@ -275,13 +257,8 @@ export function VariantSetupPage({
                 { label: isRtl ? "المزايا" : "Inclusions", value: inclusions.length },
                 { label: isRtl ? "ناقل الحركة" : "Transmission", value: transmission },
                 {
-                  label: isRtl ? "الكيلومترات" : "Mileage",
-                  value:
-                    mileagePolicy === "unlimited"
-                      ? isRtl
-                        ? "مفتوحة"
-                        : "Unlimited"
-                      : `${dailyKmLimit} km/d`,
+                  label: isRtl ? "تأكيد فوري" : "Instant Booking",
+                  value: instantConfirmation ? (isRtl ? "نعم" : "Yes") : isRtl ? "لا" : "No",
                 },
               ]}
             />
