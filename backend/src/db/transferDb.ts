@@ -113,20 +113,55 @@ async function main(): Promise<void> {
       const colNames = columns.map((c) => `"${c.column_name}"`).join(", ");
       const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(", ");
       const insertSql = `INSERT INTO "${table}" (${colNames}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`;
+      const isSelfReferencing = fkRes.rows.some(
+        (fk) => fk.table_name === table && fk.referenced_table === table,
+      );
+
+      const buildValues = (row: Record<string, unknown>) =>
+        columns.map((c) => {
+          const val = row[c.column_name];
+          if (val === undefined) return null;
+          if ((c.data_type === "jsonb" || c.data_type === "json") && val !== null) {
+            return JSON.stringify(val);
+          }
+          return val;
+        });
 
       const targetClient = await targetPool.connect();
       try {
         await targetClient.query("BEGIN");
-        for (const row of rows) {
-          const values = columns.map((c) => {
-            const val = row[c.column_name];
-            if (val === undefined) return null;
-            if ((c.data_type === "jsonb" || c.data_type === "json") && val !== null) {
-              return JSON.stringify(val);
+        if (!isSelfReferencing) {
+          for (const row of rows) {
+            await targetClient.query(insertSql, buildValues(row));
+          }
+        } else {
+          let pending = [...rows];
+          let pass = 0;
+          while (pending.length > 0) {
+            pass += 1;
+            const nextPending: Record<string, unknown>[] = [];
+            for (const row of pending) {
+              await targetClient.query("SAVEPOINT sp_row");
+              try {
+                await targetClient.query(insertSql, buildValues(row));
+                await targetClient.query("RELEASE SAVEPOINT sp_row");
+              } catch (err) {
+                const pgErr = err as { code?: string };
+                if (pgErr.code === "23503") {
+                  await targetClient.query("ROLLBACK TO SAVEPOINT sp_row");
+                  nextPending.push(row);
+                } else {
+                  throw err;
+                }
+              }
             }
-            return val;
-          });
-          await targetClient.query(insertSql, values);
+            if (nextPending.length === pending.length) {
+              throw new Error(
+                `Unresolvable self-referencing FK cycle in "${table}" at pass ${pass}`,
+              );
+            }
+            pending = nextPending;
+          }
         }
         await targetClient.query("COMMIT");
       } catch (err) {

@@ -5,8 +5,12 @@ export function createPgPool(connectionString: string): pg.Pool {
     /localhost|127\.0\.0\.1/i.test(connectionString) &&
     !/sslmode=require/i.test(connectionString);
 
-  return new pg.Pool({
+  const pool = new pg.Pool({
     connectionString,
     ssl: isLocal ? false : { rejectUnauthorized: false },
   });
+  pool.on("error", (err) => {
+    console.warn("[Postgres Pool] Idle client error (handled):", err.message);
+  });
+  return pool;
 }
