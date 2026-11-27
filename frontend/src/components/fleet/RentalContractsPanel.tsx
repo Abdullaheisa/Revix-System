@@ -196,8 +196,8 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
                     <div>{c.startDate} → {c.endDate}</div>
                     <div className="text-[11px]">{c.totalDays} {isRtl ? "يوم" : "d"}</div>
                   </td>
-                  <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap">
-                    {c.totalAmount.toLocaleString()}
+                  <td className="py-2.5 px-3 font-mono font-bold text-revix-dark whitespace-nowrap" dir="ltr">
+                    {c.totalAmount.toLocaleString()} {c.currencyCode || ""}
                   </td>
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
                     <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.cls}`}>

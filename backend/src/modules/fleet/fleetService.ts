@@ -265,17 +265,61 @@ export class FleetService {
 
     for (const item of input.items) {
       await this.getVariant(actor, item.variantId);
+      if (!item.color?.trim() || !item.vin?.trim()) {
+        throw new FleetServiceError(
+          400,
+          "INVALID_PO_ITEM",
+          "Each purchase order line item must include both color and VIN/chassis number.",
+        );
+      }
+    }
+
+    const computedTotal = input.items.reduce(
+      (sum, it) => sum + Number(it.quantity) * Number(it.unitPrice),
+      0,
+    );
+    if (
+      input.totalAmount != null &&
+      Math.abs(Number(input.totalAmount) - computedTotal) > 0.01
+    ) {
+      throw new FleetServiceError(
+        400,
+        "PO_TOTAL_MISMATCH",
+        "Purchase order total amount must match the sum of its line items.",
+      );
+    }
+
+    const upfrontPaid = Number(input.upfrontPaid ?? 0);
+    if (upfrontPaid > computedTotal) {
+      throw new FleetServiceError(
+        400,
+        "INVALID_UPFRONT_PAYMENT",
+        "Advance payment cannot exceed the purchase order total amount.",
+      );
     }
 
     const poCurrency = input.currency || actor.company.baseCurrency || "EGP";
 
-    const orderDate = new Intl.DateTimeFormat("en-CA", {
+    const todayInCompanyTz = new Intl.DateTimeFormat("en-CA", {
       timeZone: actor.company.timezone || "UTC",
       year: "numeric", month: "2-digit", day: "2-digit",
     }).format(new Date());
+    const orderDate = input.orderDate?.trim() || todayInCompanyTz;
+
+    if (
+      input.expectedDeliveryDate &&
+      input.expectedDeliveryDate.slice(0, 10) < orderDate.slice(0, 10)
+    ) {
+      throw new FleetServiceError(
+        400,
+        "INVALID_DELIVERY_DATE",
+        "Expected delivery date cannot be earlier than the order date.",
+      );
+    }
 
     const po = await this.store.createPurchaseOrder({
       ...input,
+      totalAmount: computedTotal,
       branchId: null,
       orderDate,
       currency: poCurrency,
@@ -539,6 +583,21 @@ export class FleetService {
 
     // Verify variant
     await this.getVariant(actor, input.variantId);
+
+    const todayYmd = new Intl.DateTimeFormat("en-CA", {
+      timeZone: actor.company.timezone || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    const insuranceExpiryInput = (input as { insuranceExpiry?: string | null }).insuranceExpiry;
+    if (insuranceExpiryInput && insuranceExpiryInput.slice(0, 10) < todayYmd) {
+      throw new FleetServiceError(
+        400,
+        "EXPIRED_INSURANCE",
+        "Insurance expiry date cannot be in the past.",
+      );
+    }
 
     // Verify uniqueness
     const existingVin = await this.store.findFleetVehicleByVin(
@@ -1876,6 +1935,30 @@ export class FleetService {
         "Driver name, primary phone, and license number are required.",
       );
     }
+    const todayYmd = new Intl.DateTimeFormat("en-CA", {
+      timeZone: actor.company.timezone || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    if (
+      input.licenseIssueDate &&
+      input.licenseExpiryDate &&
+      input.licenseExpiryDate.slice(0, 10) < input.licenseIssueDate.slice(0, 10)
+    ) {
+      throw new FleetServiceError(
+        400,
+        "LICENSE_EXPIRY_BEFORE_ISSUE",
+        "Driver license expiry date cannot be earlier than the issue date.",
+      );
+    }
+    if (input.licenseExpiryDate && input.licenseExpiryDate.slice(0, 10) < todayYmd) {
+      throw new FleetServiceError(
+        400,
+        "EXPIRED_LICENSE",
+        "Driver license is expired. Please enter a valid future expiry date.",
+      );
+    }
     const driver = await this.store.createDriver({
       companyId: actor.company.id,
       ...input,
@@ -1912,6 +1995,30 @@ export class FleetService {
       status?: "active" | "inactive";
     },
   ) {
+    const todayYmd = new Intl.DateTimeFormat("en-CA", {
+      timeZone: actor.company.timezone || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    if (
+      input.licenseIssueDate &&
+      input.licenseExpiryDate &&
+      input.licenseExpiryDate.slice(0, 10) < input.licenseIssueDate.slice(0, 10)
+    ) {
+      throw new FleetServiceError(
+        400,
+        "LICENSE_EXPIRY_BEFORE_ISSUE",
+        "Driver license expiry date cannot be earlier than the issue date.",
+      );
+    }
+    if (input.licenseExpiryDate && input.licenseExpiryDate.slice(0, 10) < todayYmd) {
+      throw new FleetServiceError(
+        400,
+        "EXPIRED_LICENSE",
+        "Driver license is expired. Please enter a valid future expiry date.",
+      );
+    }
     const updated = await this.store.updateDriver(actor.company.id, driverId, input);
     if (!updated) {
       throw new FleetServiceError(404, "DRIVER_NOT_FOUND", "Driver not found.");
@@ -1929,11 +2036,21 @@ export class FleetService {
   ) {
     const list = await this.store.listVehicleMovements(actor.company.id, filter);
     if (actor.role.scopeType === "assigned_branches") {
-      return list.filter(
-        (m) =>
-          actor.branchIds.includes(m.toBranchId) ||
-          (m.fromBranchId != null && actor.branchIds.includes(m.fromBranchId)),
+      const vehicles = await this.store.listFleetVehicles(
+        actor.company.id,
+        undefined,
+        actor.branchIds,
       );
+      const visibleVehicleIds = new Set(vehicles.map((v) => v.id));
+      for (const m of list) {
+        if (
+          actor.branchIds.includes(m.toBranchId) ||
+          (m.fromBranchId != null && actor.branchIds.includes(m.fromBranchId))
+        ) {
+          visibleVehicleIds.add(m.vehicleId);
+        }
+      }
+      return list.filter((m) => visibleVehicleIds.has(m.vehicleId));
     }
     return list;
   }
@@ -1961,6 +2078,24 @@ export class FleetService {
     );
     if (!input.toBranchId || !input.driverId) {
       throw new FleetServiceError(400, "VALIDATION_ERROR", "Destination branch and driver are required.");
+    }
+    const drivers = await this.store.listDrivers(actor.company.id);
+    const driver = drivers.find((d) => d.id === input.driverId);
+    if (!driver || driver.status !== "active") {
+      throw new FleetServiceError(400, "DRIVER_UNAVAILABLE", "Selected driver is not active.");
+    }
+    const todayYmd = new Intl.DateTimeFormat("en-CA", {
+      timeZone: actor.company.timezone || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    if (driver.licenseExpiryDate && driver.licenseExpiryDate.slice(0, 10) < todayYmd) {
+      throw new FleetServiceError(
+        400,
+        "EXPIRED_DRIVER_LICENSE",
+        "Selected driver's license is expired and cannot be assigned to a movement.",
+      );
     }
     if (vehicle.branchId && vehicle.branchId === input.toBranchId) {
       throw new FleetServiceError(400, "SAME_BRANCH", "Vehicle is already assigned to this branch.");

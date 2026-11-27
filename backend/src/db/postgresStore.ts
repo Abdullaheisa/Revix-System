@@ -532,6 +532,21 @@ export class PostgresAuthDataStore implements AuthDataStore {
       ],
     );
     const row = res.rows[0];
+    if (row) {
+      // Bug 15: keep all branches in the same country on a single unified currency
+      await this.pool.query(
+        `UPDATE branches
+         SET currency_code = $1,
+             updated_at = NOW()
+         WHERE company_id = $2 AND UPPER(country_code) = $3 AND id <> $4`,
+        [
+          input.currencyCode.trim().toUpperCase(),
+          companyId,
+          input.countryCode.trim().toUpperCase(),
+          branchId,
+        ],
+      );
+    }
     return row ? mapBranchRow(row) : null;
   }
 
@@ -1645,7 +1660,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
                 luggage_capacity, transmission
          FROM fleet_vehicles
          WHERE company_id = $1 AND variant_id = $2
-         ORDER BY (daily_rate_1_to_2 > 0 OR photo_url IS NOT NULL OR COALESCE(array_length(inclusions, 1), 0) > 0) DESC,
+         ORDER BY (daily_rate_1_to_2 > 0 OR daily_rate_3_to_7 > 0 OR daily_rate_8_plus > 0) DESC,
+                  (photo_url IS NOT NULL OR COALESCE(array_length(inclusions, 1), 0) > 0) DESC,
                   (branch_id = $3) DESC NULLS LAST,
                   updated_at DESC
          LIMIT 1`,
@@ -1890,13 +1906,71 @@ export class PostgresAuthDataStore implements AuthDataStore {
               luggage_capacity, transmission
        FROM fleet_vehicles
        WHERE company_id = $1 AND variant_id = $2
-       ORDER BY (daily_rate_1_to_2 > 0 OR photo_url IS NOT NULL OR COALESCE(array_length(inclusions, 1), 0) > 0) DESC,
+       ORDER BY (daily_rate_1_to_2 > 0 OR daily_rate_3_to_7 > 0 OR daily_rate_8_plus > 0) DESC,
+                (photo_url IS NOT NULL OR COALESCE(array_length(inclusions, 1), 0) > 0) DESC,
                 (branch_id = $3) DESC NULLS LAST,
                 updated_at DESC
        LIMIT 1`,
       [input.companyId, input.variantId, input.branchId ?? null],
     );
     const inheritedPricing = inheritedPricingRes.rows[0];
+    const variantDefaultsRes = await this.pool.query<{
+      daily_rate_1_to_2: string | null;
+      daily_rate_3_to_7: string | null;
+      daily_rate_8_plus: string | null;
+      damage_excess: string | null;
+      photo_url: string | null;
+    }>(
+      `SELECT daily_rate_1_to_2, daily_rate_3_to_7, daily_rate_8_plus, damage_excess, photo_url
+       FROM vehicle_variants WHERE id = $1 AND company_id = $2`,
+      [input.variantId, input.companyId],
+    );
+    const variantDefaults = variantDefaultsRes.rows[0];
+    const mergedInherited = inheritedPricing
+      ? {
+          ...inheritedPricing,
+          daily_rate_1_to_2:
+            Number(inheritedPricing.daily_rate_1_to_2) > 0
+              ? inheritedPricing.daily_rate_1_to_2
+              : (variantDefaults?.daily_rate_1_to_2 ?? "0"),
+          daily_rate_3_to_7:
+            Number(inheritedPricing.daily_rate_3_to_7) > 0
+              ? inheritedPricing.daily_rate_3_to_7
+              : (variantDefaults?.daily_rate_3_to_7 ?? "0"),
+          daily_rate_8_plus:
+            Number(inheritedPricing.daily_rate_8_plus) > 0
+              ? inheritedPricing.daily_rate_8_plus
+              : (variantDefaults?.daily_rate_8_plus ?? "0"),
+          damage_excess:
+            Number(inheritedPricing.damage_excess) > 0
+              ? inheritedPricing.damage_excess
+              : (variantDefaults?.damage_excess ?? "0"),
+          photo_url: inheritedPricing.photo_url ?? variantDefaults?.photo_url ?? null,
+        }
+      : variantDefaults
+        ? {
+            daily_rate_1_to_2: variantDefaults.daily_rate_1_to_2 ?? "0",
+            daily_rate_3_to_7: variantDefaults.daily_rate_3_to_7 ?? "0",
+            daily_rate_8_plus: variantDefaults.daily_rate_8_plus ?? "0",
+            damage_excess: variantDefaults.damage_excess ?? "0",
+            mileage_policy: null,
+            daily_km_limit: null,
+            extra_km_rate: "0",
+            photo_url: variantDefaults.photo_url ?? null,
+            location_type: null,
+            fuel_policy: null,
+            instant_confirmation: null,
+            description: null,
+            delivery_policy: null,
+            inclusions: null,
+            seats: null,
+            doors: null,
+            air_conditioning: null,
+            fuel_type: null,
+            luggage_capacity: null,
+            transmission: null,
+          }
+        : undefined;
     const res = await this.pool.query<DbFleetVehicleRow>(
       `INSERT INTO fleet_vehicles
         (id, asset_code, company_id, branch_id, variant_id, purchase_order_id, vin, license_plate,
@@ -1930,12 +2004,12 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.instantConfirmation ?? inheritedPricing?.instant_confirmation ?? false,
         input.description?.trim() || inheritedPricing?.description || null,
         input.deliveryPolicy?.trim() || inheritedPricing?.delivery_policy || null,
-        hasExplicitPricing ? (input.dailyRate1to2 ?? 0) : Number(inheritedPricing?.daily_rate_1_to_2 ?? 0),
-        hasExplicitPricing ? (input.dailyRate3to7 ?? 0) : Number(inheritedPricing?.daily_rate_3_to_7 ?? 0),
-        hasExplicitPricing ? (input.dailyRate8Plus ?? 0) : Number(inheritedPricing?.daily_rate_8_plus ?? 0),
+        hasExplicitPricing ? (input.dailyRate1to2 ?? 0) : Number(mergedInherited?.daily_rate_1_to_2 ?? 0),
+        hasExplicitPricing ? (input.dailyRate3to7 ?? 0) : Number(mergedInherited?.daily_rate_3_to_7 ?? 0),
+        hasExplicitPricing ? (input.dailyRate8Plus ?? 0) : Number(mergedInherited?.daily_rate_8_plus ?? 0),
         (input.damageExcess && input.damageExcess > 0)
           ? input.damageExcess
-          : Number(inheritedPricing?.damage_excess ?? 0),
+          : Number(mergedInherited?.damage_excess ?? 0),
         input.mileagePolicy ?? inheritedPricing?.mileage_policy ?? "unlimited",
         input.dailyKmLimit ?? inheritedPricing?.daily_km_limit ?? 0,
         input.extraKmRate ?? Number(inheritedPricing?.extra_km_rate ?? 0),
@@ -3489,6 +3563,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       customerAddress: (r.customer_address as string | null) ?? null,
       customerWorkAddress: (r.customer_work_address as string | null) ?? null,
       branchName: (r.branch_name as string | undefined) ?? undefined,
+      currencyCode: (r.currency_code as string | undefined)?.trim() || undefined,
     };
   }
 
@@ -3518,6 +3593,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
               cu.address AS customer_address,
               cu.work_address AS customer_work_address,
               br.name AS branch_name,
+              COALESCE(NULLIF(TRIM(br.currency_code), ''), NULLIF(TRIM(comp.base_currency), ''), 'EGP') AS currency_code,
               COALESCE(rcu.full_name, rcu.email) AS created_by_user_name,
               rcu.signature_data_url AS created_by_user_signature_data_url
        FROM rental_contracts rc
@@ -3525,6 +3601,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
        LEFT JOIN vehicle_variants vv ON vv.id = fv.variant_id
        JOIN customers cu ON cu.id = rc.customer_id
        LEFT JOIN branches br ON br.id = rc.branch_id
+       LEFT JOIN companies comp ON comp.id = rc.company_id
        LEFT JOIN users rcu ON rcu.id = rc.created_by_user_id
        WHERE rc.company_id = $1
        ORDER BY rc.created_at DESC`,

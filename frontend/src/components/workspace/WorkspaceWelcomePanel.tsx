@@ -7,6 +7,7 @@ import type {
   WorkspaceMembershipDto,
 } from "@/store/api/workspaceApi";
 import type { WorkspaceSectionId } from "@/store/slices/workspaceSlice";
+import { canAccessWorkspacePage } from "@/lib/workspace/navigationCatalog";
 import { RevixIcon, type RevixIconName } from "@/components/ui/RevixIcons";
 
 export interface WorkspaceWelcomePanelProps {
@@ -76,8 +77,12 @@ export function WorkspaceWelcomePanel({
   company,
   activeBranch,
   user,
+  membership,
   onNavigate,
 }: WorkspaceWelcomePanelProps) {
+  const visiblePages = CORE_PAGES.filter((item) =>
+    canAccessWorkspacePage(item.section, item.subPage, company?.operatingMode, membership),
+  );
   return (
     <div
       className="mx-auto flex w-full max-w-5xl flex-col gap-6 py-4"
@@ -114,7 +119,7 @@ export function WorkspaceWelcomePanel({
 
       {/* Clean Essential Pages Grid */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {CORE_PAGES.map((item) => (
+        {visiblePages.map((item) => (
           <button
             key={`${item.section}:${item.subPage}`}
             type="button"

@@ -343,7 +343,7 @@ router.delete(
   // --- Fleet Price Lists Master ---
   router.get(
     "/price-lists",
-    guards.requirePermission("fleet", "read"),
+    guards.requirePermission("price_lists", "read"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       try {
         const list = await fleetService.listFleetPriceLists(req.tenantActor!);
@@ -356,7 +356,7 @@ router.delete(
 
   router.post(
     "/price-lists",
-    guards.requirePermission("fleet", "create"),
+    guards.requirePermission("price_lists", "create"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
       const currencyCode =
@@ -400,7 +400,7 @@ router.delete(
 
   router.put(
     "/price-lists/:id",
-    guards.requirePermission("fleet", "update"),
+    guards.requirePermission("price_lists", "update"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       if (!id) {

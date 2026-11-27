@@ -7,7 +7,7 @@ import { paginateResponse, handleFleetError } from "../fleetHttp.ts";
 export function registerVendorsRoutes(router: Router, { guards, fleetService }: FleetRouteContext): void {
 router.get(
     "/vendors",
-    guards.requirePermission("fleet", "read"),
+    guards.requirePermission("vendors", "read"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       try {
         const category = typeof req.query.category === "string" ? (req.query.category as any) : undefined;
@@ -22,7 +22,7 @@ router.get(
 
 router.post(
     "/vendors",
-    guards.requirePermission("fleet", "create"),
+    guards.requirePermission("vendors", "create"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const parsed = createVendorSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -48,7 +48,7 @@ router.post(
 
 router.get(
     "/vendors/:id",
-    guards.requirePermission("fleet", "read"),
+    guards.requirePermission("vendors", "read"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const rawId = req.params.id;
       const vendorId = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -67,7 +67,7 @@ router.get(
 
 router.put(
     "/vendors/:id",
-    guards.requirePermission("fleet", "update"),
+    guards.requirePermission("vendors", "update"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const rawId = req.params.id;
       const vendorId = Array.isArray(rawId) ? rawId[0] : rawId;

@@ -3,10 +3,12 @@ import { type AuthenticatedTenantRequest } from "../../team/rbacMiddleware.ts";
 import type { FleetRouteContext } from "../fleetRouteContext.ts";
 import { handleFleetError } from "../fleetHttp.ts";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function registerContractsRoutes(router: Router, { guards, fleetService }: FleetRouteContext): void {
 router.get(
     "/contracts",
-    guards.requirePermission("fleet", "read"),
+    guards.requirePermission("sales", "read"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       try {
         const contracts = await fleetService.listRentalContracts(req.tenantActor!);
@@ -17,9 +19,32 @@ router.get(
     },
   );
 
+router.get(
+    "/contracts/:id",
+    guards.requirePermission("sales", "read"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id || !UUID_REGEX.test(id)) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_CONTRACT_ID", message: "Invalid contract ID." } });
+        return;
+      }
+      try {
+        const contracts = await fleetService.listRentalContracts(req.tenantActor!);
+        const contract = contracts.find((c) => c.id === id);
+        if (!contract) {
+          res.status(404).json({ ok: false, error: { code: "CONTRACT_NOT_FOUND", message: "Contract not found." } });
+          return;
+        }
+        res.status(200).json({ ok: true, data: contract });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
 router.post(
     "/contracts",
-    guards.requirePermission("fleet", "create"),
+    guards.requirePermission("sales", "create"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       try {
         const created = await fleetService.createRentalContract(req.tenantActor!, {
@@ -49,9 +74,13 @@ router.post(
 
 router.post(
     "/contracts/:id/sign",
-    guards.requirePermission("fleet", "update"),
+    guards.requirePermission("sales", "update"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id || !UUID_REGEX.test(id)) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_CONTRACT_ID", message: "Invalid contract ID." } });
+        return;
+      }
       const sig = typeof req.body?.signatureDataUrl === "string" ? req.body.signatureDataUrl.trim() : "";
       if (!sig) {
         res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "Signature is required." } });
@@ -68,9 +97,13 @@ router.post(
 
 router.post(
     "/contracts/:id/complete",
-    guards.requirePermission("fleet", "update"),
+    guards.requirePermission("sales", "update"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id || !UUID_REGEX.test(id)) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_CONTRACT_ID", message: "Invalid contract ID." } });
+        return;
+      }
       try {
         const updated = await fleetService.completeRentalContract(req.tenantActor!, id!, {
           returnOdometer: Number(req.body?.returnOdometer ?? 0),
@@ -88,9 +121,13 @@ router.post(
 
 router.post(
     "/contracts/:id/cancel",
-    guards.requirePermission("fleet", "update"),
+    guards.requirePermission("sales", "update"),
     async (req: AuthenticatedTenantRequest, res: Response) => {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id || !UUID_REGEX.test(id)) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_CONTRACT_ID", message: "Invalid contract ID." } });
+        return;
+      }
       try {
         const updated = await fleetService.cancelRentalContract(req.tenantActor!, id!);
         res.status(200).json({ ok: true, data: updated });

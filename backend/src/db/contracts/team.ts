@@ -14,6 +14,7 @@ export type PermissionResource =
   | "variants"
   | "vehicle_photos"
   | "rental_inclusions"
+  | "price_lists"
   | "sales"
   | "operations"
   | "finance"

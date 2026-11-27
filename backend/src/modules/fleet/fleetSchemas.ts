@@ -49,8 +49,8 @@ export const createPoItemSchema = z.object({
   variantId: z.string().uuid(),
   quantity: z.number().int().min(1).max(500),
   unitPrice: z.number().positive(),
-  vin: z.string().trim().max(40).nullable().optional(),
-  color: z.string().trim().max(40).nullable().optional(),
+  vin: z.string().trim().min(1, "VIN / Chassis number is required").max(40),
+  color: z.string().trim().min(1, "Color is required").max(40),
   notes: z.string().trim().max(300).nullable().optional(),
 });
 

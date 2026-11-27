@@ -638,8 +638,22 @@ export function canAccessWorkspacePage(
       );
     }
     if (subPageId === "vendors" || subPageId === "insurance-companies") {
+      return Boolean(perms?.vendors?.includes("read"));
+    }
+    if (subPageId === "price-list") {
       return Boolean(
-        perms?.vendors?.includes("read") || perms?.fleet?.includes("read"),
+        perms?.price_lists?.includes("read") || perms?.finance?.includes("read"),
+      );
+    }
+    if (subPageId === "rental-contracts" || subPageId === "rental-calendar" || subPageId === "customers") {
+      return Boolean(perms?.sales?.includes("read"));
+    }
+    if (subPageId === "create-contract") {
+      return Boolean(perms?.sales?.includes("create"));
+    }
+    if (subPageId === "movements" || subPageId === "drivers") {
+      return Boolean(
+        perms?.operations?.includes("read") || perms?.fleet?.includes("create"),
       );
     }
     if (subPageId === "variants") {

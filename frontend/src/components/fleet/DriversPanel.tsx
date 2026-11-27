@@ -187,8 +187,35 @@ export function DriversPanel({ isRtl, embedded = false }: DriversPanelProps) {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (!licenseIssueDate || !licenseExpiryDate) {
-      setErrorMsg(isRtl ? "يرجى تحديد تاريخ بداية ونهاية الرخصة." : "Please select license issue and expiry dates.");
+    const missing: string[] = [];
+    if (!fullName.trim()) missing.push(isRtl ? "الاسم الكامل" : "Full Name");
+    if (!phonePrimary.trim()) missing.push(isRtl ? "رقم الهاتف 1" : "Phone 1");
+    if (!licenseNumber.trim()) missing.push(isRtl ? "رقم الرخصة" : "License #");
+    if (!licenseIssueDate) missing.push(isRtl ? "بداية الرخصة" : "License Issue");
+    if (!licenseExpiryDate) missing.push(isRtl ? "نهاية الرخصة" : "License Expiry");
+    if (missing.length > 0) {
+      setErrorMsg(
+        isRtl
+          ? `يرجى إكمال الحقول المطلوبة: ${missing.join("، ")}`
+          : `Please complete required fields: ${missing.join(", ")}`,
+      );
+      return;
+    }
+    if (licenseExpiryDate < licenseIssueDate) {
+      setErrorMsg(
+        isRtl
+          ? "تاريخ انتهاء الرخصة لا يمكن أن يكون أقدم من تاريخ الإصدار."
+          : "License expiry date cannot be earlier than the issue date.",
+      );
+      return;
+    }
+    const todayIso = new Date().toISOString().slice(0, 10);
+    if (licenseExpiryDate < todayIso) {
+      setErrorMsg(
+        isRtl
+          ? "رخصة السائق منتهية. يرجى إدخال تاريخ انتهاء ساري."
+          : "Driver license is expired. Please enter a valid future expiry date.",
+      );
       return;
     }
     try {
@@ -221,7 +248,7 @@ export function DriversPanel({ isRtl, embedded = false }: DriversPanelProps) {
 
   if (viewMode === "form") {
     return (
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form noValidate onSubmit={handleSubmit} className="space-y-4">
         {/* Top Action Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-revix-border bg-white px-5 py-3.5 shadow-2xs">
           <div className="flex items-center gap-3">

@@ -77,4 +77,5 @@ export interface RentalContractRecord {
   customerAddress?: string | null;
   customerWorkAddress?: string | null;
   branchName?: string;
+  currencyCode?: string;
 }

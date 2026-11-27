@@ -34,10 +34,23 @@ const CATEGORY_LABELS_AR: Record<string, string> = {
   sports: "رياضية",
 };
 
+const CATEGORY_LABELS_EN: Record<string, string> = {
+  "سيدان": "Sedan",
+  "دفع رباعي": "SUV",
+  "هاتشباك": "Hatchback",
+  "اقتصادية": "Economy",
+  "فاخرة": "Luxury",
+  "فان": "Van",
+  "بيك أب": "Pickup",
+  "كوبيه": "Coupe",
+  "عامة": "General",
+  "فئة عامة": "General",
+};
+
 function formatCategoryLabel(raw: string | null | undefined, isRtl: boolean): string {
   const trimmed = raw?.trim();
   if (!trimmed) return isRtl ? "فئة عامة" : "General";
-  if (!isRtl) return trimmed;
+  if (!isRtl) return CATEGORY_LABELS_EN[trimmed] ?? trimmed;
   return CATEGORY_LABELS_AR[trimmed.toLowerCase()] ?? trimmed;
 }
 

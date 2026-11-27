@@ -219,9 +219,15 @@ export function DispatchMovementModal({
       ),
     [vehiclesData?.data, inTransitVehicleIds, initialVehicle?.id],
   );
+  const todayIso = new Date().toISOString().slice(0, 10);
   const drivers = useMemo(
-    () => (driversData?.data ?? []).filter((d) => d.status === "active"),
-    [driversData?.data],
+    () =>
+      (driversData?.data ?? []).filter(
+        (d) =>
+          d.status === "active" &&
+          (!d.licenseExpiryDate || d.licenseExpiryDate.slice(0, 10) >= todayIso),
+      ),
+    [driversData?.data, todayIso],
   );
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(initialVehicle?.id || "");
@@ -231,14 +237,29 @@ export function DispatchMovementModal({
     [vehicles, vehicleId, initialVehicle],
   );
 
-  const targetBranches = useMemo(
-    () => branches.filter((b) => b.id !== activeVehicle?.branchId),
+  const sourceBranch = useMemo(
+    () =>
+      activeVehicle?.branchId
+        ? branches.find((b) => b.id === activeVehicle.branchId) ?? null
+        : null,
     [branches, activeVehicle?.branchId],
+  );
+
+  const targetBranches = useMemo(
+    () =>
+      branches.filter((b) => {
+        if (b.id === activeVehicle?.branchId) return false;
+        if (sourceBranch && b.countryCode.toUpperCase() !== sourceBranch.countryCode.toUpperCase()) {
+          return false;
+        }
+        return true;
+      }),
+    [branches, activeVehicle?.branchId, sourceBranch],
   );
   const [toBranchId, setToBranchId] = useState("");
   const effectiveToBranchId = toBranchId || targetBranches[0]?.id || "";
   const [driverId, setDriverId] = useState("");
-  const effectiveDriverId = driverId || drivers[0]?.id || "";
+  const effectiveDriverId = driverId;
   const [odoOverride, setOdoOverride] = useState<number | null>(null);
   const dispatchOdometerKm = odoOverride ?? activeVehicle?.mileageOdometer ?? 0;
   const [notes, setNotes] = useState("");
@@ -277,7 +298,7 @@ export function DispatchMovementModal({
       title={isRtl ? "حركة / نقل سيارة لفرع" : "Dispatch Vehicle Movement"}
     >
       {errorMsg && <Alert variant="error" message={errorMsg} className="mb-3" />}
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form noValidate onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label className="mb-1 block text-xs font-semibold text-revix-dark">
             {isRtl ? "السيارة *" : "Vehicle *"}

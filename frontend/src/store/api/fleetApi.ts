@@ -405,6 +405,7 @@ export interface RentalContractDto {
   customerLicenseExpiry?: string | null;
   customerAddress?: string | null;
   customerWorkAddress?: string | null;
+  currencyCode?: string;
 }
 
 export interface InsuranceCompanyDto {

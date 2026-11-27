@@ -70,6 +70,17 @@ function CustomerForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
+    const missing: string[] = [];
+    if (!fullName.trim()) missing.push(isRtl ? "الاسم بالكامل" : "Full Name");
+    if (!phone.trim()) missing.push(isRtl ? "رقم الهاتف" : "Phone");
+    if (missing.length > 0) {
+      setErrorMsg(
+        isRtl
+          ? `يرجى إكمال الحقول المطلوبة: ${missing.join("، ")}`
+          : `Please complete required fields: ${missing.join(", ")}`,
+      );
+      return;
+    }
     try {
       const payload = {
         fullName: fullName.trim(),
@@ -235,7 +246,7 @@ function CustomerForm({
 
   if (variant === "page") {
     return (
-      <form onSubmit={handleSubmit} className="space-y-4" dir={isRtl ? "rtl" : "ltr"}>
+      <form noValidate onSubmit={handleSubmit} className="space-y-4" dir={isRtl ? "rtl" : "ltr"}>
         {/* Top Action Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-revix-border bg-white px-5 py-3.5 shadow-2xs">
           <div className="flex items-center gap-3">
@@ -305,7 +316,7 @@ function CustomerForm({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+        <form noValidate onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
           {formSections}
 
           <div className="flex justify-end gap-2 pt-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "@/i18n/navigation";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Alert } from "@/components/ui/Alert";
@@ -66,6 +66,11 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
   const [emailError, setEmailError] = useState<string | undefined>();
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | undefined>();
@@ -181,7 +186,7 @@ export function LoginForm({
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-4">
+      <form method="post" onSubmit={handleSubmit} noValidate className="mt-5 space-y-4">
         <FormInput
           label={copy.emailLabel}
           type="email"
@@ -243,7 +248,7 @@ export function LoginForm({
             type="submit"
             variant="primary"
             fullWidth
-            disabled={isSubmitting}
+            disabled={!isHydrated || isSubmitting}
             className="rounded-full"
           >
             {isSubmitting ? copy.submitting : copy.submit}

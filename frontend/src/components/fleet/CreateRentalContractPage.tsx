@@ -329,7 +329,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
 
       {errorMsg && <Alert variant="error" message={errorMsg} />}
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5 lg:grid-cols-12 items-start">
+      <form noValidate onSubmit={handleSubmit} className="grid grid-cols-1 gap-5 lg:grid-cols-12 items-start">
         {/* Main Collapsible Steps Column */}
         <div className="space-y-3 lg:col-span-8">
           {/* STEP 1: Customer */}

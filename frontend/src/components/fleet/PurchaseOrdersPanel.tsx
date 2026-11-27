@@ -453,6 +453,31 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
       return;
     }
 
+    const missingColorCount = expandedVehicleUnits.filter(
+      (u) => !u.color?.trim(),
+    ).length;
+    if (missingColorCount > 0) {
+      setCreateError(
+        isRtl
+          ? `يجب تحديد اللون لجميع السيارات أولاً.`
+          : `Please select a color for all line items.`,
+      );
+      return;
+    }
+
+    const computedTotal = expandedVehicleUnits.reduce(
+      (sum, u) => sum + Number(u.unitPrice || 0),
+      0,
+    );
+    if (Number(formUpfrontPaid || 0) > computedTotal) {
+      setCreateError(
+        isRtl
+          ? "الدفعة المقدمة لا يمكن أن تتجاوز إجمالي أمر الشراء."
+          : "Advance payment cannot exceed the purchase order total amount.",
+      );
+      return;
+    }
+
     const missingChassisCount = expandedVehicleUnits.filter(
       (u) => !chassisByUnitKey[u.key]?.trim(),
     ).length;

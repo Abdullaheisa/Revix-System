@@ -190,7 +190,7 @@ export function RentalContractPrintModal({
 
   if (!contract) return null;
 
-  const currency = company?.baseCurrency || "EGP";
+  const currency = contract.currencyCode || company?.baseCurrency || "EGP";
   const accent = company?.brandColor || "#9a7b3e";
   const contractTime = formatTime(contract.createdAt);
 

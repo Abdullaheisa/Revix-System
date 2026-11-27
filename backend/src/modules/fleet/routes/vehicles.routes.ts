@@ -75,6 +75,26 @@ router.get(
     },
   );
 
+router.get(
+    "/vehicles/:id/movements",
+    guards.requirePermission("fleet", "read"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const rawId = req.params.id;
+      const vehicleId = Array.isArray(rawId) ? rawId[0] : rawId;
+      if (!vehicleId) {
+        res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "Vehicle ID is required." } });
+        return;
+      }
+      try {
+        await fleetService.getVehicle(req.tenantActor!, vehicleId);
+        const movements = await fleetService.listVehicleMovements(req.tenantActor!, { vehicleId });
+        res.status(200).json({ ok: true, data: movements });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
 router.put(
     "/vehicles/:id",
     guards.requirePermission("fleet", "update"),
