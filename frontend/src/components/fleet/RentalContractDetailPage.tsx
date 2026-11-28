@@ -24,7 +24,7 @@ import {
 import { navigateBackOrFallback } from "@/lib/workspace/useSmartBack";
 import { formatCompanyDateTime } from "@/lib/date/companyDate";
 import { CompleteContractModal } from "./CompleteContractModal";
-import { ExtendContractModal } from "./ExtendContractModal";
+import { ExtendContractForm, ExtendContractModal } from "./ExtendContractModal";
 import { RentalContractPrintModal } from "./RentalContractPrintModal";
 import { ContractVoucherModal } from "./vouchers/ContractVoucherModal";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -178,7 +178,7 @@ export function RentalContractDetailPage({
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "contract" | "customer" | "vehicle" | "financials" | "activity"
+    "contract" | "customer" | "vehicle" | "financials" | "extension" | "activity"
   >("contract");
 
   const handleBack = () =>
@@ -276,25 +276,14 @@ export function RentalContractDetailPage({
           </Button>
 
           {contract.status === "active" && (
-            <>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setExtendingContract(contract)}
-                className="!min-h-0 h-9 rounded-xl px-3.5 py-0 text-xs"
-              >
-                <RevixIcon name="calendar" size={14} />
-                <span>{isRtl ? "تمديد" : "Extend"}</span>
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={() => setCompletingContract(contract)}
-                className="!min-h-0 h-9 rounded-xl px-4 py-0 text-xs"
-              >
-                <span>{isRtl ? "استلام وإغلاق" : "Return & Close"}</span>
-              </Button>
-            </>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setCompletingContract(contract)}
+              className="!min-h-0 h-9 rounded-xl px-4 py-0 text-xs"
+            >
+              <span>{isRtl ? "استلام وإغلاق" : "Return & Close"}</span>
+            </Button>
           )}
 
           <div className="relative">
@@ -393,6 +382,10 @@ export function RentalContractDetailPage({
             id: "financials" as const,
             label: isRtl ? "المالية" : "Financials",
             count: vouchers.length,
+          },
+          {
+            id: "extension" as const,
+            label: isRtl ? "التمديد" : "Extension",
           },
           {
             id: "activity" as const,
@@ -696,17 +689,28 @@ export function RentalContractDetailPage({
                   ),
                 },
                 {
-                  label: isRtl ? "رقم اللوحة / الأصل" : "Plate / Asset ID",
+                  label: isRtl ? "رقم اللوحة" : "Plate Number",
                   value: (
-                    <span className="font-mono">
+                    <span className="font-mono" dir="ltr">
                       {contract.vehiclePlate || "—"}
-                      {contract.vehicleAssetCode ? ` (${contract.vehicleAssetCode})` : ""}
                     </span>
                   ),
                 },
                 {
-                  label: isRtl ? "اللون / الفئة" : "Color / Category",
-                  value: [contract.vehicleColor, contract.vehicleCategory].filter(Boolean).join(" • ") || "—",
+                  label: "Asset ID",
+                  value: (
+                    <span className="font-mono" dir="ltr">
+                      {contract.vehicleAssetCode || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "اللون" : "Color",
+                  value: contract.vehicleColor || "—",
+                },
+                {
+                  label: isRtl ? "الفئة" : "Category",
+                  value: contract.vehicleCategory || "—",
                 },
                 {
                   label: isRtl ? "عداد الخروج" : "Pickup Odometer",
@@ -891,6 +895,27 @@ export function RentalContractDetailPage({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === "extension" && (
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
+          <SectionCard title={isRtl ? "تمديد مدة العقد" : "Extend Rental Period"}>
+            {contract.status === "active" ? (
+              <ExtendContractForm
+                key={`${contract.id}-${contract.endDate}`}
+                contract={contract}
+                isRtl={isRtl}
+                inline
+              />
+            ) : (
+              <p className="text-xs text-slate-500">
+                {isRtl
+                  ? "لا يمكن تمديد هذا العقد لأن حالته الحالية ليست مفتوحة."
+                  : "This contract cannot be extended because it is no longer active."}
+              </p>
+            )}
+          </SectionCard>
         </div>
       )}
 

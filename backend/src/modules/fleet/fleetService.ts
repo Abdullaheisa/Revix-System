@@ -1956,15 +1956,25 @@ export class FleetService {
 
     const addedDays = Math.max(1, Math.ceil((newEndMs - oldEndMs) / (1000 * 60 * 60 * 24)));
     const newTotalDays = Math.max(1, Math.ceil((newEndMs - startMs) / (1000 * 60 * 60 * 24)));
-    const dailyRate = Number(existing.dailyRate || 0);
+    const vehicle = await this.store.findFleetVehicleById(existing.vehicleId);
+    const fallbackRate = Number(existing.dailyRate || 0);
+    const dailyRate = vehicle
+      ? newTotalDays >= 8
+        ? Number(vehicle.dailyRate8Plus || vehicle.dailyRate3to7 || vehicle.dailyRate1to2 || fallbackRate)
+        : newTotalDays >= 3
+          ? Number(vehicle.dailyRate3to7 || vehicle.dailyRate1to2 || fallbackRate)
+          : Number(vehicle.dailyRate1to2 || fallbackRate)
+      : fallbackRate;
     const newSubtotal = newTotalDays * dailyRate;
     const newTotalAmount = Math.max(
       0,
       newSubtotal - Number(existing.discount || 0) + Number(existing.insuranceFee || 0) + Number(existing.extraCharges || 0),
     );
+    const addedAmount = newTotalAmount - Number(existing.totalAmount || 0);
 
     const updated = await this.store.extendRentalContract(actor.company.id, contractId, {
       endDate: input.newEndDate.slice(0, 10),
+      dailyRate,
       totalDays: newTotalDays,
       subtotal: newSubtotal,
       totalAmount: newTotalAmount,
@@ -1986,7 +1996,8 @@ export class FleetService {
         previousEndDate: existing.endDate,
         newEndDate: updated.endDate,
         addedDays,
-        addedAmount: addedDays * dailyRate,
+        addedAmount,
+        dailyRate,
       },
     });
 

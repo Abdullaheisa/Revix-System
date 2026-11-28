@@ -2471,6 +2471,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     contractId: string,
     input: {
       endDate: string;
+      dailyRate?: number;
       totalDays: number;
       subtotal: number;
       totalAmount: number;
@@ -2482,6 +2483,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     const updated = {
       ...existing,
       endDate: input.endDate,
+      dailyRate: input.dailyRate ?? existing.dailyRate,
       totalDays: input.totalDays,
       subtotal: input.subtotal,
       totalAmount: input.totalAmount,

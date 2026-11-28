@@ -579,6 +579,7 @@ export interface AuthDataStore {
     contractId: string,
     input: {
       endDate: string;
+      dailyRate?: number;
       totalDays: number;
       subtotal: number;
       totalAmount: number;

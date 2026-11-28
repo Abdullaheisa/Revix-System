@@ -3941,6 +3941,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
     contractId: string,
     input: {
       endDate: string;
+      dailyRate?: number;
       totalDays: number;
       subtotal: number;
       totalAmount: number;
@@ -3954,6 +3955,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
            subtotal = $5,
            total_amount = $6,
            notes = COALESCE($7, notes),
+           daily_rate = COALESCE($8, daily_rate),
            updated_at = NOW()
        WHERE id = $1 AND company_id = $2 AND status = 'active'
        RETURNING id`,
@@ -3965,6 +3967,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.subtotal,
         input.totalAmount,
         input.notes !== undefined ? input.notes : null,
+        input.dailyRate ?? null,
       ],
     );
     if (!res.rows[0]) return null;
