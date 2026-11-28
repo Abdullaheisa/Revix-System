@@ -122,12 +122,11 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
   const [createContract, { isLoading: isCreating }] = useCreateRentalContractMutation();
 
   const today = useMemo(() => toLocalIso(new Date()), []);
-  const defaultStart =
-    initialStartParam && initialStartParam >= today ? initialStartParam : today;
+  const startDate = today;
   const defaultEnd = useMemo(() => {
-    const [y, m, d] = defaultStart.split("-").map(Number);
+    const [y, m, d] = today.split("-").map(Number);
     return toLocalIso(new Date(y, (m || 1) - 1, (d || 1) + 1));
-  }, [defaultStart]);
+  }, [today]);
 
   const [openSections, setOpenSections] = useState<Record<ContractSectionKey, boolean>>({
     customer: true,
@@ -147,8 +146,11 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
       pricing: key === "pricing",
     });
 
-  const [startDate, setStartDate] = useState(defaultStart);
   const [endDate, setEndDate] = useState(defaultEnd);
+  const [returnTime, setReturnTime] = useState(() => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  });
   const [selectedVehicleId, setSelectedVehicleId] = useState(initialVehicleId);
   const [selectedCustomerId, setSelectedCustomerId] = useState(initialCustomerId);
   const [customerQuery, setCustomerQuery] = useState("");
@@ -223,8 +225,10 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
     }
     reservationAppliedRef.current = activeReservation.id;
     setSelectedCustomerId(activeReservation.customerId);
-    setStartDate(activeReservation.pickupDate);
-    setEndDate(activeReservation.returnDate);
+    setEndDate(activeReservation.returnDate >= today ? activeReservation.returnDate : today);
+    if (activeReservation.returnTime) {
+      setReturnTime(activeReservation.returnTime);
+    }
     const firstExact = reservationResp?.data?.exactMatches?.[0]?.id;
     const firstSimilar = reservationResp?.data?.similarMatches?.[0]?.id;
     if (firstExact || firstSimilar) {
@@ -394,6 +398,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         customerId,
         startDate,
         endDate,
+        returnTime: returnTime || null,
         pickupOdometer: Number(pickupOdometer) || 0,
         dailyRate: Number(dailyRate) || 0,
         discount: Number(discount) || 0,
@@ -987,38 +992,31 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
             </button>
 
             {openSections.period && (
-              <div className="border-t border-revix-border/70 p-4">
+              <div className="border-t border-revix-border/70 p-4 space-y-3">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1.5">
-                      {isRtl ? "تاريخ الاستلام *" : "Start Date *"}
+                      {isRtl ? "تاريخ انتهاء العقد *" : "Contract End Date *"}
                     </label>
                     <RevixDatePicker
                       size="sm"
                       isRtl={isRtl}
                       required
                       minDate={today}
-                      value={startDate}
-                      onChange={(next) => {
-                        const clamped = next && next < today ? today : next;
-                        setStartDate(clamped);
-                        if (endDate < clamped) setEndDate(clamped);
-                      }}
+                      value={endDate}
+                      onChange={(next) => setEndDate(next)}
                       buttonClassName="h-10 rounded-lg text-xs font-mono"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-revix-dark mb-1.5">
-                      {isRtl ? "تاريخ التسليم *" : "End Date *"}
+                      {isRtl ? "وقت انتهاء العقد" : "End Time"}
                     </label>
-                    <RevixDatePicker
-                      size="sm"
-                      isRtl={isRtl}
-                      required
-                      minDate={startDate >= today ? startDate : today}
-                      value={endDate}
-                      onChange={(next) => setEndDate(next)}
-                      buttonClassName="h-10 rounded-lg text-xs font-mono"
+                    <input
+                      type="time"
+                      value={returnTime}
+                      onChange={(e) => setReturnTime(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-revix-border bg-white px-3 text-xs font-mono font-bold text-revix-dark focus:border-revix-primary focus:outline-hidden"
                     />
                   </div>
                   <div className="flex h-10 items-center justify-between rounded-lg border border-emerald-900/15 bg-emerald-50/70 px-3 text-xs">
@@ -1035,6 +1033,11 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                     </div>
                   </div>
                 </div>
+                <p className="text-[11px] text-revix-secondary">
+                  {isRtl
+                    ? `يبدأ العقد تلقائياً بتاريخ ووقت اليوم (${today} · ${returnTime}) وينتهي في نفس الساعة (${returnTime}) بعد ${totalDays} يوم.`
+                    : `Starts automatically now (${today} · ${returnTime}) and ends at ${returnTime} after ${totalDays} day(s).`}
+                </p>
               </div>
             )}
           </div>
@@ -1242,7 +1245,8 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                 {isRtl ? "ملخص العقد والحساب" : "Contract Summary"}
               </h2>
               <p className="text-[11px] text-revix-secondary mt-0.5">
-                {startDate} → {endDate} ({totalDays} {isRtl ? "يوم" : "day(s)"})
+                {startDate} → {endDate} {returnTime ? `(${returnTime})` : ""} · {totalDays}{" "}
+                {isRtl ? "يوم" : "day(s)"}
               </p>
             </div>
 

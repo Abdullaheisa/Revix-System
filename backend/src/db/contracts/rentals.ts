@@ -86,6 +86,7 @@ export interface RentalContractRecord {
   status: RentalContractStatus;
   startDate: string;
   endDate: string;
+  returnTime?: string | null;
   pickupOdometer: number;
   returnOdometer: number | null;
   dailyRate: number;

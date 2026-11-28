@@ -651,8 +651,8 @@ export function RevixDatePicker({
                         : cd.isToday
                           ? "border border-revix-primary text-revix-primary font-bold hover:bg-revix-tint"
                           : cd.isCurrentMonth
-                            ? "cursor-pointer text-revix-dark hover:bg-revix-surface hover:text-revix-primary"
-                            : "cursor-pointer text-revix-dark/85 hover:bg-revix-surface hover:text-revix-primary"
+                            ? "cursor-pointer bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-900"
+                            : "cursor-pointer bg-emerald-50/40 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-900"
                   }`}
                 >
                   {cd.dayNumber}

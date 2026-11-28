@@ -362,6 +362,7 @@ export interface RentalContractDto {
   status: RentalContractStatus;
   startDate: string;
   endDate: string;
+  returnTime?: string | null;
   pickupOdometer: number;
   returnOdometer: number | null;
   dailyRate: number;
@@ -1478,6 +1479,7 @@ export const fleetApi = baseApi.injectEndpoints({
         customerId: string;
         startDate: string;
         endDate: string;
+        returnTime?: string | null;
         pickupOdometer?: number;
         dailyRate?: number;
         discount?: number;

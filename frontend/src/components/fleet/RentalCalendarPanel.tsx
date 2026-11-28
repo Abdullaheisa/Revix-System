@@ -60,8 +60,7 @@ type ViewMode = "week" | "month";
 type CalendarStatusFilter =
   | "all"
   | "rented"
-  | "contract_reserved"
-  | "pending_reservation"
+  | "reserved"
   | "available"
   | "maintenance";
 
@@ -246,7 +245,6 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
 
   const statusCounts = useMemo(() => {
     let rented = 0;
-    let contractReserved = 0;
     let assignedReservation = 0;
     let maintenance = 0;
     let available = 0;
@@ -254,14 +252,10 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
       const vc = contractsByVehicle.get(v.id) ?? [];
       const vr = reservationsByVehicle.get(v.id) ?? [];
       const isMaint = v.status === "maintenance" || v.status === "out_of_service";
-      const hasRented = vc.some((c) => c.status === "active" && c.startDate <= todayIso);
-      const hasContractReserved = vc.some(
-        (c) => c.status === "active" && c.startDate > todayIso,
-      );
+      const hasRented = vc.some((c) => c.status === "active");
       const hasAssignedRsv = vr.length > 0;
       if (isMaint) maintenance++;
       else if (hasRented) rented++;
-      else if (hasContractReserved) contractReserved++;
       else if (hasAssignedRsv) assignedReservation++;
       else available++;
     }
@@ -272,8 +266,7 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
     return {
       total: allBranchVehicles.length,
       rented,
-      contractReserved,
-      pendingReservation: assignedReservation + unassignedCount,
+      reserved: assignedReservation + unassignedCount,
       available,
       maintenance,
     };
@@ -282,7 +275,6 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
     contractsByVehicle,
     reservationsByVehicle,
     unassignedReservationsByVariant,
-    todayIso,
   ]);
 
   // Group vehicles by Variant (Model + Trim + Year)
@@ -346,16 +338,9 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
         (v) => v.status === "maintenance" || v.status === "out_of_service",
       );
       const hasRented = g.vehicles.some((v) =>
-        (contractsByVehicle.get(v.id) ?? []).some(
-          (c) => c.status === "active" && c.startDate <= todayIso,
-        ),
+        (contractsByVehicle.get(v.id) ?? []).some((c) => c.status === "active"),
       );
-      const hasContractReserved = g.vehicles.some((v) =>
-        (contractsByVehicle.get(v.id) ?? []).some(
-          (c) => c.status === "active" && c.startDate > todayIso,
-        ),
-      );
-      const hasPendingReservation =
+      const hasReserved =
         g.unassignedReservations.length > 0 ||
         g.vehicles.some((v) => (reservationsByVehicle.get(v.id) ?? []).length > 0);
       const hasAvailable = g.vehicles.some((v) => {
@@ -369,8 +354,7 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
       });
 
       if (statusFilter === "rented") return hasRented;
-      if (statusFilter === "contract_reserved") return hasContractReserved;
-      if (statusFilter === "pending_reservation") return hasPendingReservation;
+      if (statusFilter === "reserved") return hasReserved;
       if (statusFilter === "maintenance") return hasMaint;
       if (statusFilter === "available") return hasAvailable;
       return true;
@@ -574,21 +558,15 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
             },
             {
               key: "rented" as const,
-              label: isRtl ? "مؤجرة (بعقد)" : "Rented",
+              label: isRtl ? "مؤجرة" : "Rented",
               count: statusCounts.rented,
               dot: "bg-[#124e35]",
             },
             {
-              key: "contract_reserved" as const,
-              label: isRtl ? "حجز بعقد (قادم)" : "Scheduled Contract",
-              count: statusCounts.contractReserved,
-              dot: "bg-indigo-700",
-            },
-            {
-              key: "pending_reservation" as const,
-              label: isRtl ? "حجز بدون عقد" : "Pending Reservation",
-              count: statusCounts.pendingReservation,
-              dot: "bg-amber-500",
+              key: "reserved" as const,
+              label: isRtl ? "محجوزة" : "Reserved",
+              count: statusCounts.reserved,
+              dot: "bg-[#0c1420]",
             },
             {
               key: "available" as const,
@@ -735,7 +713,11 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                 return (
                   <div key={group.variantKey}>
                     {/* Variant Summary Row */}
-                    <div className="flex min-h-[58px] bg-white transition-colors hover:bg-[#f9fcfa]">
+                    <div
+                      className={`flex min-h-[56px] transition-colors ${
+                        isExpanded ? "bg-[#f3f7f4]" : "bg-white hover:bg-[#f9fcfa]"
+                      }`}
+                    >
                       <button
                         type="button"
                         onClick={() =>
@@ -744,7 +726,11 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                             [group.variantKey]: !prev[group.variantKey],
                           }))
                         }
-                        className="sticky start-0 z-10 flex w-64 sm:w-72 shrink-0 cursor-pointer items-center justify-between gap-2 border-e border-revix-border bg-white px-4 py-2.5 text-start hover:bg-emerald-50/35 transition-colors"
+                        className={`sticky start-0 z-10 flex w-64 sm:w-72 shrink-0 cursor-pointer items-start justify-between gap-2 border-e border-revix-border px-4 py-3 text-start transition-colors ${
+                          isExpanded
+                            ? "bg-[#f3f7f4] hover:bg-emerald-50/50"
+                            : "bg-white hover:bg-emerald-50/35"
+                        }`}
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -771,78 +757,76 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                               {totalUnits} {isRtl ? "سيارة" : "units"}
                             </span>
                             {group.unassignedReservations.length > 0 && (
-                              <span className="rounded bg-amber-500 px-1.5 py-0.5 font-semibold text-white">
+                              <span className="rounded bg-[#0c1420] px-1.5 py-0.5 font-semibold text-white">
                                 {group.unassignedReservations.length}{" "}
-                                {isRtl ? "بدون عقد" : "no contract"}
+                                {isRtl ? "محجوز" : "reserved"}
                               </span>
                             )}
                           </div>
                         </div>
                       </button>
 
-                      {/* Daily Variant Availability Summary Cells */}
-                      <div
-                        className="grid flex-1"
-                        style={{
-                          gridTemplateColumns: `repeat(${totalCols}, minmax(${viewMode === "week" ? "96px" : "42px"}, 1fr))`,
-                        }}
-                      >
-                        {dayColumns.map((col) => {
-                          let rented = 0;
-                          let contractReserved = 0;
-                          let pendingRsv = 0;
-                          let maint = 0;
+                      {/* Daily Variant Availability + Continuous Duration Bars */}
+                      <div className="flex flex-1 flex-col">
+                        <div
+                          className="grid flex-1"
+                          style={{
+                            gridTemplateColumns: `repeat(${totalCols}, minmax(${viewMode === "week" ? "96px" : "42px"}, 1fr))`,
+                          }}
+                        >
+                          {dayColumns.map((col) => {
+                            let rented = 0;
+                            let reserved = 0;
+                            let maint = 0;
 
-                          for (const v of group.vehicles) {
-                            const isMaint =
-                              v.status === "maintenance" || v.status === "out_of_service";
-                            const vc = contractsByVehicle.get(v.id) ?? [];
-                            const vr = reservationsByVehicle.get(v.id) ?? [];
-                            const activeC = vc.find(
-                              (c) =>
-                                c.status === "active" &&
-                                c.startDate <= col.iso &&
-                                c.endDate >= col.iso,
-                            );
-                            const activeR = vr.find(
-                              (r) => r.pickupDate <= col.iso && r.returnDate >= col.iso,
-                            );
-                            if (activeC) {
-                              if (activeC.startDate > todayIso) contractReserved++;
-                              else rented++;
-                            } else if (activeR) {
-                              pendingRsv++;
-                            } else if (isMaint) {
-                              maint++;
-                            }
-                          }
-                          for (const r of group.unassignedReservations) {
-                            if (r.pickupDate <= col.iso && r.returnDate >= col.iso) {
-                              pendingRsv++;
-                            }
-                          }
-
-                          const avail = Math.max(
-                            0,
-                            totalUnits - rented - contractReserved - pendingRsv - maint,
-                          );
-
-                          return (
-                            <button
-                              key={col.iso}
-                              type="button"
-                              onClick={() =>
-                                setExpandedVariants((prev) => ({
-                                  ...prev,
-                                  [group.variantKey]: !prev[group.variantKey],
-                                }))
+                            for (const v of group.vehicles) {
+                              const isMaint =
+                                v.status === "maintenance" || v.status === "out_of_service";
+                              const vc = contractsByVehicle.get(v.id) ?? [];
+                              const vr = reservationsByVehicle.get(v.id) ?? [];
+                              const activeC = vc.find(
+                                (c) =>
+                                  c.status === "active" &&
+                                  c.startDate <= col.iso &&
+                                  c.endDate >= col.iso,
+                              );
+                              const activeR = vr.find(
+                                (r) => r.pickupDate <= col.iso && r.returnDate >= col.iso,
+                              );
+                              if (activeC) {
+                                rented++;
+                              } else if (activeR) {
+                                reserved++;
+                              } else if (isMaint) {
+                                maint++;
                               }
-                              className={`flex cursor-pointer flex-col items-center justify-center gap-1 border-e border-revix-border/50 px-1 py-2 transition-colors hover:bg-emerald-50/40 ${
-                                col.isToday ? "border-x border-revix-primary/20 bg-emerald-50/40" : ""
-                              }`}
-                            >
-                              {viewMode === "week" ? (
-                                <>
+                            }
+                            for (const r of group.unassignedReservations) {
+                              if (r.pickupDate <= col.iso && r.returnDate >= col.iso) {
+                                reserved++;
+                              }
+                            }
+
+                            const avail = Math.max(
+                              0,
+                              totalUnits - rented - reserved - maint,
+                            );
+
+                            return (
+                              <button
+                                key={col.iso}
+                                type="button"
+                                onClick={() =>
+                                  setExpandedVariants((prev) => ({
+                                    ...prev,
+                                    [group.variantKey]: !prev[group.variantKey],
+                                  }))
+                                }
+                                className={`flex cursor-pointer items-center justify-center border-e border-revix-border/50 px-1 py-2 transition-colors hover:bg-emerald-50/40 ${
+                                  col.isToday ? "border-x border-revix-primary/20 bg-emerald-50/40" : ""
+                                }`}
+                              >
+                                {viewMode === "week" ? (
                                   <span
                                     className={`font-mono text-[11px] font-bold ${
                                       avail > 0 ? "text-emerald-700" : "text-rose-600"
@@ -850,50 +834,113 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                                   >
                                     {avail}/{totalUnits} {isRtl ? "متاح" : "free"}
                                   </span>
-                                  {(rented > 0 ||
-                                    contractReserved > 0 ||
-                                    pendingRsv > 0 ||
-                                    maint > 0) && (
-                                    <div className="flex flex-wrap items-center justify-center gap-1 text-[9.5px] font-semibold">
-                                      {rented > 0 && (
-                                        <span className="rounded bg-[#124e35] px-1.5 py-0.2 text-white">
-                                          {rented} {isRtl ? "مؤجر" : "out"}
-                                        </span>
-                                      )}
-                                      {contractReserved > 0 && (
-                                        <span className="rounded bg-indigo-700 px-1.5 py-0.2 text-white">
-                                          {contractReserved} {isRtl ? "بعقد" : "sched"}
-                                        </span>
-                                      )}
-                                      {pendingRsv > 0 && (
-                                        <span className="rounded bg-amber-500 px-1.5 py-0.2 text-white">
-                                          {pendingRsv} {isRtl ? "بدون عقد" : "no-cnt"}
-                                        </span>
-                                      )}
-                                      {maint > 0 && (
-                                        <span className="rounded bg-slate-200 px-1.5 py-0.2 text-slate-700">
-                                          {maint} {isRtl ? "صيانة" : "mnt"}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                </>
-                              ) : (
-                                <span
-                                  className={`inline-flex h-6 min-w-6 items-center justify-center rounded font-mono text-[10.5px] font-bold ${
-                                    avail === 0
-                                      ? "bg-rose-50 text-rose-700"
-                                      : rented + contractReserved + pendingRsv > 0
-                                        ? "bg-emerald-100 text-emerald-800"
-                                        : "text-emerald-700"
-                                  }`}
-                                >
-                                  {avail}
-                                </span>
-                              )}
-                            </button>
+                                ) : (
+                                  <span
+                                    className={`inline-flex h-6 min-w-6 items-center justify-center rounded font-mono text-[10.5px] font-bold ${
+                                      avail === 0
+                                        ? "bg-rose-50 text-rose-700"
+                                        : rented + reserved > 0
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : "text-emerald-700"
+                                    }`}
+                                  >
+                                    {avail}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Continuous Duration Bars (shown when collapsed so expanded rows don't duplicate them) */}
+                        {!isExpanded && (() => {
+                          const groupContracts =
+                            statusFilter === "reserved" || statusFilter === "maintenance"
+                              ? []
+                              : group.vehicles.flatMap((v) =>
+                                  (contractsByVehicle.get(v.id) ?? []).filter(
+                                    (c) => c.status === "active",
+                                  ),
+                                );
+                          const groupReservations =
+                            statusFilter === "rented" || statusFilter === "maintenance"
+                              ? []
+                              : [
+                                  ...group.unassignedReservations,
+                                  ...group.vehicles.flatMap(
+                                    (v) => reservationsByVehicle.get(v.id) ?? [],
+                                  ),
+                                ];
+
+                          if (groupContracts.length === 0 && groupReservations.length === 0) {
+                            return null;
+                          }
+
+                          return (
+                            <div className="space-y-1 border-t border-revix-border/40 bg-slate-50/40 py-1.5">
+                              {groupContracts.map((c) => {
+                                const clampedStart =
+                                  c.startDate < rangeStartIso ? rangeStartIso : c.startDate;
+                                const clampedEnd =
+                                  c.endDate > rangeEndIso ? rangeEndIso : c.endDate;
+                                const sIdx = isoToColIndex.get(clampedStart) ?? 0;
+                                const eIdx = isoToColIndex.get(clampedEnd) ?? totalCols - 1;
+                                const spanCols = Math.max(1, eIdx - sIdx + 1);
+                                return (
+                                  <div key={`bar-c-${c.id}`} className="relative h-6 w-full">
+                                    <button
+                                      type="button"
+                                      onClick={() => setPrintingContract(c)}
+                                      style={{
+                                        insetInlineStart: `calc(${(sIdx / totalCols) * 100}% + 4px)`,
+                                        width: `calc(${(spanCols / totalCols) * 100}% - 8px)`,
+                                      }}
+                                      title={`${isRtl ? "مؤجرة" : "Rented"} • #${c.contractNumber} • ${c.customerName || ""} (${c.startDate} → ${c.endDate})`}
+                                      className="absolute inset-y-0 flex cursor-pointer items-center justify-center overflow-hidden rounded-md bg-[#124e35] px-2.5 text-[10.5px] font-bold text-white shadow-2xs hover:opacity-90"
+                                    >
+                                      <span className="truncate">
+                                        {isRtl ? "مؤجرة" : "Rented"} • #{c.contractNumber}
+                                        {c.customerName ? ` · ${c.customerName}` : ""}
+                                      </span>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                              {groupReservations.map((r) => {
+                                const clampedStart =
+                                  r.pickupDate < rangeStartIso ? rangeStartIso : r.pickupDate;
+                                const clampedEnd =
+                                  r.returnDate > rangeEndIso ? rangeEndIso : r.returnDate;
+                                const sIdx = isoToColIndex.get(clampedStart) ?? 0;
+                                const eIdx = isoToColIndex.get(clampedEnd) ?? totalCols - 1;
+                                const spanCols = Math.max(1, eIdx - sIdx + 1);
+                                return (
+                                  <div key={`bar-r-${r.id}`} className="relative h-6 w-full">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        router.push(
+                                          `/workspace/fleet/rental-contracts/new?reservationId=${r.id}`,
+                                        )
+                                      }
+                                      style={{
+                                        insetInlineStart: `calc(${(sIdx / totalCols) * 100}% + 4px)`,
+                                        width: `calc(${(spanCols / totalCols) * 100}% - 8px)`,
+                                      }}
+                                      title={`${isRtl ? "محجوزة" : "Reserved"} • #${r.reservationNumber} • ${r.customerName || ""} (${r.pickupDate} → ${r.returnDate})`}
+                                      className="absolute inset-y-0 flex cursor-pointer items-center justify-center overflow-hidden rounded-md bg-[#0c1420] px-2.5 text-[10.5px] font-bold text-white shadow-2xs hover:bg-slate-800"
+                                    >
+                                      <span className="truncate">
+                                        {isRtl ? "محجوزة" : "Reserved"} • #{r.reservationNumber}
+                                        {r.customerName ? ` · ${r.customerName}` : ""}
+                                      </span>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           );
-                        })}
+                        })()}
                       </div>
                     </div>
 
@@ -913,15 +960,15 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                           return (
                             <div
                               key={`rsv-${r.id}`}
-                              className="flex min-h-[48px] bg-amber-50/35 hover:bg-amber-50/60"
+                              className="flex min-h-[48px] bg-slate-50/70 hover:bg-slate-100/70"
                             >
                               <Link
                                 href={`/workspace/fleet/rental-contracts/new?reservationId=${r.id}`}
-                                className="sticky start-0 z-10 flex w-64 sm:w-72 shrink-0 flex-col justify-center border-e border-revix-border bg-amber-50/60 ps-8 pe-4 py-1.5 text-start"
+                                className="sticky start-0 z-10 flex w-64 sm:w-72 shrink-0 flex-col justify-center border-e border-revix-border bg-slate-100/80 ps-8 pe-4 py-1.5 text-start"
                               >
                                 <div className="flex items-center gap-1.5">
-                                  <span className="rounded bg-amber-500 px-1.5 py-0.5 text-[9.5px] font-bold text-white">
-                                    {isRtl ? "حجز بدون عقد" : "No Contract"}
+                                  <span className="rounded bg-[#0c1420] px-1.5 py-0.5 text-[9.5px] font-bold text-white">
+                                    {isRtl ? "محجوزة" : "Reserved"}
                                   </span>
                                   <span className="font-mono text-[11px] font-bold text-revix-dark">
                                     #{r.reservationNumber}
@@ -955,11 +1002,11 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                                     insetInlineStart: `calc(${(sIdx / totalCols) * 100}% + 6px)`,
                                     width: `calc(${(spanCols / totalCols) * 100}% - 12px)`,
                                   }}
-                                  title={`${isRtl ? "حجز بدون عقد — اضغط لتحويله لعقد" : "Pending reservation — click to convert"} • #${r.reservationNumber}`}
-                                  className="absolute top-1.5 bottom-1.5 z-10 flex cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-amber-500 px-3 text-[11px] font-bold text-white shadow-xs hover:bg-amber-600"
+                                  title={`${isRtl ? "حجز — اضغط للتحويل لعقد" : "Reservation — click to convert"} • #${r.reservationNumber}`}
+                                  className="absolute top-1.5 bottom-1.5 z-10 flex cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-[#0c1420] px-3 text-[11px] font-bold text-white shadow-xs hover:bg-slate-800"
                                 >
                                   <span className="truncate">
-                                    {isRtl ? "حجز بدون عقد" : "Pending"} • #{r.reservationNumber}
+                                    {isRtl ? "محجوزة" : "Reserved"} • #{r.reservationNumber}
                                     {r.customerName ? ` · ${r.customerName}` : ""}
                                   </span>
                                 </button>
@@ -1021,11 +1068,13 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                                       type="button"
                                       disabled={isPast}
                                       onClick={() => {
-                                        if (!isPast) {
+                                        if (col.iso === todayIso) {
                                           openContractCreate({
                                             vehicleId: v.id,
-                                            startDate: col.iso,
+                                            startDate: todayIso,
                                           });
+                                        } else if (col.iso > todayIso) {
+                                          openNewReservation(col.iso);
                                         }
                                       }}
                                       className={`group flex items-center justify-center border-e border-revix-border/40 transition-colors ${
@@ -1083,10 +1132,10 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                                         insetInlineStart: `calc(${(sIdx / totalCols) * 100}% + 6px)`,
                                         width: `calc(${(spanCols / totalCols) * 100}% - 12px)`,
                                       }}
-                                      className="absolute top-1.5 bottom-1.5 z-10 flex cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-amber-500 px-3 text-[11px] font-bold text-white shadow-xs hover:bg-amber-600"
+                                      className="absolute top-1.5 bottom-1.5 z-10 flex cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-[#0c1420] px-3 text-[11px] font-bold text-white shadow-xs hover:bg-slate-800"
                                     >
                                       <span className="truncate">
-                                        {isRtl ? "حجز بدون عقد" : "No Contract"} • #{r.reservationNumber}
+                                        {isRtl ? "محجوزة" : "Reserved"} • #{r.reservationNumber}
                                       </span>
                                     </button>
                                   );
@@ -1101,24 +1150,14 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                                   const eIdx = isoToColIndex.get(clampedEnd) ?? totalCols - 1;
                                   const spanCols = Math.max(1, eIdx - sIdx + 1);
                                   const isCompleted = c.status === "completed";
-                                  const isReserved =
-                                    c.status === "active" && c.startDate > todayIso;
-                                  const barColor = isCompleted
-                                    ? "bg-sky-700"
-                                    : isReserved
-                                      ? "bg-indigo-700"
-                                      : "bg-[#124e35]";
+                                  const barColor = isCompleted ? "bg-sky-700" : "bg-[#124e35]";
                                   const label = isCompleted
                                     ? isRtl
                                       ? "مكتمل"
                                       : "Completed"
-                                    : isReserved
-                                      ? isRtl
-                                        ? "حجز بعقد"
-                                        : "Contracted"
-                                      : isRtl
-                                        ? "مؤجرة"
-                                        : "Rented";
+                                    : isRtl
+                                      ? "مؤجرة"
+                                      : "Rented";
                                   return (
                                     <button
                                       key={c.id}

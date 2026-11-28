@@ -528,6 +528,7 @@ export interface AuthDataStore {
     customerId: string;
     startDate: string;
     endDate: string;
+    returnTime?: string | null;
     pickupOdometer: number;
     dailyRate: number;
     totalDays: number;

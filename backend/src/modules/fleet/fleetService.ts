@@ -1621,6 +1621,7 @@ export class FleetService {
       customerId: string;
       startDate: string;
       endDate: string;
+      returnTime?: string | null;
       pickupOdometer?: number;
       dailyRate?: number;
       discount?: number;
@@ -1670,8 +1671,16 @@ export class FleetService {
       throw new FleetServiceError(400, "INVALID_DATES", "End date must be on or after start date.");
     }
     const todayYmd = new Date().toISOString().slice(0, 10);
-    if (input.startDate.slice(0, 10) < todayYmd) {
+    const startYmd = input.startDate.slice(0, 10);
+    if (startYmd < todayYmd) {
       throw new FleetServiceError(400, "INVALID_START_DATE", "Start date cannot be in the past.");
+    }
+    if (startYmd > todayYmd) {
+      throw new FleetServiceError(
+        400,
+        "FUTURE_CONTRACT_NOT_ALLOWED",
+        "Rental contracts must start today. Please create a reservation for future dates.",
+      );
     }
 
     const existingContracts = await this.store.listRentalContracts(actor.company.id);
@@ -1746,6 +1755,7 @@ export class FleetService {
       customerId: input.customerId,
       startDate: input.startDate,
       endDate: input.endDate,
+      returnTime: input.returnTime ?? null,
       pickupOdometer,
       dailyRate,
       totalDays: diffDays,
@@ -2726,11 +2736,16 @@ export class FleetService {
       await this.store.findFleetVehicleById(input.vehicleId),
     );
 
+    const todayYmd = new Date().toISOString().slice(0, 10);
+    const effectiveEndDate =
+      reservation.returnDate >= todayYmd ? reservation.returnDate : todayYmd;
+
     const contract = await this.createRentalContract(actor, {
       vehicleId: vehicle.id,
       customerId: reservation.customerId,
-      startDate: reservation.pickupDate,
-      endDate: reservation.returnDate,
+      startDate: todayYmd,
+      endDate: effectiveEndDate,
+      returnTime: reservation.returnTime ?? null,
       pickupOdometer: input.pickupOdometer ?? vehicle.mileageOdometer,
       dailyRate: input.dailyRate ?? reservation.dailyRate,
       discount: input.discount ?? 0,

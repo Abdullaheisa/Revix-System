@@ -3547,6 +3547,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
       status: r.status as RentalContractStatus,
       startDate: this.formatPgDate(r.start_date),
       endDate: this.formatPgDate(r.end_date),
+      returnTime: (r.return_time as string | null) ?? null,
       pickupOdometer: Number(r.pickup_odometer || r.vehicle_mileage_odometer || 0),
       returnOdometer: r.return_odometer != null ? Number(r.return_odometer) : null,
       dailyRate: Number(r.daily_rate ?? 0),
@@ -3677,6 +3678,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
     customerId: string;
     startDate: string;
     endDate: string;
+    returnTime?: string | null;
     pickupOdometer: number;
     dailyRate: number;
     totalDays: number;
@@ -3716,11 +3718,11 @@ export class PostgresAuthDataStore implements AuthDataStore {
     const res = await this.pool.query(
       `INSERT INTO rental_contracts
         (company_id, branch_id, contract_number, vehicle_id, customer_id, status,
-         start_date, end_date, pickup_odometer, daily_rate, total_days,
+         start_date, end_date, return_time, pickup_odometer, daily_rate, total_days,
          subtotal, discount, insurance_fee, extra_charges, total_amount, paid_amount, deposit_amount,
          notes, second_driver_name, second_driver_license_no, sponsor_name, sponsor_national_id, sponsor_phone,
          customer_signature_data_url, signed_at, reservation_id, created_by_user_id)
-       VALUES ($1,$2,$3,$4,$5,'active',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24::text, CASE WHEN $24::text IS NOT NULL THEN NOW() ELSE NULL END, $25, $26)
+       VALUES ($1,$2,$3,$4,$5,'active',$6,$7,$27,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24::text, CASE WHEN $24::text IS NOT NULL THEN NOW() ELSE NULL END, $25, $26)
        RETURNING *`,
       [
         input.companyId,
@@ -3749,6 +3751,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         effectiveSignature,
         input.reservationId || null,
         input.createdByUserId || null,
+        input.returnTime?.trim() || null,
       ],
     );
 

@@ -70,6 +70,7 @@ router.post(
           customerId: String(req.body?.customerId ?? ""),
           startDate: String(req.body?.startDate ?? ""),
           endDate: String(req.body?.endDate ?? ""),
+          returnTime: typeof req.body?.returnTime === "string" ? req.body.returnTime.trim() || null : null,
           pickupOdometer: req.body?.pickupOdometer != null ? Number(req.body.pickupOdometer) : undefined,
           dailyRate: req.body?.dailyRate != null ? Number(req.body.dailyRate) : undefined,
           discount: req.body?.discount != null ? Number(req.body.discount) : 0,
