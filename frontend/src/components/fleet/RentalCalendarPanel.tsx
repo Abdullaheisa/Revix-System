@@ -108,13 +108,21 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
   const [printingContract, setPrintingContract] = useState<RentalContractDto | null>(null);
   const todayHeaderRef = useRef<HTMLDivElement | null>(null);
 
-  const openContractCreate = (seed: { vehicleId?: string | null; startDate?: string | null }) => {
-    router.push(
-      rentalContractNewHref({
-        vehicleId: seed.vehicleId ?? null,
-        startDate: seed.startDate ?? todayIso,
-      }),
-    );
+  const openContractCreate = (seed: {
+    vehicleId?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+  }) => {
+    const base = rentalContractNewHref({
+      vehicleId: seed.vehicleId ?? null,
+      startDate: seed.startDate ?? todayIso,
+    });
+    if (seed.endDate) {
+      const sep = base.includes("?") ? "&" : "?";
+      router.push(`${base}${sep}endDate=${encodeURIComponent(seed.endDate)}`);
+      return;
+    }
+    router.push(base);
   };
 
   const openNewReservation = (startDate?: string) => {
@@ -1068,13 +1076,12 @@ export function RentalCalendarPanel({ isRtl }: RentalCalendarPanelProps) {
                                       type="button"
                                       disabled={isPast}
                                       onClick={() => {
-                                        if (col.iso === todayIso) {
+                                        if (!isPast) {
                                           openContractCreate({
                                             vehicleId: v.id,
                                             startDate: todayIso,
+                                            endDate: col.iso > todayIso ? col.iso : null,
                                           });
-                                        } else if (col.iso > todayIso) {
-                                          openNewReservation(col.iso);
                                         }
                                       }}
                                       className={`group flex items-center justify-center border-e border-revix-border/40 transition-colors ${

@@ -61,6 +61,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
   const initialVehicleId = searchParams.get("vehicleId") || "";
   const initialCustomerId = searchParams.get("customerId") || "";
   const initialStartParam = searchParams.get("startDate") || "";
+  const initialEndParam = searchParams.get("endDate") || "";
   const reservationId = searchParams.get("reservationId") || "";
   const { backHref } = useSmartBack(
     reservationId ? "/workspace/fleet/reservations" : "/workspace/fleet/rental-contracts",
@@ -124,13 +125,16 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
   const today = useMemo(() => toLocalIso(new Date()), []);
   const startDate = today;
   const defaultEnd = useMemo(() => {
+    if (initialEndParam && initialEndParam >= today) {
+      return initialEndParam;
+    }
     const [y, m, d] = today.split("-").map(Number);
     return toLocalIso(new Date(y, (m || 1) - 1, (d || 1) + 1));
-  }, [today]);
+  }, [today, initialEndParam]);
 
   const [openSections, setOpenSections] = useState<Record<ContractSectionKey, boolean>>({
     customer: true,
-    vehicle: Boolean(initialVehicleId),
+    vehicle: false,
     period: true,
     pricing: false,
   });
