@@ -1492,6 +1492,7 @@ export const fleetApi = baseApi.injectEndpoints({
         sponsorNationalId?: string | null;
         sponsorPhone?: string | null;
         customerSignatureDataUrl?: string | null;
+        reservationId?: string | null;
       }
     >({
       query: (body) => ({
@@ -1540,6 +1541,18 @@ export const fleetApi = baseApi.injectEndpoints({
       query: (id) => ({
         url: `/fleet/contracts/${id}/cancel`,
         method: "POST",
+      }),
+      invalidatesTags: ["RentalContract", "Fleet"],
+    }),
+
+    extendRentalContract: builder.mutation<
+      { ok: boolean; data: RentalContractDto },
+      { id: string; newEndDate: string; notes?: string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/fleet/contracts/${id}/extend`,
+        method: "POST",
+        body,
       }),
       invalidatesTags: ["RentalContract", "Fleet"],
     }),
@@ -1810,8 +1823,131 @@ export const fleetApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Fleet"],
     }),
+
+    listReservations: builder.query<ApiResponse<ReservationDto[]>, void>({
+      query: () => "/fleet/reservations",
+      providesTags: ["Fleet"],
+    }),
+
+    createReservation: builder.mutation<
+      ApiResponse<ReservationDto>,
+      {
+        branchId: string;
+        returnBranchId?: string | null;
+        customerId: string;
+        variantId: string;
+        allowSimilar?: boolean;
+        source?: ReservationSource;
+        externalBookingRef?: string | null;
+        status?: "pending" | "confirmed";
+        pickupDate: string;
+        pickupTime?: string | null;
+        returnDate: string;
+        returnTime?: string | null;
+        dailyRate?: number;
+        notes?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: "/fleet/reservations",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    updateReservationStatus: builder.mutation<
+      ApiResponse<ReservationDto>,
+      { id: string; status: ReservationStatus }
+    >({
+      query: ({ id, status }) => ({
+        url: `/fleet/reservations/${id}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
+
+    getReservationAvailableVehicles: builder.query<
+      ApiResponse<{
+        reservation: ReservationDto;
+        exactMatches: FleetVehicleDto[];
+        similarMatches: FleetVehicleDto[];
+      }>,
+      string
+    >({
+      query: (id) => `/fleet/reservations/${id}/available-vehicles`,
+      providesTags: ["Fleet"],
+    }),
+
+    convertReservationToContract: builder.mutation<
+      ApiResponse<{ reservation: ReservationDto; contract: RentalContractDto }>,
+      {
+        id: string;
+        vehicleId: string;
+        pickupOdometer?: number;
+        dailyRate?: number;
+        discount?: number;
+        insuranceFee?: number;
+        notes?: string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/fleet/reservations/${id}/convert`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Fleet"],
+    }),
   }),
 });
+
+export type ReservationStatus =
+  | "pending"
+  | "confirmed"
+  | "converted"
+  | "cancelled"
+  | "no_show";
+
+export type ReservationSource = "phone" | "walk_in" | "website" | "ota_partner";
+
+export interface ReservationDto {
+  id: string;
+  companyId: string;
+  branchId: string;
+  returnBranchId: string | null;
+  reservationNumber: string;
+  customerId: string;
+  variantId: string;
+  allowSimilar: boolean;
+  source: ReservationSource;
+  externalBookingRef: string | null;
+  status: ReservationStatus;
+  pickupDate: string;
+  pickupTime: string | null;
+  returnDate: string;
+  returnTime: string | null;
+  dailyRate: number;
+  totalDays: number;
+  estimatedTotal: number;
+  convertedContractId: string | null;
+  convertedContractNumber?: string | null;
+  assignedVehicleId: string | null;
+  assignedVehiclePlate?: string | null;
+  notes: string | null;
+  createdByUserName?: string | null;
+  cancelledByUserName?: string | null;
+  customerName?: string;
+  customerPhone?: string;
+  variantTitle?: string;
+  variantCategory?: string | null;
+  variantSippCode?: string | null;
+  branchName?: string;
+  returnBranchName?: string | null;
+  currencyCode?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export const {
   useGetFleetMetricsQuery,
@@ -1838,6 +1974,7 @@ export const {
   useSignRentalContractMutation,
   useCompleteRentalContractMutation,
   useCancelRentalContractMutation,
+  useExtendRentalContractMutation,
   useListContractVouchersQuery,
   useCreateContractVoucherMutation,
   useSignPurchaseOrderMutation,
@@ -1893,4 +2030,9 @@ export const {
   useDispatchMovementMutation,
   useReceiveMovementMutation,
   useCancelMovementMutation,
+  useListReservationsQuery,
+  useCreateReservationMutation,
+  useUpdateReservationStatusMutation,
+  useGetReservationAvailableVehiclesQuery,
+  useConvertReservationToContractMutation,
 } = fleetApi;

@@ -13,6 +13,8 @@ import {
 } from "@/store/api/fleetApi";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { SmartSearchInput } from "@/components/ui/SmartSearchInput";
+import { smartMatch } from "@/lib/search/smartSearch";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { CustomerDetailPage } from "./CustomerDetailPage";
 
@@ -47,16 +49,14 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
-      (c) =>
-        (c.customerCode && c.customerCode.toLowerCase().includes(q)) ||
-        c.fullName.toLowerCase().includes(q) ||
-        c.phone.toLowerCase().includes(q) ||
-        (c.secondaryPhone && c.secondaryPhone.toLowerCase().includes(q)) ||
-        (c.nationalId && c.nationalId.toLowerCase().includes(q)) ||
-        (c.driverLicenseNo && c.driverLicenseNo.toLowerCase().includes(q)),
+    if (!search.trim()) return customers;
+    return customers.filter((c) =>
+      smartMatch(search, {
+        id: [c.customerCode],
+        name: [c.fullName],
+        phone: [c.phone, c.secondaryPhone],
+        extra: [c.nationalId, c.driverLicenseNo],
+      }),
     );
   }, [customers, search]);
 
@@ -100,22 +100,16 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-56">
-            <RevixIcon
-              name="search"
-              className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder={isRtl ? "بحث بالكود، الاسم، الهاتف، الهوية..." : "Search ID, name, phone..."}
-              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
-            />
-          </div>
+          <SmartSearchInput
+            value={search}
+            onChange={(val) => {
+              setSearch(val);
+              setPage(1);
+            }}
+            isRtl={isRtl}
+            placeholder={isRtl ? "بحث ذكي: كود، اسم، هاتف..." : "Smart search: ID, name, phone..."}
+            className="w-60"
+          />
 
           <button
             type="button"

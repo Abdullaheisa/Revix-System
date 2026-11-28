@@ -9,6 +9,9 @@ import type {
   ContractVoucherType,
   CustomerRecord,
   RentalContractRecord,
+  ReservationRecord,
+  ReservationSource,
+  ReservationStatus,
   VoucherPaymentMethod,
 } from "./contracts/rentals.ts";
 
@@ -542,6 +545,7 @@ export interface AuthDataStore {
     sponsorNationalId?: string | null;
     sponsorPhone?: string | null;
     customerSignatureDataUrl?: string | null;
+    reservationId?: string | null;
     createdByUserId?: string | null;
   }): Promise<RentalContractRecord>;
   signRentalContract(
@@ -569,6 +573,17 @@ export interface AuthDataStore {
     contractId: string,
     cancelledByUserId?: string | null,
   ): Promise<RentalContractRecord | null>;
+  extendRentalContract(
+    companyId: string,
+    contractId: string,
+    input: {
+      endDate: string;
+      totalDays: number;
+      subtotal: number;
+      totalAmount: number;
+      notes?: string | null;
+    },
+  ): Promise<RentalContractRecord | null>;
   listContractVouchers(
     companyId: string,
     contractId: string,
@@ -587,6 +602,41 @@ export interface AuthDataStore {
     description?: string | null;
     createdByUserId?: string | null;
   }): Promise<ContractVoucherRecord>;
+  listReservations(companyId: string): Promise<ReservationRecord[]>;
+  findReservationById(companyId: string, reservationId: string): Promise<ReservationRecord | null>;
+  createReservation(input: {
+    companyId: string;
+    branchId: string;
+    returnBranchId?: string | null;
+    customerId: string;
+    variantId: string;
+    allowSimilar: boolean;
+    source: ReservationSource;
+    externalBookingRef?: string | null;
+    externalMetadata?: Record<string, unknown> | null;
+    status: ReservationStatus;
+    pickupDate: string;
+    pickupTime?: string | null;
+    returnDate: string;
+    returnTime?: string | null;
+    dailyRate: number;
+    totalDays: number;
+    estimatedTotal: number;
+    notes?: string | null;
+    createdByUserId?: string | null;
+  }): Promise<ReservationRecord>;
+  updateReservationStatus(
+    companyId: string,
+    reservationId: string,
+    status: ReservationStatus,
+    cancelledByUserId?: string | null,
+  ): Promise<ReservationRecord | null>;
+  markReservationConverted(
+    companyId: string,
+    reservationId: string,
+    contractId: string,
+    vehicleId: string,
+  ): Promise<ReservationRecord | null>;
 
   recordAuditLog(input: AuditLogInput): Promise<void>;
   listAuditLogs(

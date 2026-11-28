@@ -28,6 +28,7 @@ const VendorsDirectoryPanel = dynamic(() => import("@/components/fleet/VendorsDi
 const InsuranceCompaniesPanel = dynamic(() => import("@/components/fleet/InsuranceCompaniesPanel").then((module) => module.InsuranceCompaniesPanel), { loading: PanelLoading });
 const BookableFleetPanel = dynamic(() => import("@/components/fleet/BookableFleetPanel").then((module) => module.BookableFleetPanel), { loading: PanelLoading });
 const CustomersPanel = dynamic(() => import("@/components/fleet/CustomersPanel").then((module) => module.CustomersPanel), { loading: PanelLoading });
+const ReservationsPanel = dynamic(() => import("@/components/fleet/ReservationsPanel").then((module) => module.ReservationsPanel), { loading: PanelLoading });
 const RentalContractsPanel = dynamic(() => import("@/components/fleet/RentalContractsPanel").then((module) => module.RentalContractsPanel), { loading: PanelLoading });
 const RentalCalendarPanel = dynamic(() => import("@/components/fleet/RentalCalendarPanel").then((module) => module.RentalCalendarPanel), { loading: PanelLoading });
 const FleetMovementsPanel = dynamic(() => import("@/components/fleet/FleetMovementsPanel").then((module) => module.FleetMovementsPanel), { loading: PanelLoading });
@@ -95,6 +96,8 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
             <BookableFleetPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "customers" ? (
             <CustomersPanel isRtl={isRtl} />
+          ) : activeSection === "fleet" && activeSubPage === "reservations" ? (
+            <ReservationsPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "rental-contracts" ? (
             <RentalContractsPanel isRtl={isRtl} />
           ) : activeSection === "fleet" && activeSubPage === "rental-calendar" ? (

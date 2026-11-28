@@ -8,6 +8,7 @@ import {
   type DepartmentId,
 } from "@/lib/workspace/departmentsCatalog";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { SmartBackButton } from "@/components/ui/SmartBackButton";
 
 export interface DepartmentHubPanelProps {
   isRtl: boolean;
@@ -46,15 +47,13 @@ export function DepartmentHubPanel({
       {/* Department Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-revix-border bg-white px-5 py-4 shadow-xs">
         <div className="flex items-center gap-3.5">
-          <button
-            type="button"
+          <SmartBackButton
+            isRtl={isRtl}
             onClick={onBack}
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-revix-border bg-white text-revix-dark transition-colors hover:border-[#14532D]/40 hover:bg-emerald-50/40 hover:text-[#14532D]"
-            aria-label={isRtl ? "العودة إلى الإدارات" : "Back to Departments"}
             title={isRtl ? "العودة إلى الإدارات" : "Back to Departments"}
-          >
-            <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={16} />
-          </button>
+            size={16}
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-revix-border bg-white text-revix-dark transition-colors hover:border-[#14532D]/40 hover:bg-emerald-50/40 hover:text-[#14532D]"
+          />
 
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#14532D]">
             <RevixIcon name={department.icon} size={20} />

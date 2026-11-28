@@ -2,10 +2,12 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Provider } from "react-redux";
+import { useTrackNavigationHistory } from "@/lib/navigationHistory";
 import { makeStore } from "./store";
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [store] = useState(makeStore);
+  useTrackNavigationHistory();
 
   useEffect(() => {
     const sanitizeNumericInput = (e: Event) => {

@@ -87,6 +87,10 @@ router.post(
             typeof req.body?.customerSignatureDataUrl === "string" && req.body.customerSignatureDataUrl.trim()
               ? req.body.customerSignatureDataUrl.trim()
               : null,
+          reservationId:
+            typeof req.body?.reservationId === "string" && req.body.reservationId.trim()
+              ? req.body.reservationId.trim()
+              : null,
         });
         res.status(201).json({ ok: true, data: created });
       } catch (err) {
@@ -159,6 +163,27 @@ router.post(
       }
       try {
         const updated = await fleetService.cancelRentalContract(req.tenantActor!, id!);
+        res.status(200).json({ ok: true, data: updated });
+      } catch (err) {
+        handleFleetError(res, err);
+      }
+    },
+  );
+
+  router.post(
+    "/contracts/:id/extend",
+    guards.requirePermission("sales", "update"),
+    async (req: AuthenticatedTenantRequest, res: Response) => {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      if (!id || !UUID_REGEX.test(id)) {
+        res.status(400).json({ ok: false, error: { code: "INVALID_CONTRACT_ID", message: "Invalid contract ID." } });
+        return;
+      }
+      try {
+        const updated = await fleetService.extendRentalContract(req.tenantActor!, id!, {
+          newEndDate: String(req.body?.newEndDate ?? ""),
+          notes: typeof req.body?.notes === "string" ? req.body.notes.trim() || null : undefined,
+        });
         res.status(200).json({ ok: true, data: updated });
       } catch (err) {
         handleFleetError(res, err);

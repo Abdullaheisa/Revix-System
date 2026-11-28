@@ -16,6 +16,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { navigateToWorkspacePage, setPendingFleetReceiveContext, clearPendingFleetReceiveContext } from "@/store/slices/workspaceSlice";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { SmartSearchInput } from "@/components/ui/SmartSearchInput";
+import { smartMatch } from "@/lib/search/smartSearch";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixPagination } from "@/components/ui/RevixPagination";
 import { VehicleInspectionsTab } from "./vehicle-profile/VehicleInspectionsTab";
@@ -130,10 +132,9 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
   const { data, isLoading } = useListVehiclesQuery({
     branchId: selectedBranchId !== "all" ? selectedBranchId : undefined,
     status: selectedStatus !== "all" ? (selectedStatus as FleetVehicleStatus) : undefined,
-    search: search.trim() || undefined,
     includeNetwork: isNetworkMain && includeNetwork,
-    page,
-    pageSize,
+    page: search.trim() ? 1 : page,
+    pageSize: search.trim() ? 500 : pageSize,
   });
 
   const { data: variantsData } = useListVariantsQuery();
@@ -225,13 +226,26 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
     [variantSummaries, selectedVariantId],
   );
 
-  const paginatedVehicles = useMemo(
-    () =>
-      selectedVariantId
-        ? vehicles.filter((v) => v.variantId === selectedVariantId)
-        : vehicles,
-    [vehicles, selectedVariantId],
-  );
+  const paginatedVehicles = useMemo(() => {
+    const base = selectedVariantId
+      ? vehicles.filter((v) => v.variantId === selectedVariantId)
+      : vehicles;
+    if (!search.trim()) return base;
+    return base.filter((v) =>
+      smartMatch(search, {
+        id: [v.assetCode],
+        plate: [v.licensePlate],
+        vin: [v.vin],
+        name: [
+          v.variant
+            ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear} ${v.variant.trim || ""}`
+            : "",
+          v.color,
+          v.branchName,
+        ],
+      }),
+    );
+  }, [vehicles, selectedVariantId, search]);
 
   // Compute pending incoming deliveries (POs approved/partially_received with remaining cars)
   const pendingDeliveries: PendingDeliveryItem[] = useMemo(() => {
@@ -474,26 +488,16 @@ export function FleetVehiclesPanel({ isRtl, branches, activeBranch, company }: F
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-52">
-            <RevixIcon
-              name="search"
-              className={`pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ${
-                isRtl ? "right-3" : "left-3"
-              }`}
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder={isRtl ? "بحث برقم الأصل، اللوحة، الشاسيه..." : "Search Asset ID, plate, VIN..."}
-              className={`h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder:text-revix-muted focus:border-revix-primary focus:outline-hidden ${
-                isRtl ? "pr-8.5 pl-3" : "pl-8.5 pr-3"
-              }`}
-            />
-          </div>
+          <SmartSearchInput
+            value={search}
+            onChange={(val) => {
+              setSearch(val);
+              setPage(1);
+            }}
+            isRtl={isRtl}
+            placeholder={isRtl ? "بحث ذكي: أصل، لوحة، شاسيه، سيارة..." : "Smart search: Asset ID, plate, VIN, car..."}
+            className="w-60"
+          />
           {branches.length > 1 && (
             <div className="w-44">
               <RevixSelect

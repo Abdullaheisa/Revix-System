@@ -1014,54 +1014,125 @@ export function PriceListPanel({
           <thead>
             <tr className="border-b border-revix-border bg-revix-surface/75 text-[11.5px] font-semibold uppercase tracking-wide text-revix-secondary">
               <th className="whitespace-nowrap px-4 py-2.5 text-start">{isRtl ? "الفريانت / الفئة" : "Model Variant"}</th>
-              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "إجمالي السيارات" : "Total Units"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "السيارات" : "Units"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "1 - 2 يوم" : "1 - 2 Days"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "3 - 7 أيام" : "3 - 7 Days"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "8+ أيام" : "8+ Days"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "تحمل الأضرار" : "Damage Excess"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "الديبوزت" : "Deposit"}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-center">{isRtl ? "الكيلومترات" : "Mileage"}</th>
               <th className="whitespace-nowrap px-4 py-2.5 text-end">{isRtl ? "إجراء" : "Action"}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-revix-border/80">
             {isLoading ? (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-[13px] text-revix-secondary">
+                <td colSpan={9} className="px-4 py-8 text-center text-[13px] text-revix-secondary">
                   {isRtl ? "جاري التحميل..." : "Loading..."}
                 </td>
               </tr>
             ) : filteredRows.length === 0 ? (
               <TableEmptyRow
-                colSpan={3}
+                colSpan={9}
                 title={isRtl ? "لا توجد فئات سيارات مسجلة بعد" : "No variants found"}
                 description={
                   isRtl
-                    ? "ستظهر فئات السيارات هنا للدخول وتحديد أسعارها."
-                    : "Vehicle variants will appear here to view and configure prices."
+                    ? "ستظهر فئات السيارات هنا لتحديد أسعار كل فئة بالكامل."
+                    : "Vehicle variants will appear here to configure prices for the entire variant."
                 }
               />
             ) : (
-              filteredRows.map((row) => (
-                <tr
-                  key={row.variantId}
-                  onClick={() => setSelectedVariantId(row.variantId)}
-                  className="cursor-pointer transition-colors hover:bg-revix-accent-soft/40"
-                >
-                  <td className="whitespace-nowrap px-4 py-3 text-start">
-                    <span className="font-semibold text-revix-dark">{row.title}</span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-center">
-                    <span className="font-mono font-bold text-revix-dark">{row.totalCount}</span>
-                    <span className="ms-1.5 text-[11px] text-emerald-700">
-                      ({isRtl ? `متاح ${row.availableCount}` : `${row.availableCount} avail`})
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedVariantId(row.variantId)}
-                      className="cursor-pointer whitespace-nowrap rounded-[6px] border border-revix-border bg-revix-white px-3 py-1.5 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft hover:text-revix-primary"
-                    >
-                      {isRtl ? "عرض وتعديل الأسعار" : "View & Edit Prices"}
-                    </button>
-                  </td>
-                </tr>
-              ))
+              filteredRows.map((row) => {
+                const curr = openedList?.currencyCode || defaultCurrency;
+                const variantSample = vehicles.find((v) => v.variantId === row.variantId);
+                const openVariantPriceModal = () =>
+                  openEditModal({
+                    variantId: row.variantId,
+                    title: row.title,
+                    totalCount: row.totalCount,
+                    branchKey: undefined,
+                    branchLabel: isRtl ? "كافة سيارات الفئة" : "All Variant Vehicles",
+                    currency: curr,
+                    dailyRate1to2: row.dailyRate1to2,
+                    dailyRate3to7: row.dailyRate3to7,
+                    dailyRate8Plus: row.dailyRate8Plus,
+                    damageExcess: row.damageExcess,
+                    securityDeposit: row.securityDeposit,
+                    mileagePolicy: variantSample?.mileagePolicy ?? "unlimited",
+                    dailyKmLimit: Number(variantSample?.dailyKmLimit || 250),
+                    extraKmRate: Number(variantSample?.extraKmRate || 0),
+                  });
+
+                return (
+                  <tr
+                    key={row.variantId}
+                    onClick={openVariantPriceModal}
+                    className="cursor-pointer transition-colors hover:bg-revix-accent-soft/40"
+                  >
+                    <td className="whitespace-nowrap px-4 py-3 text-start">
+                      <span className="font-semibold text-revix-dark">{row.title}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center">
+                      <span className="font-mono font-bold text-revix-dark">{row.totalCount}</span>
+                      <span className="ms-1.5 text-[11px] text-emerald-700">
+                        ({isRtl ? `متاح ${row.availableCount}` : `${row.availableCount} avail`})
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center font-mono font-semibold text-revix-dark">
+                      <span dir="ltr" className="inline-block">
+                        {formatPriceOrRange(row.minRate1to2, row.maxRate1to2, curr)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-dark">
+                      <span dir="ltr" className="inline-block">
+                        {formatPriceOrRange(row.minRate3to7, row.maxRate3to7, curr)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-dark">
+                      <span dir="ltr" className="inline-block">
+                        {formatPriceOrRange(row.minRate8Plus, row.maxRate8Plus, curr)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-secondary">
+                      <span dir="ltr" className="inline-block">
+                        {formatPriceOrRange(row.minDamageExcess, row.maxDamageExcess, curr)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-revix-secondary">
+                      <span dir="ltr" className="inline-block">
+                        {Number(row.securityDeposit || 0).toLocaleString()} {curr}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-center">
+                      {variantSample?.mileagePolicy === "limited" ? (
+                        <div className="inline-flex flex-col items-center">
+                          <span className="font-mono text-[11px] font-semibold text-revix-dark" dir="ltr">
+                            {Number(variantSample.dailyKmLimit || 0).toLocaleString()} km/d
+                          </span>
+                          {Number(variantSample.extraKmRate || 0) > 0 && (
+                            <span className="font-mono text-[10px] text-revix-secondary" dir="ltr">
+                              +{Number(variantSample.extraKmRate).toLocaleString()} {curr}/km
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                          {isRtl ? "مفتوح" : "Unlimited"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={openVariantPriceModal}
+                        className="cursor-pointer whitespace-nowrap rounded-[6px] border border-revix-border bg-revix-white px-3 py-1.5 text-[12px] font-medium text-revix-dark transition-colors hover:border-revix-primary/40 hover:bg-revix-accent-soft hover:text-revix-primary"
+                      >
+                        {isRtl ? "تعديل سعر الفئة" : "Set Variant Price"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </DataTable>

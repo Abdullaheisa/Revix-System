@@ -19,9 +19,10 @@ export interface FleetResourceRoute {
     | "insurance-companies"
     | "price-list"
     | "customers"
-    | "rental-contracts";
+    | "rental-contracts"
+    | "reservations";
   id: string | null;
-  action: "list" | "detail" | "create" | "receive";
+  action: "list" | "detail" | "create" | "receive" | "convert";
   tab: VehicleProfileTab;
 }
 
@@ -38,7 +39,8 @@ export function parseFleetResourceRoute(pathname: string): FleetResourceRoute | 
       resource !== "insurance-companies" &&
       resource !== "price-list" &&
       resource !== "customers" &&
-      resource !== "rental-contracts")
+      resource !== "rental-contracts" &&
+      resource !== "reservations")
   ) {
     return null;
   }
@@ -46,7 +48,13 @@ export function parseFleetResourceRoute(pathname: string): FleetResourceRoute | 
   if (!id) return { resource, id: null, action: "list", tab: "overview" };
   if (id === "new") return { resource, id: null, action: "create", tab: "overview" };
   const tab = VEHICLE_PROFILE_TABS.find((value) => value === parts[4]) ?? "overview";
-  return { resource, id, action: resource === "purchase-orders" && parts[4] === "receive" ? "receive" : "detail", tab };
+  const action =
+    resource === "purchase-orders" && parts[4] === "receive"
+      ? "receive"
+      : resource === "reservations" && parts[4] === "convert"
+        ? "convert"
+        : "detail";
+  return { resource, id, action, tab };
 }
 
 export function vehicleHref(id: string, tab: VehicleProfileTab = "overview"): string {
@@ -88,11 +96,25 @@ export function rentalContractNewHref(params?: {
   vehicleId?: string | null;
   customerId?: string | null;
   startDate?: string | null;
+  reservationId?: string | null;
 }): string {
   const qs = new URLSearchParams();
   if (params?.vehicleId) qs.set("vehicleId", params.vehicleId);
   if (params?.customerId) qs.set("customerId", params.customerId);
   if (params?.startDate) qs.set("startDate", params.startDate);
+  if (params?.reservationId) qs.set("reservationId", params.reservationId);
   const query = qs.toString();
   return `/workspace/fleet/rental-contracts/new${query ? `?${query}` : ""}`;
+}
+
+export function reservationHref(id?: string | null): string {
+  return id ? `/workspace/fleet/reservations/${encodeURIComponent(id)}` : "/workspace/fleet/reservations";
+}
+
+export function reservationNewHref(): string {
+  return "/workspace/fleet/reservations/new";
+}
+
+export function reservationConvertHref(id: string): string {
+  return `/workspace/fleet/reservations/${encodeURIComponent(id)}/convert`;
 }

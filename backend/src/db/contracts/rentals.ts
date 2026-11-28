@@ -23,6 +23,59 @@ export interface CustomerRecord {
 
 export type RentalContractStatus = "draft" | "active" | "completed" | "cancelled";
 
+export type ReservationStatus =
+  | "pending"
+  | "confirmed"
+  | "converted"
+  | "cancelled"
+  | "no_show";
+
+export type ReservationSource = "phone" | "walk_in" | "website" | "ota_partner";
+
+export interface ReservationRecord {
+  id: string;
+  companyId: string;
+  branchId: string;
+  returnBranchId: string | null;
+  reservationNumber: string;
+  customerId: string;
+  variantId: string;
+  allowSimilar: boolean;
+  source: ReservationSource;
+  externalBookingRef: string | null;
+  externalMetadata: Record<string, unknown> | null;
+  status: ReservationStatus;
+  pickupDate: string;
+  pickupTime: string | null;
+  returnDate: string;
+  returnTime: string | null;
+  dailyRate: number;
+  totalDays: number;
+  estimatedTotal: number;
+  convertedContractId: string | null;
+  convertedContractNumber?: string | null;
+  assignedVehicleId: string | null;
+  assignedVehiclePlate?: string | null;
+  notes: string | null;
+  createdByUserId: string | null;
+  createdByUserName?: string | null;
+  cancelledByUserId: string | null;
+  cancelledByUserName?: string | null;
+  cancelledAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  // Enriched presentation fields
+  customerName?: string;
+  customerPhone?: string;
+  variantTitle?: string;
+  variantBodyStyleId?: string | null;
+  variantCategory?: string | null;
+  variantSippCode?: string | null;
+  branchName?: string;
+  returnBranchName?: string | null;
+  currencyCode?: string;
+}
+
 export interface RentalContractRecord {
   id: string;
   companyId: string;
@@ -65,6 +118,7 @@ export interface RentalContractRecord {
   receivedByUserSignatureDataUrl?: string | null;
   actualDays?: number | null;
   returnContractImageUrl?: string | null;
+  reservationId?: string | null;
   createdAt: Date;
   updatedAt: Date;
   // Enriched presentation fields

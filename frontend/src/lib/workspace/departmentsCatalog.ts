@@ -39,6 +39,15 @@ export const WORKSPACE_DEPARTMENTS: readonly DepartmentDefinition[] = [
     modules: [
       {
         section: "fleet",
+        subPage: "reservations",
+        icon: "calendar",
+        titleAr: "الحجوزات",
+        titleEn: "Reservations",
+        descAr: "حجوزات العملاء بالفئة (أو ما يماثلها) قبل تحويلها لعقود.",
+        descEn: "Variant-based customer reservations (or similar) before pickup.",
+      },
+      {
+        section: "fleet",
         subPage: "customers",
         icon: "users-round",
         titleAr: "سجل العملاء",
@@ -278,6 +287,15 @@ export const WORKSPACE_DEPARTMENTS: readonly DepartmentDefinition[] = [
     descAr: "إدارة المبيعات وعقود التأجير وتقويم الحجوزات وقوائم الأسعار والمزايا.",
     descEn: "Manage rental contracts, booking calendar, pricing, and rental inclusions.",
     modules: [
+      {
+        section: "fleet",
+        subPage: "reservations",
+        icon: "calendar",
+        titleAr: "الحجوزات",
+        titleEn: "Reservations",
+        descAr: "إنشاء حجوزات بالفئة (أو ما يماثلها) وتحويلها لعقد يوم الاستلام.",
+        descEn: "Variant-based reservations (or similar) converted to contracts on pickup.",
+      },
       {
         section: "fleet",
         subPage: "rental-contracts",

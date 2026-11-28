@@ -1,7 +1,7 @@
 import { mapCompanyRoleRow, mapCompanyMembershipRow, mapEmployeeInvitationRow, mapNetworkLinkRow, mapPermittedBranchRow, mapNetworkInvitationRow, mapVehicleVariantRow, mapVendorRow, mapPurchaseOrderRow, mapPurchaseOrderItemRow, mapFleetVehicleRow, mapVehiclePhotoRow, mapRentalInclusionRow, mapUserRow, mapSessionRow, mapActionTokenRow, mapCompanyRow, mapBranchRow, type DbUserRow, type DbSessionRow, type DbActionTokenRow, type DbCompanyRow, type DbBranchRow, type DbCompanyRoleRow, type DbCompanyMembershipRow, type DbEmployeeInvitationRow, type DbNetworkLinkRow, type DbPermittedBranchRow, type DbNetworkInvitationRow, type DbVehicleVariantRow, type DbVendorRow, type DbPurchaseOrderRow, type DbPurchaseOrderItemRow, type DbFleetVehicleRow, type DbVehiclePhotoRow, type DbRentalInclusionRow } from "./postgres/rowMappers.ts";
 import crypto from "node:crypto";
 import pg from "pg";
-import type { ContractVoucherRecord, ContractVoucherType, VoucherPaymentMethod } from "./contracts/rentals.ts";
+import type { ContractVoucherRecord, ContractVoucherType, ReservationRecord, ReservationSource, ReservationStatus, VoucherPaymentMethod } from "./contracts/rentals.ts";
 import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, AuthDataStore, BranchRecord, CompanyMembershipRecord, CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CompanyOperatingMode, CompanyRecord, CompanyRoleRecord, CreateBranchInput, CreateCompanyInput, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, CreateFleetPriceListInput, CreateFleetVehicleInput, CreateNetworkInvitationInput, CreateNetworkLinkInput, CreatePurchaseOrderInput, CreateRentalInclusionInput, CreateVehicleBodyStyleInput, CreateVehicleColorInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, CreateVendorInput, CustomerRecord, DriverRecord, EmployeeInvitationRecord, FleetPriceListRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord, PurchaseOrderItemRecord, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, RentalContractRecord, RentalContractStatus, RentalInclusionRecord, SessionRecord, UpdateBranchInput, UpdateCompanyInput, UpdateCompanyMembershipInput, UpdateCompanyRoleInput, UpdateFleetPriceListInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, UpdateVendorInput, UserRecord, UserStatus, VehicleBodyStyleRecord, VehicleCategory, VehicleColorRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord, VendorCategory, VendorRecord } from "./store.ts";
 
 
@@ -3694,6 +3694,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
     sponsorNationalId?: string | null;
     sponsorPhone?: string | null;
     customerSignatureDataUrl?: string | null;
+    reservationId?: string | null;
     createdByUserId?: string | null;
   }): Promise<RentalContractRecord> {
     const countRes = await this.pool.query(
@@ -3718,8 +3719,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
          start_date, end_date, pickup_odometer, daily_rate, total_days,
          subtotal, discount, insurance_fee, extra_charges, total_amount, paid_amount, deposit_amount,
          notes, second_driver_name, second_driver_license_no, sponsor_name, sponsor_national_id, sponsor_phone,
-         customer_signature_data_url, signed_at, created_by_user_id)
-       VALUES ($1,$2,$3,$4,$5,'active',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24::text, CASE WHEN $24::text IS NOT NULL THEN NOW() ELSE NULL END, $25)
+         customer_signature_data_url, signed_at, reservation_id, created_by_user_id)
+       VALUES ($1,$2,$3,$4,$5,'active',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24::text, CASE WHEN $24::text IS NOT NULL THEN NOW() ELSE NULL END, $25, $26)
        RETURNING *`,
       [
         input.companyId,
@@ -3746,6 +3747,7 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.sponsorNationalId?.trim() || null,
         input.sponsorPhone?.trim() || null,
         effectiveSignature,
+        input.reservationId || null,
         input.createdByUserId || null,
       ],
     );
@@ -3927,6 +3929,42 @@ export class PostgresAuthDataStore implements AuthDataStore {
       );
     }
 
+    const list = await this.listRentalContracts(companyId);
+    return list.find((c) => c.id === contractId) ?? null;
+  }
+
+  async extendRentalContract(
+    companyId: string,
+    contractId: string,
+    input: {
+      endDate: string;
+      totalDays: number;
+      subtotal: number;
+      totalAmount: number;
+      notes?: string | null;
+    },
+  ): Promise<RentalContractRecord | null> {
+    const res = await this.pool.query(
+      `UPDATE rental_contracts
+       SET end_date = $3::date,
+           total_days = $4,
+           subtotal = $5,
+           total_amount = $6,
+           notes = COALESCE($7, notes),
+           updated_at = NOW()
+       WHERE id = $1 AND company_id = $2 AND status = 'active'
+       RETURNING id`,
+      [
+        contractId,
+        companyId,
+        input.endDate,
+        input.totalDays,
+        input.subtotal,
+        input.totalAmount,
+        input.notes !== undefined ? input.notes : null,
+      ],
+    );
+    if (!res.rows[0]) return null;
     const list = await this.listRentalContracts(companyId);
     return list.find((c) => c.id === contractId) ?? null;
   }
@@ -4734,6 +4772,220 @@ export class PostgresAuthDataStore implements AuthDataStore {
       [companyId, priceListId],
     );
     return Boolean(res.rowCount && res.rowCount > 0);
+  }
+
+  private mapReservationRow(row: Record<string, unknown>): ReservationRecord {
+    return {
+      id: String(row.id),
+      companyId: String(row.company_id),
+      branchId: String(row.branch_id),
+      returnBranchId: row.return_branch_id ? String(row.return_branch_id) : null,
+      reservationNumber: String(row.reservation_number),
+      customerId: String(row.customer_id),
+      variantId: String(row.variant_id),
+      allowSimilar: Boolean(row.allow_similar),
+      source: (String(row.source || "phone") as ReservationSource),
+      externalBookingRef: row.external_booking_ref ? String(row.external_booking_ref) : null,
+      externalMetadata: (row.external_metadata as Record<string, unknown> | null) ?? null,
+      status: (String(row.status || "confirmed") as ReservationStatus),
+      pickupDate: this.formatPgDate(row.pickup_date),
+      pickupTime: row.pickup_time ? String(row.pickup_time) : null,
+      returnDate: this.formatPgDate(row.return_date),
+      returnTime: row.return_time ? String(row.return_time) : null,
+      dailyRate: Number(row.daily_rate ?? 0),
+      totalDays: Number(row.total_days ?? 1),
+      estimatedTotal: Number(row.estimated_total ?? 0),
+      convertedContractId: row.converted_contract_id ? String(row.converted_contract_id) : null,
+      convertedContractNumber: row.converted_contract_number ? String(row.converted_contract_number) : null,
+      assignedVehicleId: row.assigned_vehicle_id ? String(row.assigned_vehicle_id) : null,
+      assignedVehiclePlate: row.assigned_vehicle_plate ? String(row.assigned_vehicle_plate) : null,
+      notes: row.notes ? String(row.notes) : null,
+      createdByUserId: row.created_by_user_id ? String(row.created_by_user_id) : null,
+      createdByUserName: row.created_by_user_name ? String(row.created_by_user_name) : null,
+      cancelledByUserId: row.cancelled_by_user_id ? String(row.cancelled_by_user_id) : null,
+      cancelledByUserName: row.cancelled_by_user_name ? String(row.cancelled_by_user_name) : null,
+      cancelledAt: row.cancelled_at ? new Date(String(row.cancelled_at)) : null,
+      createdAt: new Date(String(row.created_at)),
+      updatedAt: new Date(String(row.updated_at)),
+      customerName: row.customer_name ? String(row.customer_name) : undefined,
+      customerPhone: row.customer_phone ? String(row.customer_phone) : undefined,
+      variantTitle: row.variant_title ? String(row.variant_title) : undefined,
+      variantBodyStyleId: row.variant_body_style_id ? String(row.variant_body_style_id) : null,
+      variantCategory: row.variant_category ? String(row.variant_category) : null,
+      variantSippCode: row.variant_sipp_code ? String(row.variant_sipp_code) : null,
+      branchName: row.branch_name ? String(row.branch_name) : undefined,
+      returnBranchName: row.return_branch_name ? String(row.return_branch_name) : null,
+      currencyCode: row.currency_code ? String(row.currency_code) : undefined,
+    };
+  }
+
+  async listReservations(companyId: string): Promise<ReservationRecord[]> {
+    const res = await this.pool.query(
+      `SELECT r.*,
+              c.full_name AS customer_name,
+              c.phone AS customer_phone,
+              TRIM(CONCAT_WS(' ', vv.make, vv.model, vv.model_year::text, vv.trim)) AS variant_title,
+              vv.category AS variant_category,
+              vv.sipp_code AS variant_sipp_code,
+              b.name AS branch_name,
+              b.currency_code AS currency_code,
+              rb.name AS return_branch_name,
+              rc.contract_number AS converted_contract_number,
+              fv.license_plate AS assigned_vehicle_plate,
+              COALESCE(cu.full_name, cu.email) AS created_by_user_name,
+              COALESCE(xu.full_name, xu.email) AS cancelled_by_user_name
+       FROM reservations r
+       JOIN customers c ON c.id = r.customer_id
+       JOIN vehicle_variants vv ON vv.id = r.variant_id
+       JOIN branches b ON b.id = r.branch_id
+       LEFT JOIN branches rb ON rb.id = r.return_branch_id
+       LEFT JOIN rental_contracts rc ON rc.id = r.converted_contract_id
+       LEFT JOIN fleet_vehicles fv ON fv.id = r.assigned_vehicle_id
+       LEFT JOIN users cu ON cu.id = r.created_by_user_id
+       LEFT JOIN users xu ON xu.id = r.cancelled_by_user_id
+       WHERE r.company_id = $1
+       ORDER BY r.created_at DESC`,
+      [companyId],
+    );
+    return res.rows.map((row) => this.mapReservationRow(row));
+  }
+
+  async findReservationById(
+    companyId: string,
+    reservationId: string,
+  ): Promise<ReservationRecord | null> {
+    const res = await this.pool.query(
+      `SELECT r.*,
+              c.full_name AS customer_name,
+              c.phone AS customer_phone,
+              TRIM(CONCAT_WS(' ', vv.make, vv.model, vv.model_year::text, vv.trim)) AS variant_title,
+              vv.category AS variant_category,
+              vv.sipp_code AS variant_sipp_code,
+              b.name AS branch_name,
+              b.currency_code AS currency_code,
+              rb.name AS return_branch_name,
+              rc.contract_number AS converted_contract_number,
+              fv.license_plate AS assigned_vehicle_plate,
+              COALESCE(cu.full_name, cu.email) AS created_by_user_name,
+              COALESCE(xu.full_name, xu.email) AS cancelled_by_user_name
+       FROM reservations r
+       JOIN customers c ON c.id = r.customer_id
+       JOIN vehicle_variants vv ON vv.id = r.variant_id
+       JOIN branches b ON b.id = r.branch_id
+       LEFT JOIN branches rb ON rb.id = r.return_branch_id
+       LEFT JOIN rental_contracts rc ON rc.id = r.converted_contract_id
+       LEFT JOIN fleet_vehicles fv ON fv.id = r.assigned_vehicle_id
+       LEFT JOIN users cu ON cu.id = r.created_by_user_id
+       LEFT JOIN users xu ON xu.id = r.cancelled_by_user_id
+       WHERE r.company_id = $1 AND r.id = $2`,
+      [companyId, reservationId],
+    );
+    return res.rows[0] ? this.mapReservationRow(res.rows[0]) : null;
+  }
+
+  async createReservation(input: {
+    companyId: string;
+    branchId: string;
+    returnBranchId?: string | null;
+    customerId: string;
+    variantId: string;
+    allowSimilar: boolean;
+    source: ReservationSource;
+    externalBookingRef?: string | null;
+    externalMetadata?: Record<string, unknown> | null;
+    status: ReservationStatus;
+    pickupDate: string;
+    pickupTime?: string | null;
+    returnDate: string;
+    returnTime?: string | null;
+    dailyRate: number;
+    totalDays: number;
+    estimatedTotal: number;
+    notes?: string | null;
+    createdByUserId?: string | null;
+  }): Promise<ReservationRecord> {
+    const year = new Date().getFullYear();
+    const countRes = await this.pool.query(
+      `SELECT COUNT(*)::int AS cnt FROM reservations WHERE company_id = $1`,
+      [input.companyId],
+    );
+    const nextNum = Number(countRes.rows[0]?.cnt ?? 0) + 1;
+    const reservationNumber = `RSV-${year}-${String(nextNum).padStart(4, "0")}`;
+
+    const res = await this.pool.query(
+      `INSERT INTO reservations
+        (company_id, branch_id, return_branch_id, reservation_number, customer_id, variant_id,
+         allow_similar, source, external_booking_ref, external_metadata, status,
+         pickup_date, pickup_time, return_date, return_time, daily_rate, total_days, estimated_total,
+         notes, created_by_user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12::date,$13,$14::date,$15,$16,$17,$18,$19,$20)
+       RETURNING id`,
+      [
+        input.companyId,
+        input.branchId,
+        input.returnBranchId || null,
+        reservationNumber,
+        input.customerId,
+        input.variantId,
+        input.allowSimilar,
+        input.source,
+        input.externalBookingRef?.trim() || null,
+        input.externalMetadata ? JSON.stringify(input.externalMetadata) : null,
+        input.status,
+        input.pickupDate,
+        input.pickupTime?.trim() || null,
+        input.returnDate,
+        input.returnTime?.trim() || null,
+        input.dailyRate,
+        input.totalDays,
+        input.estimatedTotal,
+        input.notes?.trim() || null,
+        input.createdByUserId || null,
+      ],
+    );
+    const created = await this.findReservationById(input.companyId, String(res.rows[0]!.id));
+    if (!created) throw new Error("Failed to load created reservation.");
+    return created;
+  }
+
+  async updateReservationStatus(
+    companyId: string,
+    reservationId: string,
+    status: ReservationStatus,
+    cancelledByUserId?: string | null,
+  ): Promise<ReservationRecord | null> {
+    const res = await this.pool.query(
+      `UPDATE reservations
+       SET status = $3,
+           cancelled_by_user_id = CASE WHEN $3 = 'cancelled' THEN COALESCE($4, cancelled_by_user_id) ELSE cancelled_by_user_id END,
+           cancelled_at = CASE WHEN $3 = 'cancelled' THEN NOW() ELSE cancelled_at END,
+           updated_at = NOW()
+       WHERE company_id = $1 AND id = $2
+       RETURNING id`,
+      [companyId, reservationId, status, cancelledByUserId || null],
+    );
+    if (!res.rows[0]) return null;
+    return this.findReservationById(companyId, reservationId);
+  }
+
+  async markReservationConverted(
+    companyId: string,
+    reservationId: string,
+    contractId: string,
+    vehicleId: string,
+  ): Promise<ReservationRecord | null> {
+    const res = await this.pool.query(
+      `UPDATE reservations
+       SET status = 'converted',
+           converted_contract_id = $3,
+           assigned_vehicle_id = $4,
+           updated_at = NOW()
+       WHERE company_id = $1 AND id = $2
+       RETURNING id`,
+      [companyId, reservationId, contractId, vehicleId],
+    );
+    if (!res.rows[0]) return null;
+    return this.findReservationById(companyId, reservationId);
   }
 }
 

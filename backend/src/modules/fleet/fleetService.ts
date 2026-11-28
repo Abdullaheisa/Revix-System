@@ -11,6 +11,9 @@ import type {
   PurchaseOrderStatus,
   ReceiveVehicleFromPoInput,
   RentalInclusionRecord,
+  ReservationRecord,
+  ReservationSource,
+  ReservationStatus,
   UpdateFleetVehicleInput,
   UpdateVehicleVariantInput,
   UpdateVendorInput,
@@ -1632,6 +1635,7 @@ export class FleetService {
       sponsorNationalId?: string | null;
       sponsorPhone?: string | null;
       customerSignatureDataUrl?: string | null;
+      reservationId?: string | null;
     },
   ) {
     const vehicle = this.assertVehicleScope(
@@ -1759,8 +1763,32 @@ export class FleetService {
       sponsorNationalId: input.sponsorNationalId ?? null,
       sponsorPhone: input.sponsorPhone ?? null,
       customerSignatureDataUrl: input.customerSignatureDataUrl ?? null,
+      reservationId: input.reservationId ?? null,
       createdByUserId: actor.user.id,
     });
+
+    if (input.reservationId) {
+      await this.store.markReservationConverted(
+        actor.company.id,
+        input.reservationId,
+        contract.id,
+        vehicle.id,
+      );
+      await this.store.recordAuditLog({
+        companyId: actor.company.id,
+        branchId: vehicle.branchId,
+        actorUserId: actor.user.id,
+        action: "fleet.reservation_converted",
+        entityType: "reservation",
+        entityId: input.reservationId,
+        metadata: {
+          contractId: contract.id,
+          contractNumber: contract.contractNumber,
+          vehicleId: vehicle.id,
+          vehiclePlate: vehicle.licensePlate,
+        },
+      });
+    }
 
     await Promise.all([
       this.store.recordAuditLog({
@@ -1885,6 +1913,73 @@ export class FleetService {
         },
       }),
     ]);
+    return updated;
+  }
+
+  async extendRentalContract(
+    actor: TenantActor,
+    contractId: string,
+    input: {
+      newEndDate: string;
+      notes?: string | null;
+    },
+  ) {
+    const existing = (await this.store.listRentalContracts(actor.company.id)).find(
+      (c) => c.id === contractId,
+    );
+    if (!existing) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+    if (existing.status !== "active") {
+      throw new FleetServiceError(409, "CONTRACT_NOT_ACTIVE", "Only active contracts can be extended.");
+    }
+    if (!input.newEndDate || input.newEndDate <= existing.endDate) {
+      throw new FleetServiceError(400, "INVALID_DATE", "New end date must be after the current end date.");
+    }
+
+    const startMs = new Date(existing.startDate.slice(0, 10)).getTime();
+    const newEndMs = new Date(input.newEndDate.slice(0, 10)).getTime();
+    const oldEndMs = new Date(existing.endDate.slice(0, 10)).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(newEndMs) || Number.isNaN(oldEndMs)) {
+      throw new FleetServiceError(400, "INVALID_DATE", "Invalid contract date format.");
+    }
+
+    const addedDays = Math.max(1, Math.ceil((newEndMs - oldEndMs) / (1000 * 60 * 60 * 24)));
+    const newTotalDays = Math.max(1, Math.ceil((newEndMs - startMs) / (1000 * 60 * 60 * 24)));
+    const dailyRate = Number(existing.dailyRate || 0);
+    const newSubtotal = newTotalDays * dailyRate;
+    const newTotalAmount = Math.max(
+      0,
+      newSubtotal - Number(existing.discount || 0) + Number(existing.insuranceFee || 0) + Number(existing.extraCharges || 0),
+    );
+
+    const updated = await this.store.extendRentalContract(actor.company.id, contractId, {
+      endDate: input.newEndDate.slice(0, 10),
+      totalDays: newTotalDays,
+      subtotal: newSubtotal,
+      totalAmount: newTotalAmount,
+      notes: input.notes,
+    });
+    if (!updated) {
+      throw new FleetServiceError(404, "CONTRACT_NOT_FOUND", "Rental contract not found.");
+    }
+
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: updated.branchId,
+      actorUserId: actor.user.id,
+      action: "fleet.rental_contract_extended",
+      entityType: "rental_contract",
+      entityId: updated.id,
+      metadata: {
+        contractNumber: updated.contractNumber,
+        previousEndDate: existing.endDate,
+        newEndDate: updated.endDate,
+        addedDays,
+        addedAmount: addedDays * dailyRate,
+      },
+    });
+
     return updated;
   }
 
@@ -2359,5 +2454,317 @@ export class FleetService {
       throw new FleetServiceError(404, "MOVEMENT_NOT_FOUND", "Pending movement not found.");
     }
     return updated;
+  }
+
+  async listReservations(actor: TenantActor): Promise<ReservationRecord[]> {
+    const rows = await this.store.listReservations(actor.company.id);
+    if (actor.role.scopeType === "assigned_branches") {
+      return rows.filter((r) => actor.branchIds.includes(r.branchId));
+    }
+    return rows;
+  }
+
+  async getReservation(actor: TenantActor, reservationId: string): Promise<ReservationRecord> {
+    const reservation = await this.store.findReservationById(actor.company.id, reservationId);
+    if (!reservation) {
+      throw new FleetServiceError(404, "RESERVATION_NOT_FOUND", "Reservation not found.");
+    }
+    if (
+      actor.role.scopeType === "assigned_branches" &&
+      !actor.branchIds.includes(reservation.branchId)
+    ) {
+      throw new FleetServiceError(403, "BRANCH_SCOPE_DENIED", "You do not have access to this branch reservation.");
+    }
+    return reservation;
+  }
+
+  async createReservation(
+    actor: TenantActor,
+    input: {
+      branchId: string;
+      returnBranchId?: string | null;
+      customerId: string;
+      variantId: string;
+      allowSimilar?: boolean;
+      source?: ReservationSource;
+      externalBookingRef?: string | null;
+      externalMetadata?: Record<string, unknown> | null;
+      status?: ReservationStatus;
+      pickupDate: string;
+      pickupTime?: string | null;
+      returnDate: string;
+      returnTime?: string | null;
+      dailyRate?: number;
+      notes?: string | null;
+    },
+  ): Promise<ReservationRecord> {
+    if (
+      actor.role.scopeType === "assigned_branches" &&
+      !actor.branchIds.includes(input.branchId)
+    ) {
+      throw new FleetServiceError(403, "BRANCH_SCOPE_DENIED", "You cannot create reservations for this branch.");
+    }
+    if (!input.customerId || !input.variantId || !input.branchId) {
+      throw new FleetServiceError(400, "INVALID_INPUT", "Branch, customer, and variant are required.");
+    }
+    if (!input.pickupDate || !input.returnDate) {
+      throw new FleetServiceError(400, "INVALID_DATES", "Pickup and return dates are required.");
+    }
+    const startMs = new Date(input.pickupDate).getTime();
+    const endMs = new Date(input.returnDate).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
+      throw new FleetServiceError(400, "INVALID_DATES", "Return date must be on or after pickup date.");
+    }
+    const totalDays = Math.max(1, Math.ceil((endMs - startMs) / (1000 * 60 * 60 * 24)));
+
+    const variant = await this.store.findVehicleVariantById(input.variantId);
+    if (!variant || variant.companyId !== actor.company.id) {
+      throw new FleetServiceError(404, "VARIANT_NOT_FOUND", "Vehicle variant not found.");
+    }
+    const customers = await this.store.listCustomers(actor.company.id);
+    const customer = customers.find((c) => c.id === input.customerId);
+    if (!customer) {
+      throw new FleetServiceError(404, "CUSTOMER_NOT_FOUND", "Customer not found.");
+    }
+
+    const dailyRate =
+      input.dailyRate != null && Number.isFinite(input.dailyRate) && input.dailyRate >= 0
+        ? Number(input.dailyRate)
+        : 0;
+    const estimatedTotal = Math.max(0, dailyRate * totalDays);
+    const initialStatus: ReservationStatus =
+      input.status === "pending" ? "pending" : "confirmed";
+
+    const created = await this.store.createReservation({
+      companyId: actor.company.id,
+      branchId: input.branchId,
+      returnBranchId: input.returnBranchId || null,
+      customerId: input.customerId,
+      variantId: input.variantId,
+      allowSimilar: input.allowSimilar ?? true,
+      source: input.source || "phone",
+      externalBookingRef: input.externalBookingRef ?? null,
+      externalMetadata: input.externalMetadata ?? null,
+      status: initialStatus,
+      pickupDate: input.pickupDate,
+      pickupTime: input.pickupTime ?? null,
+      returnDate: input.returnDate,
+      returnTime: input.returnTime ?? null,
+      dailyRate,
+      totalDays,
+      estimatedTotal,
+      notes: input.notes ?? null,
+      createdByUserId: actor.user.id,
+    });
+
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: created.branchId,
+      actorUserId: actor.user.id,
+      action: "fleet.reservation_created",
+      entityType: "reservation",
+      entityId: created.id,
+      metadata: {
+        reservationNumber: created.reservationNumber,
+        variantId: created.variantId,
+        source: created.source,
+        allowSimilar: created.allowSimilar,
+      },
+    });
+
+    return created;
+  }
+
+  async updateReservationStatus(
+    actor: TenantActor,
+    reservationId: string,
+    status: ReservationStatus,
+  ): Promise<ReservationRecord> {
+    const existing = await this.getReservation(actor, reservationId);
+    if (existing.status === "converted") {
+      throw new FleetServiceError(409, "RESERVATION_ALREADY_CONVERTED", "Converted reservations cannot change status.");
+    }
+    const allowedNext: ReservationStatus[] = ["pending", "confirmed", "cancelled", "no_show"];
+    if (!allowedNext.includes(status)) {
+      throw new FleetServiceError(400, "INVALID_STATUS", "Invalid reservation status.");
+    }
+    const updated = await this.store.updateReservationStatus(
+      actor.company.id,
+      reservationId,
+      status,
+      status === "cancelled" ? actor.user.id : null,
+    );
+    if (!updated) {
+      throw new FleetServiceError(404, "RESERVATION_NOT_FOUND", "Reservation not found.");
+    }
+
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: updated.branchId,
+      actorUserId: actor.user.id,
+      action: `fleet.reservation_${status}`,
+      entityType: "reservation",
+      entityId: updated.id,
+      metadata: {
+        reservationNumber: updated.reservationNumber,
+        previousStatus: existing.status,
+        nextStatus: status,
+      },
+    });
+
+    return updated;
+  }
+
+  async getReservationAvailableVehicles(
+    actor: TenantActor,
+    reservationId: string,
+  ): Promise<{
+    reservation: ReservationRecord;
+    exactMatches: FleetVehicleRecord[];
+    similarMatches: FleetVehicleRecord[];
+  }> {
+    const reservation = await this.getReservation(actor, reservationId);
+    const [allVehicles, contracts, variants] = await Promise.all([
+      this.store.listFleetVehicles(actor.company.id, { branchId: reservation.branchId }),
+      this.store.listRentalContracts(actor.company.id),
+      this.store.listVehicleVariants(actor.company.id),
+    ]);
+
+    const variantById = new Map(variants.map((v) => [v.id, v]));
+    const reservedVariant = variantById.get(reservation.variantId);
+
+    const overlappingVehicleIds = new Set(
+      contracts
+        .filter(
+          (c) =>
+            c.status === "active" &&
+            c.startDate <= reservation.returnDate &&
+            c.endDate >= reservation.pickupDate,
+        )
+        .map((c) => c.vehicleId),
+    );
+
+    const candidateVehicles = allVehicles.filter(
+      (v) =>
+        v.status === "available" &&
+        !overlappingVehicleIds.has(v.id),
+    );
+
+    const exactMatches = candidateVehicles.filter(
+      (v) => v.variantId === reservation.variantId,
+    );
+
+    const isSimilarVariant = (vr: VehicleVariantRecord | undefined) => {
+      if (!vr || !reservedVariant) return false;
+      if (reservedVariant.category && vr.category && vr.category === reservedVariant.category) {
+        return true;
+      }
+      if (reservedVariant.sippCode && vr.sippCode && vr.sippCode === reservedVariant.sippCode) {
+        return true;
+      }
+      if (
+        vr.make.toLowerCase() === reservedVariant.make.toLowerCase() &&
+        vr.model.toLowerCase() === reservedVariant.model.toLowerCase()
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const similarMatches = candidateVehicles
+      .filter((v) => {
+        if (v.variantId === reservation.variantId) return false;
+        const vr = v.variantId ? variantById.get(v.variantId) : undefined;
+        return isSimilarVariant(vr);
+      })
+      .sort((a, b) => {
+        const va = a.variantId ? variantById.get(a.variantId) : undefined;
+        const vb = b.variantId ? variantById.get(b.variantId) : undefined;
+        const score = (vr: VehicleVariantRecord | undefined) => {
+          if (!vr || !reservedVariant) return 0;
+          let s = 0;
+          if (reservedVariant.category && vr.category === reservedVariant.category) s += 2;
+          if (reservedVariant.sippCode && vr.sippCode === reservedVariant.sippCode) s += 1;
+          return s;
+        };
+        return score(vb) - score(va);
+      });
+
+    return {
+      reservation,
+      exactMatches,
+      similarMatches,
+    };
+  }
+
+  async convertReservationToContract(
+    actor: TenantActor,
+    reservationId: string,
+    input: {
+      vehicleId: string;
+      pickupOdometer?: number;
+      dailyRate?: number;
+      discount?: number;
+      insuranceFee?: number;
+      notes?: string | null;
+    },
+  ) {
+    const reservation = await this.getReservation(actor, reservationId);
+    if (reservation.status !== "pending" && reservation.status !== "confirmed") {
+      throw new FleetServiceError(
+        409,
+        "RESERVATION_NOT_CONVERTIBLE",
+        "Only pending or confirmed reservations can be converted to a contract.",
+      );
+    }
+    if (!input.vehicleId) {
+      throw new FleetServiceError(400, "VEHICLE_REQUIRED", "A vehicle must be selected to convert the reservation.");
+    }
+
+    const vehicle = this.assertVehicleScope(
+      actor,
+      await this.store.findFleetVehicleById(input.vehicleId),
+    );
+
+    const contract = await this.createRentalContract(actor, {
+      vehicleId: vehicle.id,
+      customerId: reservation.customerId,
+      startDate: reservation.pickupDate,
+      endDate: reservation.returnDate,
+      pickupOdometer: input.pickupOdometer ?? vehicle.mileageOdometer,
+      dailyRate: input.dailyRate ?? reservation.dailyRate,
+      discount: input.discount ?? 0,
+      insuranceFee: input.insuranceFee ?? 0,
+      notes: input.notes ?? reservation.notes ?? null,
+      reservationId: reservation.id,
+    });
+
+    const updatedReservation = await this.store.markReservationConverted(
+      actor.company.id,
+      reservation.id,
+      contract.id,
+      vehicle.id,
+    );
+
+    await this.store.recordAuditLog({
+      companyId: actor.company.id,
+      branchId: reservation.branchId,
+      actorUserId: actor.user.id,
+      action: "fleet.reservation_converted",
+      entityType: "reservation",
+      entityId: reservation.id,
+      metadata: {
+        reservationNumber: reservation.reservationNumber,
+        contractId: contract.id,
+        contractNumber: contract.contractNumber,
+        vehicleId: vehicle.id,
+        vehiclePlate: vehicle.licensePlate,
+      },
+    });
+
+    return {
+      reservation: updatedReservation ?? reservation,
+      contract,
+    };
   }
 }

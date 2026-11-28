@@ -345,6 +345,16 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
               isReady: true,
             },
             {
+              id: "reservations",
+              titleEn: "Reservations",
+              titleAr: "الحجوزات",
+              descEn: "Variant-based bookings (or similar) ready for pickup-day contract conversion.",
+              descAr: "حجوزات الفئات (أو ما يماثلها) وتحويلها إلى عقود عند الاستلام.",
+              shortcut: "G B",
+              keyCode: "b",
+              isReady: true,
+            },
+            {
               id: "rental-contracts",
               titleEn: "Rental Contracts",
               titleAr: "عقود التأجير",
@@ -690,7 +700,7 @@ export function canAccessWorkspacePage(
         perms?.price_lists?.includes("read") || perms?.finance?.includes("read"),
       );
     }
-    if (subPageId === "rental-contracts" || subPageId === "rental-calendar" || subPageId === "customers") {
+    if (subPageId === "rental-contracts" || subPageId === "rental-calendar" || subPageId === "customers" || subPageId === "reservations") {
       return Boolean(perms?.sales?.includes("read"));
     }
     if (subPageId === "create-contract") {

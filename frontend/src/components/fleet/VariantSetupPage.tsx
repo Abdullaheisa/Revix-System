@@ -13,6 +13,7 @@ import { resolveAssetUrl } from "@/store/api/baseApi";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { SmartBackButton } from "@/components/ui/SmartBackButton";
 import { DetailTileGrid } from "@/components/shared/workspace";
 import { VariantSpecsSection } from "./variant-setup/VariantSpecsSection";
 import { VariantPhotosSection } from "./variant-setup/VariantPhotosSection";
@@ -150,13 +151,12 @@ export function VariantSetupPage({
       {/* Top Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border pb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <Link
-            href={variantBackHref}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface hover:text-revix-dark transition-colors"
+          <SmartBackButton
+            isRtl={isRtl}
+            fallbackHref={variantBackHref}
             title={isRtl ? "العودة للفريانت" : "Back to Variant"}
-          >
-            <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={16} />
-          </Link>
+            size={16}
+          />
           <div>
             <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
               {isRtl ? `تجهيز الفريانت: ${variantTitle}` : `Variant Setup: ${variantTitle}`}

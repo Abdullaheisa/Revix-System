@@ -12,6 +12,7 @@ import {
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { SmartBackButton } from "@/components/ui/SmartBackButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { DetailTileGrid } from "@/components/shared/workspace";
 import { ResourceFeedback } from "@/components/shared/ResourceFeedback";
@@ -23,6 +24,7 @@ import {
 import { navigateBackOrFallback } from "@/lib/workspace/useSmartBack";
 import { formatCompanyDateTime } from "@/lib/date/companyDate";
 import { CompleteContractModal } from "./CompleteContractModal";
+import { ExtendContractModal } from "./ExtendContractModal";
 import { RentalContractPrintModal } from "./RentalContractPrintModal";
 import { ContractVoucherModal } from "./vouchers/ContractVoucherModal";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -41,8 +43,8 @@ const STATUS_BADGE: Record<
   { ar: string; en: string; cls: string }
 > = {
   active: {
-    ar: "ساري",
-    en: "Active",
+    ar: "مفتوح",
+    en: "Open",
     cls: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   completed: {
@@ -166,6 +168,8 @@ export function RentalContractDetailPage({
     useState<RentalContractDto | null>(null);
   const [completingContract, setCompletingContract] =
     useState<RentalContractDto | null>(null);
+  const [extendingContract, setExtendingContract] =
+    useState<RentalContractDto | null>(null);
   const [voucherModal, setVoucherModal] = useState<{
     contract: RentalContractDto;
     type: ContractVoucherType;
@@ -173,9 +177,9 @@ export function RentalContractDetailPage({
   const [isCancelOpen, setIsCancelOpen] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "vouchers" | "activity">(
-    "overview",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "contract" | "customer" | "vehicle" | "financials" | "activity"
+  >("contract");
 
   const handleBack = () =>
     navigateBackOrFallback(router, rentalContractHref());
@@ -218,15 +222,12 @@ export function RentalContractDetailPage({
       {/* Clean Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 shrink-0">
         <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
+          <SmartBackButton
+            isRtl={isRtl}
             onClick={handleBack}
             title={isRtl ? "رجوع" : "Back"}
-            aria-label={isRtl ? "رجوع" : "Back"}
-            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50"
-          >
-            <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={15} />
-          </button>
+            size={15}
+          />
 
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
@@ -239,7 +240,7 @@ export function RentalContractDetailPage({
                 {isRtl ? st.ar : st.en}
               </span>
             </div>
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
               <span className="font-mono" dir="ltr">
                 {contract.startDate} → {contract.endDate}
               </span>
@@ -247,6 +248,17 @@ export function RentalContractDetailPage({
               <span>
                 {contract.actualDays ?? contract.totalDays} {isRtl ? "أيام" : "day(s)"}
               </span>
+              {contract.createdByUserName && (
+                <>
+                  <span>•</span>
+                  <span>
+                    {isRtl ? "منشئ العقد:" : "Created by:"}{" "}
+                    <strong className="font-semibold text-slate-700">
+                      {contract.createdByUserName}
+                    </strong>
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -264,14 +276,25 @@ export function RentalContractDetailPage({
           </Button>
 
           {contract.status === "active" && (
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => setCompletingContract(contract)}
-              className="!min-h-0 h-9 rounded-xl px-4 py-0 text-xs"
-            >
-              <span>{isRtl ? "استلام وإغلاق" : "Return & Close"}</span>
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setExtendingContract(contract)}
+                className="!min-h-0 h-9 rounded-xl px-3.5 py-0 text-xs"
+              >
+                <RevixIcon name="calendar" size={14} />
+                <span>{isRtl ? "تمديد" : "Extend"}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => setCompletingContract(contract)}
+                className="!min-h-0 h-9 rounded-xl px-4 py-0 text-xs"
+              >
+                <span>{isRtl ? "استلام وإغلاق" : "Return & Close"}</span>
+              </Button>
+            </>
           )}
 
           <div className="relative">
@@ -355,17 +378,25 @@ export function RentalContractDetailPage({
       >
         {[
           {
-            id: "overview" as const,
-            label: isRtl ? "نظرة عامة والتفاصيل" : "Overview & Details",
+            id: "contract" as const,
+            label: isRtl ? "بيانات العقد" : "Contract Details",
           },
           {
-            id: "vouchers" as const,
-            label: isRtl ? "السندات المالية" : "Financial Vouchers",
+            id: "customer" as const,
+            label: isRtl ? "بيانات العميل" : "Customer Details",
+          },
+          {
+            id: "vehicle" as const,
+            label: isRtl ? "بيانات السيارة" : "Vehicle Details",
+          },
+          {
+            id: "financials" as const,
+            label: isRtl ? "المالية" : "Financials",
             count: vouchers.length,
           },
           {
             id: "activity" as const,
-            label: isRtl ? "سجل إجراءات الموظفين" : "Employee Activity Log",
+            label: isRtl ? "سجل الموظفين" : "Staff & Activity",
             count: auditLogs.length,
           },
         ].map((tab) => {
@@ -398,199 +429,100 @@ export function RentalContractDetailPage({
         })}
       </nav>
 
-      {activeTab === "overview" && (
-        <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto pr-0.5">
-          {/* Financial KPI Cards */}
-          <DetailTileGrid
-            columns={4}
-            items={[
-              {
-                label: isRtl ? "إجمالي العقد" : "Total Amount",
-                value: (
-                  <span className="font-mono font-extrabold" dir="ltr">
-                    {Number(contract.totalAmount || 0).toLocaleString()} {currency}
-                  </span>
-                ),
-              },
-              {
-                label: isRtl ? "المدفوع" : "Paid Amount",
-                value: (
-                  <span className="font-mono font-bold text-emerald-700" dir="ltr">
-                    {Number(contract.paidAmount || 0).toLocaleString()} {currency}
-                  </span>
-                ),
-              },
-              {
-                label: isRtl ? "المتبقي" : "Remaining",
-                value: (
-                  <span className="font-mono font-bold text-amber-600" dir="ltr">
-                    {remaining.toLocaleString()} {currency}
-                  </span>
-                ),
-              },
-              {
-                label: isRtl ? "إيجار اليوم / الديبوزت" : "Daily Rate / Deposit",
-                value: (
-                  <span className="font-mono font-bold" dir="ltr">
-                    {Number(contract.dailyRate || 0).toLocaleString()} /{" "}
-                    {Number(contract.depositAmount || 0).toLocaleString()} {currency}
-                  </span>
-                ),
-              },
-            ]}
-          />
+      {activeTab === "contract" && (
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
+          <SectionCard title={isRtl ? "بيانات العقد والموظف المسؤول" : "Contract & Staff Summary"}>
+            <DetailTileGrid
+              columns={3}
+              items={[
+                {
+                  label: isRtl ? "رقم العقد" : "Contract #",
+                  value: <span className="font-mono font-bold">{contract.contractNumber}</span>,
+                },
+                {
+                  label: isRtl ? "الحالة" : "Status",
+                  value: isRtl ? st.ar : st.en,
+                },
+                {
+                  label: isRtl ? "الفرع" : "Branch",
+                  value: contract.branchName || "—",
+                },
+                {
+                  label: isRtl ? "تاريخ البداية" : "Start Date",
+                  value: <span className="font-mono">{contract.startDate}</span>,
+                },
+                {
+                  label: isRtl ? "تاريخ النهاية" : "End Date",
+                  value: <span className="font-mono">{contract.endDate}</span>,
+                },
+                {
+                  label: isRtl ? "المدة" : "Duration",
+                  value: (
+                    <span className="font-mono">
+                      {contract.actualDays ?? contract.totalDays} {isRtl ? "أيام" : "day(s)"}
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "الموظف منشئ العقد" : "Created by Employee",
+                  value: contract.createdByUserName || "—",
+                },
+                {
+                  label: isRtl ? "الموظف المستلم" : "Received by",
+                  value: contract.receivedByUserName || "—",
+                },
+                {
+                  label: isRtl ? "توقيع العميل" : "Customer Signature",
+                  value: contract.signedAt
+                    ? formatCompanyDateTime(contract.signedAt)
+                    : isRtl
+                      ? "غير موقع"
+                      : "Unsigned",
+                },
+              ]}
+            />
+            {contract.notes && (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-xs text-slate-700">
+                <span className="font-bold text-slate-900">
+                  {isRtl ? "ملاحظات العقد: " : "Notes: "}
+                </span>
+                {contract.notes}
+              </div>
+            )}
+          </SectionCard>
 
-          {/* Customer & Vehicle DetailTileGrid Cards */}
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <SectionCard
-              title={isRtl ? "بيانات العميل" : "Customer Details"}
-              rightSlot={
-                <Link
-                  href={customerHref(contract.customerId)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-revix-primary hover:underline"
-                >
-                  <span>{isRtl ? "فتح ملف العميل" : "Open Customer"}</span>
-                  <RevixIcon name="arrow-up-right" size={13} />
-                </Link>
-              }
-            >
+          {(contract.secondDriverName || contract.sponsorName) && (
+            <SectionCard title={isRtl ? "السائق الإضافي والضامن" : "Second Driver & Sponsor"}>
               <DetailTileGrid
-                columns={2}
+                columns={3}
                 items={[
                   {
-                    label: isRtl ? "الاسم الكامل" : "Full Name",
-                    value: (
-                      <Link
-                        href={customerHref(contract.customerId)}
-                        className="font-bold text-revix-primary hover:underline"
-                      >
-                        {contract.customerName || "—"}
-                      </Link>
-                    ),
+                    label: isRtl ? "السائق الثاني" : "Second Driver",
+                    value: contract.secondDriverName || "—",
                   },
                   {
-                    label: isRtl ? "رقم الهاتف" : "Phone",
-                    value: (
-                      <span className="font-mono" dir="ltr">
-                        {contract.customerPhone || "—"}
-                      </span>
-                    ),
+                    label: isRtl ? "رخصة السائق الثاني" : "Second Driver License",
+                    value: contract.secondDriverLicenseNo || "—",
                   },
                   {
-                    label: isRtl ? "الجنسية" : "Nationality",
-                    value: contract.customerNationality || "—",
+                    label: isRtl ? "اسم الضامن" : "Sponsor Name",
+                    value: contract.sponsorName || "—",
                   },
                   {
-                    label: isRtl ? "الهوية / الرقم المدني" : "National ID",
-                    value: (
-                      <span className="font-mono" dir="ltr">
-                        {contract.customerNationalId
-                          ? `${contract.customerNationalId}${
-                              contract.customerNationalIdExpiry
-                                ? ` (${contract.customerNationalIdExpiry})`
-                                : ""
-                            }`
-                          : "—"}
-                      </span>
-                    ),
+                    label: isRtl ? "هوية الضامن" : "Sponsor National ID",
+                    value: contract.sponsorNationalId || "—",
                   },
                   {
-                    label: isRtl ? "رقم الرخصة" : "Driver License",
-                    value: (
-                      <span className="font-mono" dir="ltr">
-                        {contract.customerDriverLicenseNo
-                          ? `${contract.customerDriverLicenseNo}${
-                              contract.customerLicenseExpiry
-                                ? ` (${contract.customerLicenseExpiry})`
-                                : ""
-                            }`
-                          : "—"}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "عنوان السكن" : "Address",
-                    value: contract.customerAddress || "—",
+                    label: isRtl ? "هاتف الضامن" : "Sponsor Phone",
+                    value: contract.sponsorPhone || "—",
                   },
                 ]}
               />
             </SectionCard>
+          )}
 
-            <SectionCard
-              title={isRtl ? "بيانات السيارة" : "Vehicle Details"}
-              rightSlot={
-                <Link
-                  href={vehicleHref(contract.vehicleId)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-revix-primary hover:underline"
-                >
-                  <span>{isRtl ? "فتح ملف السيارة" : "Open Vehicle"}</span>
-                  <RevixIcon name="arrow-up-right" size={13} />
-                </Link>
-              }
-            >
-              <DetailTileGrid
-                columns={2}
-                items={[
-                  {
-                    label: isRtl ? "السيارة" : "Vehicle",
-                    value: (
-                      <Link
-                        href={vehicleHref(contract.vehicleId)}
-                        className="font-bold text-revix-primary hover:underline"
-                      >
-                        {contract.vehicleName || "—"}
-                      </Link>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "رقم اللوحة / الأصل" : "Plate / Asset ID",
-                    value: (
-                      <span className="font-mono">
-                        {contract.vehiclePlate || "—"}
-                        {contract.vehicleAssetCode ? ` (${contract.vehicleAssetCode})` : ""}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "عداد الخروج" : "Pickup Odometer",
-                    value: (
-                      <span className="font-mono" dir="ltr">
-                        {Number(contract.pickupOdometer || 0).toLocaleString()} km
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "عداد العودة / المسافة" : "Return Odometer",
-                    value: (
-                      <span className="font-mono" dir="ltr">
-                        {contract.returnOdometer != null
-                          ? `${Number(contract.returnOdometer).toLocaleString()} km (${drivenKm?.toLocaleString()} km)`
-                          : "—"}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: isRtl ? "شركة التأمين" : "Insurance",
-                    value: contract.vehicleInsuranceCompany || "—",
-                  },
-                  {
-                    label: isRtl ? "انتهاء التأمين" : "Insurance Expiry",
-                    value: (
-                      <span className="font-mono" dir="ltr">
-                        {contract.vehicleInsuranceExpiry || "—"}
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </SectionCard>
-          </div>
-
-          {/* Return & Handover Card (when closed) */}
           {(contract.status === "completed" || contract.returnContractImageUrl) && (
-            <SectionCard
-              title={isRtl ? "بيانات الاستلام والإغلاق" : "Return & Handover Summary"}
-            >
+            <SectionCard title={isRtl ? "بيانات الاستلام والإغلاق" : "Return & Handover Summary"}>
               <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
                 <div className="lg:col-span-2">
                   <DetailTileGrid
@@ -645,87 +577,320 @@ export function RentalContractDetailPage({
         </div>
       )}
 
-      {activeTab === "vouchers" && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
-            <h2 className="text-sm font-bold text-slate-900">
-              {isRtl
-                ? `السندات المالية (${vouchers.length})`
-                : `Financial Vouchers (${vouchers.length})`}
-            </h2>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setVoucherModal({ contract, type: "receipt" })}
-                className="h-8 text-xs"
+      {activeTab === "customer" && (
+        <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+          <SectionCard
+            title={isRtl ? "بيانات العميل" : "Customer Details"}
+            rightSlot={
+              <Link
+                href={customerHref(contract.customerId)}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-revix-primary hover:underline"
               >
-                {isRtl ? "+ سند قبض" : "+ Receipt"}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setVoucherModal({ contract, type: "payment" })}
-                className="h-8 text-xs"
-              >
-                {isRtl ? "+ سند دفع" : "+ Payment"}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setVoucherModal({ contract, type: "refund" })}
-                className="h-8 text-xs"
-              >
-                {isRtl ? "+ سند مرتجع" : "+ Refund"}
-              </Button>
-            </div>
-          </div>
+                <span>{isRtl ? "فتح ملف العميل" : "Open Customer"}</span>
+                <RevixIcon name="arrow-up-right" size={13} />
+              </Link>
+            }
+          >
+            <DetailTileGrid
+              columns={3}
+              items={[
+                {
+                  label: isRtl ? "الاسم الكامل" : "Full Name",
+                  value: (
+                    <Link
+                      href={customerHref(contract.customerId)}
+                      className="font-bold text-revix-primary hover:underline"
+                    >
+                      {contract.customerName || "—"}
+                    </Link>
+                  ),
+                },
+                {
+                  label: isRtl ? "رقم الهاتف" : "Phone",
+                  value: (
+                    <span className="font-mono" dir="ltr">
+                      {contract.customerPhone || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "هاتف إضافي" : "Secondary Phone",
+                  value: (
+                    <span className="font-mono" dir="ltr">
+                      {contract.customerSecondaryPhone || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "الجنسية" : "Nationality",
+                  value: contract.customerNationality || "—",
+                },
+                {
+                  label: isRtl ? "الهوية / الرقم المدني" : "National ID",
+                  value: (
+                    <span className="font-mono" dir="ltr">
+                      {contract.customerNationalId
+                        ? `${contract.customerNationalId}${
+                            contract.customerNationalIdExpiry
+                              ? ` (${contract.customerNationalIdExpiry})`
+                              : ""
+                          }`
+                        : "—"}
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "رقم الرخصة" : "Driver License",
+                  value: (
+                    <span className="font-mono" dir="ltr">
+                      {contract.customerDriverLicenseNo
+                        ? `${contract.customerDriverLicenseNo}${
+                            contract.customerLicenseExpiry
+                              ? ` (${contract.customerLicenseExpiry})`
+                              : ""
+                          }`
+                        : "—"}
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "عنوان السكن" : "Address",
+                  value: contract.customerAddress || "—",
+                },
+                {
+                  label: isRtl ? "عنوان العمل" : "Work Address",
+                  value: contract.customerWorkAddress || "—",
+                },
+              ]}
+            />
+          </SectionCard>
+        </div>
+      )}
 
-          {vouchers.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-500">
-              {isRtl ? "لا توجد سندات مسجلة لهذا العقد بعد." : "No vouchers recorded yet."}
+      {activeTab === "vehicle" && (
+        <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+          <SectionCard
+            title={isRtl ? "بيانات السيارة" : "Vehicle Details"}
+            rightSlot={
+              <Link
+                href={vehicleHref(contract.vehicleId)}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-revix-primary hover:underline"
+              >
+                <span>{isRtl ? "فتح ملف السيارة" : "Open Vehicle"}</span>
+                <RevixIcon name="arrow-up-right" size={13} />
+              </Link>
+            }
+          >
+            <DetailTileGrid
+              columns={3}
+              items={[
+                {
+                  label: isRtl ? "السيارة" : "Vehicle",
+                  value: (
+                    <Link
+                      href={vehicleHref(contract.vehicleId)}
+                      className="font-bold text-revix-primary hover:underline"
+                    >
+                      {contract.vehicleName || "—"}
+                    </Link>
+                  ),
+                },
+                {
+                  label: isRtl ? "رقم اللوحة / الأصل" : "Plate / Asset ID",
+                  value: (
+                    <span className="font-mono">
+                      {contract.vehiclePlate || "—"}
+                      {contract.vehicleAssetCode ? ` (${contract.vehicleAssetCode})` : ""}
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "اللون / الفئة" : "Color / Category",
+                  value: [contract.vehicleColor, contract.vehicleCategory].filter(Boolean).join(" • ") || "—",
+                },
+                {
+                  label: isRtl ? "عداد الخروج" : "Pickup Odometer",
+                  value: (
+                    <span className="font-mono" dir="ltr">
+                      {Number(contract.pickupOdometer || 0).toLocaleString()} km
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "عداد العودة / المسافة" : "Return Odometer",
+                  value: (
+                    <span className="font-mono" dir="ltr">
+                      {contract.returnOdometer != null
+                        ? `${Number(contract.returnOdometer).toLocaleString()} km (${drivenKm?.toLocaleString()} km)`
+                        : "—"}
+                    </span>
+                  ),
+                },
+                {
+                  label: isRtl ? "حد الكيلومتر اليومي" : "Daily KM Limit",
+                  value:
+                    contract.vehicleDailyKmLimit != null
+                      ? `${Number(contract.vehicleDailyKmLimit).toLocaleString()} km`
+                      : isRtl
+                        ? "مفتوح"
+                        : "Unlimited",
+                },
+                {
+                  label: isRtl ? "شركة التأمين" : "Insurance",
+                  value: contract.vehicleInsuranceCompany || "—",
+                },
+                {
+                  label: isRtl ? "انتهاء التأمين" : "Insurance Expiry",
+                  value: (
+                    <span className="font-mono" dir="ltr">
+                      {contract.vehicleInsuranceExpiry || "—"}
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          </SectionCard>
+        </div>
+      )}
+
+      {activeTab === "financials" && (
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
+          <DetailTileGrid
+            columns={4}
+            items={[
+              {
+                label: isRtl ? "إجمالي العقد" : "Total Amount",
+                value: (
+                  <span className="font-mono font-extrabold" dir="ltr">
+                    {Number(contract.totalAmount || 0).toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+              {
+                label: isRtl ? "المدفوع" : "Paid Amount",
+                value: (
+                  <span className="font-mono font-bold text-emerald-700" dir="ltr">
+                    {Number(contract.paidAmount || 0).toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+              {
+                label: isRtl ? "المتبقي" : "Remaining",
+                value: (
+                  <span className="font-mono font-bold text-amber-600" dir="ltr">
+                    {remaining.toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+              {
+                label: isRtl ? "إيجار اليوم / الديبوزت" : "Daily Rate / Deposit",
+                value: (
+                  <span className="font-mono font-bold" dir="ltr">
+                    {Number(contract.dailyRate || 0).toLocaleString()} /{" "}
+                    {Number(contract.depositAmount || 0).toLocaleString()} {currency}
+                  </span>
+                ),
+              },
+              {
+                label: isRtl ? "المجموع الفرعي" : "Subtotal",
+                value: `${Number(contract.subtotal || 0).toLocaleString()} ${currency}`,
+              },
+              {
+                label: isRtl ? "الخصم" : "Discount",
+                value: `${Number(contract.discount || 0).toLocaleString()} ${currency}`,
+              },
+              {
+                label: isRtl ? "رسوم التأمين" : "Insurance Fee",
+                value: `${Number(contract.insuranceFee || 0).toLocaleString()} ${currency}`,
+              },
+              {
+                label: isRtl ? "رسوم إضافية" : "Extra Charges",
+                value: `${Number(contract.extraCharges || 0).toLocaleString()} ${currency}`,
+              },
+            ]}
+          />
+
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+              <h2 className="text-sm font-bold text-slate-900">
+                {isRtl
+                  ? `السندات المالية (${vouchers.length})`
+                  : `Financial Vouchers (${vouchers.length})`}
+              </h2>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setVoucherModal({ contract, type: "receipt" })}
+                  className="h-8 text-xs"
+                >
+                  {isRtl ? "+ سند قبض" : "+ Receipt"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setVoucherModal({ contract, type: "payment" })}
+                  className="h-8 text-xs"
+                >
+                  {isRtl ? "+ سند دفع" : "+ Payment"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setVoucherModal({ contract, type: "refund" })}
+                  className="h-8 text-xs"
+                >
+                  {isRtl ? "+ سند مرتجع" : "+ Refund"}
+                </Button>
+              </div>
             </div>
-          ) : (
-            <div className="divide-y divide-slate-100 px-5">
-              {vouchers.map((v) => {
-                const vMeta = VOUCHER_TYPE_META[v.voucherType];
-                const pm = PAYMENT_METHOD_LABELS[v.paymentMethod];
-                return (
-                  <div
-                    key={v.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3.5 text-xs"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-rose-600">
-                          {v.voucherNumber}
-                        </span>
-                        <span
-                          className={`inline-flex rounded border px-2 py-0.5 text-[10px] font-semibold ${vMeta.badgeCls}`}
-                        >
-                          {isRtl ? vMeta.ar : vMeta.en}
-                        </span>
-                        <span className="font-mono text-sm font-extrabold text-slate-900" dir="ltr">
-                          {v.amount.toLocaleString()} {v.currencyCode}
-                        </span>
+
+            {vouchers.length === 0 ? (
+              <div className="py-10 text-center text-xs text-slate-500">
+                {isRtl ? "لا توجد سندات مسجلة لهذا العقد بعد." : "No vouchers recorded yet."}
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 px-5">
+                {vouchers.map((v) => {
+                  const vMeta = VOUCHER_TYPE_META[v.voucherType];
+                  const pm = PAYMENT_METHOD_LABELS[v.paymentMethod];
+                  return (
+                    <div
+                      key={v.id}
+                      className="flex flex-wrap items-center justify-between gap-3 py-3.5 text-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-sm font-bold text-rose-600">
+                            {v.voucherNumber}
+                          </span>
+                          <span
+                            className={`inline-flex rounded border px-2 py-0.5 text-[10px] font-semibold ${vMeta.badgeCls}`}
+                          >
+                            {isRtl ? vMeta.ar : vMeta.en}
+                          </span>
+                          <span className="font-mono text-sm font-extrabold text-slate-900" dir="ltr">
+                            {v.amount.toLocaleString()} {v.currencyCode}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          {isRtl ? pm.ar : pm.en} • {v.paymentDate}
+                          {v.referenceNo ? ` • ${isRtl ? "مرجع:" : "Ref:"} ${v.referenceNo}` : ""}
+                          {v.bankName ? ` • ${v.bankName}` : ""}
+                          {v.createdByUserName
+                            ? ` • ${isRtl ? "بواسطة:" : "By:"} ${v.createdByUserName}`
+                            : ""}
+                        </div>
+                        {v.description && (
+                          <div className="text-[11px] text-slate-500">{v.description}</div>
+                        )}
                       </div>
-                      <div className="text-[11px] text-slate-600">
-                        {isRtl ? pm.ar : pm.en} • {v.paymentDate}
-                        {v.referenceNo ? ` • ${isRtl ? "مرجع:" : "Ref:"} ${v.referenceNo}` : ""}
-                        {v.bankName ? ` • ${v.bankName}` : ""}
-                        {v.createdByUserName
-                          ? ` • ${isRtl ? "بواسطة:" : "By:"} ${v.createdByUserName}`
-                          : ""}
-                      </div>
-                      {v.description && (
-                        <div className="text-[11px] text-slate-500">{v.description}</div>
-                      )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -756,6 +921,12 @@ export function RentalContractDetailPage({
         contract={completingContract}
         isRtl={isRtl}
         onClose={() => setCompletingContract(null)}
+      />
+
+      <ExtendContractModal
+        contract={extendingContract}
+        isRtl={isRtl}
+        onClose={() => setExtendingContract(null)}
       />
 
       <ContractVoucherModal

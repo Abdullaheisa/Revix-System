@@ -5,6 +5,7 @@ import { useRouter } from "@/i18n/navigation";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailTileCard } from "@/components/shared/workspace";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { SmartBackButton } from "@/components/ui/SmartBackButton";
 import { useAppDispatch } from "@/store/hooks";
 import { setPendingFleetReceiveContext } from "@/store/slices/workspaceSlice";
 import { purchaseOrderHref, vehicleHref } from "@/lib/workspace/resourceRoutes";
@@ -266,15 +267,12 @@ export function VendorDetailPage({
       {/* Clean Top Header — matches PO & Vehicle detail pages */}
       <div className="flex flex-wrap items-center justify-between gap-3 py-1 shrink-0">
         <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
+          <SmartBackButton
+            isRtl={isRtl}
             onClick={onBack}
             title={isRtl ? "العودة لدليل الموردين" : "Back to vendors"}
-            aria-label={isRtl ? "العودة لدليل الموردين" : "Back to vendors"}
-            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface"
-          >
-            <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
-          </button>
+            size={14}
+          />
           <h1 className="truncate text-lg font-bold text-revix-dark">{vendor.name}</h1>
         </div>
 

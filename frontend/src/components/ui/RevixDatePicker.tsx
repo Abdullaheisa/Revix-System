@@ -174,15 +174,15 @@ export function RevixDatePicker({
     const spaceBelow = window.innerHeight - rect.bottom;
     const neededSpace = withTime ? 420 : 360;
     const nextPlacement: "bottom" | "top" =
-      spaceBelow < neededSpace && rect.top > neededSpace ? "top" : "bottom";
+      spaceBelow < neededSpace && rect.top > spaceBelow ? "top" : "bottom";
 
     const popupWidth = 310;
     const rawLeft = isRtl ? rect.right - popupWidth : rect.left;
     const clampedLeft = Math.max(8, Math.min(rawLeft, window.innerWidth - popupWidth - 8));
 
     setCoords({
-      top: rect.bottom + 6,
-      bottom: window.innerHeight - rect.top + 6,
+      top: Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - 280)),
+      bottom: Math.max(8, window.innerHeight - rect.top + 6),
       left: clampedLeft,
       placement: nextPlacement,
     });
@@ -556,6 +556,8 @@ export function RevixDatePicker({
                 ...(coords.placement === "top"
                   ? { bottom: coords.bottom }
                   : { top: coords.top }),
+                maxHeight: "calc(100dvh - 16px)",
+                overflowY: "auto",
                 zIndex: 9999,
               }}
               className={`w-[310px] overflow-hidden rounded-xl border border-revix-border bg-white p-3.5 shadow-dialog animate-in fade-in zoom-in-95 duration-100 ${menuClassName}`.trim()}
@@ -650,7 +652,7 @@ export function RevixDatePicker({
                           ? "border border-revix-primary text-revix-primary font-bold hover:bg-revix-tint"
                           : cd.isCurrentMonth
                             ? "cursor-pointer text-revix-dark hover:bg-revix-surface hover:text-revix-primary"
-                            : "cursor-pointer text-revix-secondary/70 hover:bg-revix-surface hover:text-revix-primary"
+                            : "cursor-pointer text-revix-dark/85 hover:bg-revix-surface hover:text-revix-primary"
                   }`}
                 >
                   {cd.dayNumber}

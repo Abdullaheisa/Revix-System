@@ -16,6 +16,7 @@ import { registerPhotosRoutes } from "./routes/photos.routes.ts";
 import { registerInclusionsRoutes } from "./routes/inclusions.routes.ts";
 import { registerCustomersRoutes } from "./routes/customers.routes.ts";
 import { registerContractsRoutes } from "./routes/contracts.routes.ts";
+import { registerReservationsRoutes } from "./routes/reservations.routes.ts";
 
 export function createFleetRouter(options: {
  authService: AuthService; teamService: TeamService; fleetService: FleetService; env: BackendEnvConfig;
@@ -34,5 +35,6 @@ export function createFleetRouter(options: {
  registerInclusionsRoutes(router, context);
  registerCustomersRoutes(router, context);
  registerContractsRoutes(router, context);
+ registerReservationsRoutes(router, context);
  return router;
 }

@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { DataTable } from "@/components/ui/DataTable";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { SmartBackButton } from "@/components/ui/SmartBackButton";
 import { DetailTileGrid } from "@/components/shared/workspace";
 import { rentalContractHref, vehicleHref } from "@/lib/workspace/resourceRoutes";
 import {
@@ -123,15 +124,12 @@ export function CustomerDetailPage({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 py-1 shrink-0">
         <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
+          <SmartBackButton
+            isRtl={isRtl}
             onClick={onBack}
             title={isRtl ? "العودة للعملاء" : "Back to customers"}
-            aria-label={isRtl ? "العودة للعملاء" : "Back to customers"}
-            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface"
-          >
-            <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
-          </button>
+            size={14}
+          />
 
           <h1 className="truncate text-lg font-bold text-revix-dark sm:text-xl">
             {customer.fullName}

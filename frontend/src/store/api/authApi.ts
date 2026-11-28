@@ -83,7 +83,7 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["AuthUser"],
+      invalidatesTags: ["AuthUser", "Company"],
     }),
 
     login: builder.mutation<AuthUserResponseDto, LoginRequestDto>({
@@ -92,7 +92,7 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["AuthUser"],
+      invalidatesTags: ["AuthUser", "Company"],
     }),
 
     logout: builder.mutation<{ ok: true }, void>({
@@ -100,7 +100,7 @@ export const authApi = baseApi.injectEndpoints({
         url: "/auth/logout",
         method: "POST",
       }),
-      invalidatesTags: ["AuthUser"],
+      invalidatesTags: ["AuthUser", "Company"],
     }),
 
     verifyEmail: builder.mutation<AuthUserResponseDto, VerifyEmailRequestDto>({
@@ -109,7 +109,7 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["AuthUser"],
+      invalidatesTags: ["AuthUser", "Company"],
     }),
 
     resendVerification: builder.mutation<
@@ -128,7 +128,7 @@ export const authApi = baseApi.injectEndpoints({
         url: "/auth/dev-verify-session",
         method: "POST",
       }),
-      invalidatesTags: ["AuthUser"],
+      invalidatesTags: ["AuthUser", "Company"],
     }),
 
     forgotPassword: builder.mutation<{ ok: true }, ForgotPasswordRequestDto>({
@@ -145,7 +145,7 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["AuthUser"],
+      invalidatesTags: ["AuthUser", "Company"],
     }),
 
     changePassword: builder.mutation<{ ok: true }, ChangePasswordRequestDto>({
@@ -154,7 +154,7 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["AuthUser"],
+      invalidatesTags: ["AuthUser", "Company"],
     }),
 
     updateMySignature: builder.mutation<
@@ -166,7 +166,7 @@ export const authApi = baseApi.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["AuthUser"],
+      invalidatesTags: ["AuthUser", "Company"],
     }),
   }),
   overrideExisting: true,

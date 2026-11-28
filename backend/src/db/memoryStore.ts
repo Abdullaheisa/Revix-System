@@ -93,6 +93,7 @@ export class InMemoryAuthDataStore implements AuthDataStore {
   private readonly userIdByEmail = new Map<string, string>();
   private readonly sessionsByHash = new Map<string, SessionRecord>();
   private readonly actionTokensByHash = new Map<string, ActionTokenRecord>();
+  private readonly reservationsById = new Map<string, any>();
   private readonly companiesById = new Map<string, CompanyRecord>();
   private readonly companyIdByOwnerUserId = new Map<string, string>();
   private readonly branchesById = new Map<string, BranchRecord>();
@@ -2359,6 +2360,69 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     return rec;
   }
 
+  async listReservations(companyId: string) {
+    return Array.from(this.reservationsById.values()).filter((r) => r.companyId === companyId);
+  }
+
+  async findReservationById(companyId: string, reservationId: string) {
+    const r = this.reservationsById.get(reservationId);
+    return r && r.companyId === companyId ? r : null;
+  }
+
+  async createReservation(input: any) {
+    const rec = {
+      ...input,
+      id: crypto.randomUUID(),
+      reservationNumber: `RSV-${new Date().getFullYear()}-${String(this.reservationsById.size + 1).padStart(4, "0")}`,
+      convertedContractId: null,
+      assignedVehicleId: null,
+      cancelledByUserId: null,
+      cancelledAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.reservationsById.set(rec.id, rec);
+    return rec;
+  }
+
+  async updateReservationStatus(
+    companyId: string,
+    reservationId: string,
+    status: string,
+    cancelledByUserId?: string | null,
+  ) {
+    const existing = this.reservationsById.get(reservationId);
+    if (!existing || existing.companyId !== companyId) return null;
+    const updated = {
+      ...existing,
+      status,
+      cancelledByUserId: status === "cancelled" ? cancelledByUserId ?? existing.cancelledByUserId : existing.cancelledByUserId,
+      cancelledAt: status === "cancelled" ? new Date() : existing.cancelledAt,
+      updatedAt: new Date(),
+    };
+    this.reservationsById.set(reservationId, updated);
+    return updated;
+  }
+
+  async markReservationConverted(
+    companyId: string,
+    reservationId: string,
+    contractId: string,
+    vehicleId: string,
+  ) {
+    const existing = this.reservationsById.get(reservationId);
+    if (!existing || existing.companyId !== companyId) return null;
+    const updated = {
+      ...existing,
+      status: "converted",
+      convertedContractId: contractId,
+      assignedVehicleId: vehicleId,
+      updatedAt: new Date(),
+    };
+    this.reservationsById.set(reservationId, updated);
+    return updated;
+  }
+
   async signRentalContract(companyId: string, contractId: string, signatureDataUrl: string) {
     const existing = this.contractsById.get(contractId);
     if (!existing || existing.companyId !== companyId) return null;
@@ -2396,6 +2460,32 @@ export class InMemoryAuthDataStore implements AuthDataStore {
       status: "cancelled",
       cancelledByUserId: cancelledByUserId ?? null,
       cancelledAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.contractsById.set(contractId, updated);
+    return updated;
+  }
+
+  async extendRentalContract(
+    companyId: string,
+    contractId: string,
+    input: {
+      endDate: string;
+      totalDays: number;
+      subtotal: number;
+      totalAmount: number;
+      notes?: string | null;
+    },
+  ) {
+    const existing = this.contractsById.get(contractId);
+    if (!existing || existing.companyId !== companyId || existing.status !== "active") return null;
+    const updated = {
+      ...existing,
+      endDate: input.endDate,
+      totalDays: input.totalDays,
+      subtotal: input.subtotal,
+      totalAmount: input.totalAmount,
+      notes: input.notes !== undefined ? input.notes : existing.notes,
       updatedAt: new Date(),
     };
     this.contractsById.set(contractId, updated);

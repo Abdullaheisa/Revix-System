@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { navigateToWorkspacePage, setPendingFleetReceiveContext, clearPendingFleetReceiveContext } from "@/store/slices/workspaceSlice";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { SmartBackButton } from "@/components/ui/SmartBackButton";
 import { RevixSelect } from "@/components/ui/RevixSelect";
 import { RevixDatePicker } from "@/components/ui/RevixDatePicker";
 import { RevixPagination } from "@/components/ui/RevixPagination";
@@ -172,15 +173,12 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
         {/* Clean Top Header — matches single Purchase Order page */}
         <div className="flex flex-wrap items-center justify-between gap-3 py-1 shrink-0">
           <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
+            <SmartBackButton
+              isRtl={isRtl}
               onClick={closeVehicleDetails}
               title={isRtl ? "العودة لأصول السيارات" : "Back to vehicle assets"}
-              aria-label={isRtl ? "العودة لأصول السيارات" : "Back to vehicle assets"}
-              className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface focus-visible:outline-revix-primary"
-            >
-              <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
-            </button>
+              size={14}
+            />
 
             <h1 className="truncate text-lg font-bold text-revix-dark">
               {variant

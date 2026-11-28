@@ -3,14 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
+import { useSmartBack } from "@/lib/navigationHistory";
+import { SmartBackButton } from "@/components/ui/SmartBackButton";
 import {
   useCreateRentalContractMutation,
+  useGetReservationAvailableVehiclesQuery,
   useListCustomersQuery,
   useListRentalContractsQuery,
   useListVehiclesQuery,
   type RentalContractDto,
 } from "@/store/api/fleetApi";
-import { useUpdateMySignatureMutation } from "@/store/api/authApi";
+import { useGetMeQuery, useUpdateMySignatureMutation } from "@/store/api/authApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
 import { Alert } from "@/components/ui/Alert";
 import { RevixIcon } from "@/components/ui/RevixIcons";
@@ -58,14 +61,60 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
   const initialVehicleId = searchParams.get("vehicleId") || "";
   const initialCustomerId = searchParams.get("customerId") || "";
   const initialStartParam = searchParams.get("startDate") || "";
+  const reservationId = searchParams.get("reservationId") || "";
+  const { backHref } = useSmartBack(
+    reservationId ? "/workspace/fleet/reservations" : "/workspace/fleet/rental-contracts",
+  );
+
+  const { data: reservationResp } = useGetReservationAvailableVehiclesQuery(
+    reservationId,
+    { skip: !reservationId },
+  );
+  const activeReservation = reservationResp?.data?.reservation ?? null;
+  const isSimilarToReservation = useMemo(() => {
+    return (v: { variantId?: string | null; variant?: { category?: string | null; sippCode?: string | null; make: string; model: string } | null }) => {
+      if (!activeReservation || v.variantId === activeReservation.variantId) return false;
+      const vv = v.variant;
+      if (!vv) return false;
+      if (
+        activeReservation.variantCategory &&
+        vv.category &&
+        vv.category === activeReservation.variantCategory
+      ) {
+        return true;
+      }
+      if (
+        activeReservation.variantSippCode &&
+        vv.sippCode &&
+        vv.sippCode === activeReservation.variantSippCode
+      ) {
+        return true;
+      }
+      if (
+        activeReservation.variantTitle &&
+        activeReservation.variantTitle
+          .toLowerCase()
+          .includes(`${vv.make} ${vv.model}`.toLowerCase())
+      ) {
+        return true;
+      }
+      return false;
+    };
+  }, [activeReservation]);
+  const reservationExactIds = useMemo(
+    () => new Set((reservationResp?.data?.exactMatches ?? []).map((v) => v.id)),
+    [reservationResp?.data?.exactMatches],
+  );
+  const reservationAppliedRef = useRef<string | null>(null);
 
   const { data: vehiclesData, isLoading: isLoadingVehicles } = useListVehiclesQuery({
     pageSize: 500,
   });
   const { data: customersData, isLoading: isLoadingCustomers } = useListCustomersQuery();
   const { data: contractsData } = useListRentalContractsQuery();
-  const { data: ctx } = useGetWorkspaceContextQuery();
-  const currentUser = ctx?.data?.user ?? null;
+  const { data: ctx, refetch: refetchWorkspace } = useGetWorkspaceContextQuery();
+  const { data: meResp } = useGetMeQuery();
+  const currentUser = meResp?.data?.user ?? ctx?.data?.user ?? null;
   const [updateMySignature, { isLoading: isSavingEmpSig }] = useUpdateMySignatureMutation();
   const [isEmpSignOpen, setIsEmpSignOpen] = useState(false);
   const [localEmpSigned, setLocalEmpSigned] = useState(false);
@@ -168,7 +217,31 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
     [contractsData?.data],
   );
 
-  const availableVehicles = useMemo(() => {
+  useEffect(() => {
+    if (!activeReservation || reservationAppliedRef.current === activeReservation.id) {
+      return;
+    }
+    reservationAppliedRef.current = activeReservation.id;
+    setSelectedCustomerId(activeReservation.customerId);
+    setStartDate(activeReservation.pickupDate);
+    setEndDate(activeReservation.returnDate);
+    const firstExact = reservationResp?.data?.exactMatches?.[0]?.id;
+    const firstSimilar = reservationResp?.data?.similarMatches?.[0]?.id;
+    if (firstExact || firstSimilar) {
+      setSelectedVehicleId(firstExact || firstSimilar || "");
+    }
+    if (activeReservation.notes) {
+      setNotes(activeReservation.notes);
+    }
+    setOpenSections({
+      customer: false,
+      vehicle: false,
+      period: false,
+      pricing: false,
+    });
+  }, [activeReservation, reservationResp?.data?.exactMatches, reservationResp?.data?.similarMatches]);
+
+  const allAvailableVehicles = useMemo(() => {
     const all = (vehiclesData?.data ?? []).filter(
       (v) =>
         !v.isPartnerVehicle &&
@@ -179,22 +252,40 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
           Number(v.dailyRate3to7 || 0) > 0 ||
           Number(v.dailyRate8Plus || 0) > 0),
     );
-    if (!startDate || !endDate) return all;
-    return all.filter((v) => {
-      const hasOverlap = activeContracts.some(
-        (c) =>
-          c.vehicleId === v.id && c.startDate <= endDate && c.endDate >= startDate,
-      );
-      return !hasOverlap;
-    });
-  }, [vehiclesData?.data, activeContracts, startDate, endDate]);
+    const filtered =
+      !startDate || !endDate
+        ? all
+        : all.filter((v) => {
+            const hasOverlap = activeContracts.some(
+              (c) =>
+                c.vehicleId === v.id && c.startDate <= endDate && c.endDate >= startDate,
+            );
+            return !hasOverlap;
+          });
+    if (!activeReservation) return filtered;
+    const getMatchRank = (v: (typeof filtered)[number]) => {
+      const sameBranch = v.branchId === activeReservation.branchId ? 10 : 0;
+      if (v.variantId === activeReservation.variantId) return sameBranch + 2;
+      if (isSimilarToReservation(v)) return sameBranch + 1;
+      return sameBranch;
+    };
+    return [...filtered].sort((a, b) => getMatchRank(b) - getMatchRank(a));
+  }, [vehiclesData?.data, activeContracts, startDate, endDate, activeReservation, isSimilarToReservation]);
+
+  const availableVehicles = useMemo(() => {
+    if (!activeReservation) return allAvailableVehicles;
+    const branchFiltered = allAvailableVehicles.filter(
+      (v) => v.branchId === activeReservation.branchId,
+    );
+    return branchFiltered.length > 0 ? branchFiltered : allAvailableVehicles;
+  }, [allAvailableVehicles, activeReservation]);
 
   const filteredVehicles = useMemo(() => {
     const q = vehicleQuery.trim().toLowerCase();
     if (!q) return availableVehicles;
-    return availableVehicles.filter((v) => {
+    return allAvailableVehicles.filter((v) => {
       const modelLabel = v.variant
-        ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}`.toLowerCase()
+        ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear} ${v.variant.trim ?? ""}`.toLowerCase()
         : "";
       return (
         (v.assetCode ?? "").toLowerCase().includes(q) ||
@@ -203,18 +294,18 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         (v.branchName ?? "").toLowerCase().includes(q)
       );
     });
-  }, [availableVehicles, vehicleQuery]);
+  }, [availableVehicles, allAvailableVehicles, vehicleQuery]);
 
   const vehicleId = useMemo(() => {
-    if (selectedVehicleId && availableVehicles.some((v) => v.id === selectedVehicleId)) {
+    if (selectedVehicleId && allAvailableVehicles.some((v) => v.id === selectedVehicleId)) {
       return selectedVehicleId;
     }
     return "";
-  }, [selectedVehicleId, availableVehicles]);
+  }, [selectedVehicleId, allAvailableVehicles]);
 
   const selectedVehicle = useMemo(
-    () => availableVehicles.find((v) => v.id === vehicleId) ?? null,
-    [availableVehicles, vehicleId],
+    () => allAvailableVehicles.find((v) => v.id === vehicleId) ?? null,
+    [allAvailableVehicles, vehicleId],
   );
 
   const totalDays = useMemo(() => {
@@ -284,7 +375,12 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
       );
       return;
     }
-    if (currentUser && !currentUser.signatureDataUrl && !localEmpSigned) {
+    const hasEmpSignature = Boolean(
+      meResp?.data?.user?.signatureDataUrl ||
+        ctx?.data?.user?.signatureDataUrl ||
+        localEmpSigned,
+    );
+    if (currentUser && !hasEmpSignature) {
       setIsEmpSignOpen(true);
       return;
     }
@@ -310,6 +406,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
         sponsorName: sponsorName.trim() || null,
         sponsorNationalId: sponsorNationalId.trim() || null,
         sponsorPhone: sponsorPhone.trim() || null,
+        reservationId: reservationId || null,
       }).unwrap();
       setCreatedContract(res.data);
     } catch (err: unknown) {
@@ -328,22 +425,11 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
       {/* Page Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-revix-border pb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <Link
-            href="/workspace/fleet/rental-contracts"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-revix-border bg-revix-white text-revix-secondary hover:bg-revix-surface hover:text-revix-dark transition-colors"
-            title={isRtl ? "العودة للعقود" : "Back to Contracts"}
-          >
-            <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={16} />
-          </Link>
+          <SmartBackButton isRtl={isRtl} fallbackHref={backHref} size={16} />
           <div>
             <h1 className="text-xl font-bold tracking-tight text-revix-dark sm:text-2xl">
               {isRtl ? "إنشاء عقد تأجير جديد" : "New Rental Contract"}
             </h1>
-            <p className="text-xs text-revix-secondary mt-0.5">
-              {isRtl
-                ? "١. اختر أو أضف العميل  ←  ٢. اختر السيارة  ←  ٣. حدد الفترة والتسعير"
-                : "1. Select or add customer  →  2. Choose vehicle  →  3. Set period & pricing"}
-            </p>
           </div>
         </div>
 
@@ -616,11 +702,31 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
             {openSections.vehicle && (
               <div className="border-t border-revix-border/70 p-4 space-y-4">
                 <div ref={vehicleBoxRef} className="relative">
-                  <label className="block text-xs font-semibold text-revix-dark mb-1.5">
-                    {isRtl
-                      ? "ابحث بالاسم أو رقم اللوحة أو Asset ID (0001) *"
-                      : "Search Vehicle by Asset ID (0001), Plate, or Model *"}
-                  </label>
+                  <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-xs font-semibold text-revix-dark">
+                      {isRtl
+                        ? "ابحث بالاسم أو رقم اللوحة أو Asset ID (0001) *"
+                        : "Search Vehicle by Asset ID (0001), Plate, or Model *"}
+                    </label>
+                    {activeReservation && (() => {
+                      const exactCount = availableVehicles.filter(
+                        (v) => v.variantId === activeReservation.variantId,
+                      ).length;
+                      const similarCount = availableVehicles.filter((v) =>
+                        isSimilarToReservation(v),
+                      ).length;
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                            {isRtl ? `متاح من الفئة: ${exactCount}` : `Exact Class: ${exactCount}`}
+                          </span>
+                          <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200">
+                            {isRtl ? `مماثلة: ${similarCount}` : `Similar: ${similarCount}`}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
                   <div className="relative">
                     <RevixIcon
                       name="search"
@@ -643,6 +749,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                       onFocus={() => {
                         setVehicleQuery("");
                         setIsVehicleFocused(true);
+                        setIsVehicleDropdownOpen(true);
                       }}
                       onBlur={() => {
                         setIsVehicleFocused(false);
@@ -650,7 +757,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                       onChange={(e) => {
                         const val = e.target.value;
                         setVehicleQuery(val);
-                        setIsVehicleDropdownOpen(val.trim().length > 0);
+                        setIsVehicleDropdownOpen(true);
                       }}
                       disabled={isLoadingVehicles}
                       placeholder={
@@ -679,7 +786,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                     )}
                   </div>
 
-                  {isVehicleDropdownOpen && vehicleQuery.trim().length > 0 && (
+                  {isVehicleDropdownOpen && (
                     <div className="absolute start-0 end-0 top-full z-30 mt-1 max-h-[214px] overflow-y-auto rounded-xl border border-revix-border bg-white shadow-lg">
                       <div className="sticky top-0 grid h-8 grid-cols-12 items-center gap-2 border-b border-revix-border bg-revix-surface px-3 text-[10.5px] font-bold uppercase text-revix-secondary">
                         <div className="col-span-2">Asset ID</div>
@@ -694,8 +801,12 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                       ) : (
                         filteredVehicles.map((v) => {
                           const modelLabel = v.variant
-                            ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}`
+                            ? `${v.variant.make} ${v.variant.model} ${v.variant.modelYear}${v.variant.trim ? ` ${v.variant.trim}` : ""}`
                             : "—";
+                          const isExact = activeReservation
+                            ? v.variantId === activeReservation.variantId
+                            : false;
+                          const isSimilar = isSimilarToReservation(v);
                           return (
                             <button
                               key={v.id}
@@ -716,8 +827,31 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                               <div className="col-span-3 truncate font-mono font-bold text-revix-dark" dir="ltr">
                                 {highlightMatch(v.licensePlate, vehicleQuery)}
                               </div>
-                              <div className="col-span-4 truncate font-semibold text-revix-dark">
-                                {highlightMatch(modelLabel, vehicleQuery)}
+                              <div className="col-span-4 flex items-center gap-1.5 truncate font-semibold text-revix-dark">
+                                <span className="truncate">{highlightMatch(modelLabel, vehicleQuery)}</span>
+                                {activeReservation && (
+                                  <span
+                                    className={`shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-semibold ${
+                                      isExact
+                                        ? "bg-emerald-50 text-emerald-700"
+                                        : isSimilar
+                                          ? "bg-amber-50 text-amber-700"
+                                          : "bg-slate-100 text-slate-600"
+                                    }`}
+                                  >
+                                    {isExact
+                                      ? isRtl
+                                        ? "مطابقة"
+                                        : "Exact"
+                                      : isSimilar
+                                        ? isRtl
+                                          ? "مماثلة"
+                                          : "Similar"
+                                        : isRtl
+                                          ? "فئة أخرى"
+                                          : "Other"}
+                                  </span>
+                                )}
                               </div>
                               <div className="col-span-3 truncate font-medium text-revix-secondary">
                                 {v.branchName ? highlightMatch(v.branchName, vehicleQuery) : "—"}
@@ -1193,7 +1327,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
                     : "Create & Print Contract"}
               </button>
               <Link
-                href="/workspace/fleet/rental-contracts"
+                href={backHref}
                 className="flex h-9 w-full items-center justify-center rounded-xl border border-revix-border text-xs font-semibold text-revix-secondary hover:bg-revix-surface"
               >
                 {isRtl ? "إلغاء" : "Cancel"}
@@ -1227,6 +1361,7 @@ export function CreateRentalContractPage({ isRtl }: CreateRentalContractPageProp
             await updateMySignature({ signatureDataUrl: dataUrl }).unwrap();
             setLocalEmpSigned(true);
             setIsEmpSignOpen(false);
+            void refetchWorkspace();
             await submitCreateContract();
           } catch (err) {
             setIsEmpSignOpen(false);

@@ -5,6 +5,7 @@ import { useRouter } from "@/i18n/navigation";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailTileCard } from "@/components/shared/workspace";
 import { RevixIcon } from "@/components/ui/RevixIcons";
+import { SmartBackButton } from "@/components/ui/SmartBackButton";
 import { vehicleHref } from "@/lib/workspace/resourceRoutes";
 import {
   useListInsuranceCompanyPoliciesQuery,
@@ -81,15 +82,12 @@ export function InsuranceCompanyDetailPage({
       {/* Clean Top Header — matches PO, Vehicle & Vendor detail pages */}
       <div className="flex flex-wrap items-center justify-between gap-3 py-1 shrink-0">
         <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
+          <SmartBackButton
+            isRtl={isRtl}
             onClick={onBack}
             title={isRtl ? "العودة لشركات التأمين" : "Back to insurance companies"}
-            aria-label={isRtl ? "العودة لشركات التأمين" : "Back to insurance companies"}
-            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-revix-border bg-white text-revix-secondary hover:bg-revix-surface"
-          >
-            <RevixIcon name={isRtl ? "arrow-right" : "arrow-left"} size={14} />
-          </button>
+            size={14}
+          />
           <h1 className="truncate text-lg font-bold text-revix-dark">{company.name}</h1>
         </div>
       </div>

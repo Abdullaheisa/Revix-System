@@ -21,6 +21,8 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { RevixIcon } from "@/components/ui/RevixIcons";
 import { RevixPagination } from "@/components/ui/RevixPagination";
+import { SmartSearchInput } from "@/components/ui/SmartSearchInput";
+import { smartMatch } from "@/lib/search/smartSearch";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { CreateRentalContractPage } from "./CreateRentalContractPage";
@@ -35,7 +37,7 @@ interface RentalContractsPanelProps {
 }
 
 const STATUS_BADGE: Record<RentalContractStatus, { ar: string; en: string; cls: string }> = {
-  active: { ar: "ساري", en: "Active", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  active: { ar: "مفتوح", en: "Open", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
   completed: { ar: "مغلق", en: "Closed", cls: "border-blue-200 bg-blue-50 text-blue-700" },
   draft: { ar: "مسودة", en: "Draft", cls: "border-slate-200 bg-slate-50 text-slate-700" },
   cancelled: { ar: "ملغي", en: "Cancelled", cls: "border-red-200 bg-red-50 text-red-700" },
@@ -64,17 +66,14 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
   const contracts = useMemo(() => contractsData?.data ?? [], [contractsData?.data]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return contracts.filter((c) => {
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
-      if (!q) return true;
-      return (
-        c.contractNumber.toLowerCase().includes(q) ||
-        (c.customerName && c.customerName.toLowerCase().includes(q)) ||
-        (c.vehicleAssetCode && c.vehicleAssetCode.toLowerCase().includes(q)) ||
-        (c.vehiclePlate && c.vehiclePlate.toLowerCase().includes(q)) ||
-        (c.vehicleName && c.vehicleName.toLowerCase().includes(q))
-      );
+      return smartMatch(search, {
+        id: [c.contractNumber, c.vehicleAssetCode],
+        name: [c.customerName, c.vehicleName],
+        phone: [c.customerPhone],
+        plate: [c.vehiclePlate],
+      });
     });
   }, [contracts, statusFilter, search]);
 
@@ -114,22 +113,16 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-56">
-            <RevixIcon
-              name="search"
-              className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-revix-muted ltr:left-3 rtl:right-3"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder={isRtl ? "بحث بالعقد، العميل، رقم الأصل، اللوحة..." : "Search contract, customer, Asset ID, plate..."}
-              className="h-9 w-full rounded-lg border border-revix-border bg-revix-white text-xs text-revix-dark placeholder-revix-muted focus:border-revix-primary focus:outline-hidden ltr:pl-9 ltr:pr-3 rtl:pl-3 rtl:pr-9"
-            />
-          </div>
+          <SmartSearchInput
+            value={search}
+            onChange={(val) => {
+              setSearch(val);
+              setPage(1);
+            }}
+            isRtl={isRtl}
+            placeholder={isRtl ? "بحث ذكي: عقد، عميل، لوحة، سيارة..." : "Smart search: contract, customer, plate..."}
+            className="w-60"
+          />
 
           <Link
             href={rentalContractNewHref()}
@@ -145,7 +138,7 @@ export function RentalContractsPanel({ isRtl }: RentalContractsPanelProps) {
       <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-revix-border">
         {[
           { id: "all", ar: "الكل", en: "All" },
-          { id: "active", ar: "ساري", en: "Active" },
+          { id: "active", ar: "مفتوح", en: "Open" },
           { id: "completed", ar: "مغلق", en: "Closed" },
           { id: "cancelled", ar: "ملغي", en: "Cancelled" },
         ].map((tab) => (
