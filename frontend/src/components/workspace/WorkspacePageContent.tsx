@@ -10,6 +10,7 @@ function PanelLoading() { return <div role="status" className="animate-pulse spa
 const PriceListPanel = dynamic(() => import("@/components/fleet/PriceListPanel").then((module) => module.PriceListPanel), { loading: PanelLoading });
 const AccountSecurityPanel = dynamic(() => import("@/components/workspace/AccountSecurityPanel").then((module) => module.AccountSecurityPanel), { loading: PanelLoading });
 const CompanyNetworkPanel = dynamic(() => import("@/components/workspace/CompanyNetworkPanel").then((module) => module.CompanyNetworkPanel), { loading: PanelLoading });
+const PartnerIntegrationsPanel = dynamic(() => import("@/components/workspace/PartnerIntegrationsPanel").then((module) => module.PartnerIntegrationsPanel), { loading: PanelLoading });
 const CompanySettingsPanel = dynamic(() => import("@/components/workspace/CompanySettingsPanel").then((module) => module.CompanySettingsPanel), { loading: PanelLoading });
 const ContractTermsSettingsPanel = dynamic(() => import("@/components/workspace/ContractTermsSettingsPanel").then((module) => module.ContractTermsSettingsPanel), { loading: PanelLoading });
 const LocationsManager = dynamic(() => import("@/components/workspace/LocationsManager").then((module) => module.LocationsManager), { loading: PanelLoading });
@@ -75,6 +76,11 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
             activeSubPage === "local-companies" &&
             company?.operatingMode !== "independent" ? (
             <CompanyNetworkPanel isRtl={isRtl} />
+          ) : activeSection === "network" &&
+            activeSubPage === "integrations" &&
+            company?.operatingMode === "network_main" &&
+            company ? (
+            <PartnerIntegrationsPanel isRtl={isRtl} company={company} />
           ) : activeSection === "fleet" && activeSubPage === "variants" ? (
             <VehicleVariantsPanel
               isRtl={isRtl}

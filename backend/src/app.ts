@@ -17,6 +17,8 @@ import { createFleetRouter } from "./modules/fleet/fleetRouter.ts";
 import { FleetService } from "./modules/fleet/fleetService.ts";
 import { createWorkspaceRouter } from "./modules/workspace/workspaceRouter.ts";
 import { WorkspaceService } from "./modules/workspace/workspaceService.ts";
+import { createPartnerRouter } from "./modules/partner/partnerRouter.ts";
+import { createPartnerIntegrationsRouter } from "./modules/partner/partnerIntegrationsRouter.ts";
 
 export function createApp(options: {
   env: BackendEnvConfig;
@@ -95,12 +97,27 @@ export function createApp(options: {
   );
 
   app.use(
+    "/api/v1/workspace/integrations",
+    createPartnerIntegrationsRouter({
+      authService,
+      teamService,
+      store,
+      env,
+    }),
+  );
+
+  app.use(
     "/api/v1/workspace",
     createWorkspaceRouter({
       authService,
       workspaceService,
       env,
     }),
+  );
+
+  app.use(
+    "/api/v1/partner/:companySlug",
+    createPartnerRouter({ store }),
   );
 
   app.use(

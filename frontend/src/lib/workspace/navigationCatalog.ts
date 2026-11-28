@@ -500,6 +500,18 @@ export const WORKSPACE_NAVIGATION_SECTIONS: readonly WorkspaceSectionConfig[] =
               keyCode: "n",
               isReady: true,
             },
+            {
+              id: "integrations",
+              titleEn: "Partner Integrations",
+              titleAr: "التكامل والربط (API)",
+              descEn:
+                "Issue Partner API keys and download your branded integration guide PDF.",
+              descAr:
+                "إصدار مفاتيح الربط للمواقع العالمية وتحميل دليل الربط PDF بهوية الشركة.",
+              shortcut: "G I",
+              keyCode: "i",
+              isReady: true,
+            },
           ],
         },
       ],

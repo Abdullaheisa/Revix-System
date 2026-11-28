@@ -119,6 +119,29 @@ export interface UpdateBranchRequestDto extends CreateBranchRequestDto {
   isActive: boolean;
 }
 
+export interface PartnerApiKeyDto {
+  id: string;
+  companyId: string;
+  partnerName: string;
+  partnerWebsiteUrl: string;
+  environment: "production";
+  keyPrefix: string;
+  scopes: string[];
+  status: "active" | "suspended" | "revoked";
+  lastUsedAt: string | null;
+  requestCount: number;
+  createdAt: string;
+}
+
+export interface PartnerIntegrationsResponseDto {
+  ok: true;
+  data: {
+    partnerSlug: string;
+    baseUrl: string;
+    keys: PartnerApiKeyDto[];
+  };
+}
+
 export interface BranchResponseDto {
   ok: true;
   data: {
@@ -177,6 +200,35 @@ export const workspaceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Branch"],
     }),
+
+    getPartnerIntegrations: builder.query<PartnerIntegrationsResponseDto, void>({
+      query: () => "/workspace/integrations",
+      providesTags: ["Company"],
+    }),
+
+    createPartnerApiKey: builder.mutation<
+      { ok: true; data: { key: PartnerApiKeyDto; rawApiKey: string } },
+      { partnerName: string; partnerWebsiteUrl: string }
+    >({
+      query: (body) => ({
+        url: "/workspace/integrations/keys",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Company"],
+    }),
+
+    updatePartnerApiKeyStatus: builder.mutation<
+      { ok: true; data: PartnerApiKeyDto },
+      { id: string; status: "active" | "suspended" | "revoked" }
+    >({
+      query: ({ id, status }) => ({
+        url: `/workspace/integrations/keys/${encodeURIComponent(id)}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: ["Company"],
+    }),
   }),
   overrideExisting: true,
 });
@@ -187,4 +239,7 @@ export const {
   useUpdateCompanyMutation,
   useCreateBranchMutation,
   useUpdateBranchMutation,
+  useGetPartnerIntegrationsQuery,
+  useCreatePartnerApiKeyMutation,
+  useUpdatePartnerApiKeyStatusMutation,
 } = workspaceApi;

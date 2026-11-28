@@ -160,6 +160,8 @@ export interface PurchaseOrderItemDto {
   vin?: string | null;
   color?: string | null;
   notes: string | null;
+  source?: string;
+  partnerName?: string | null;
   createdAt: string;
 }
 
@@ -346,6 +348,8 @@ export interface CustomerDto {
   address: string | null;
   workAddress: string | null;
   notes: string | null;
+  source?: string;
+  partnerName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -508,6 +512,8 @@ export interface VehicleInsurancePolicyDto {
   expiryDate: string;
   status: string;
   notes: string | null;
+  source?: string;
+  partnerName?: string | null;
   createdAt: string;
 }
 
@@ -621,6 +627,8 @@ export interface VehicleMovementDto {
   dispatchedAt: string;
   receivedAt: string | null;
   notes: string | null;
+  source?: string;
+  partnerName?: string | null;
   createdAt: string;
   updatedAt: string;
   vehicleName?: string | null;
@@ -1923,6 +1931,7 @@ export interface ReservationDto {
   variantId: string;
   allowSimilar: boolean;
   source: ReservationSource;
+  partnerName?: string | null;
   externalBookingRef: string | null;
   status: ReservationStatus;
   pickupDate: string;

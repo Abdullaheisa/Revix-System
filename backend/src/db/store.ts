@@ -1,5 +1,5 @@
 import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, SessionRecord, UserRecord, UserStatus } from "./contracts/auth.ts";
-import type { BranchRecord, CompanyOperatingMode, CompanyRecord, CreateBranchInput, CreateCompanyInput, InsuranceCompanyRecord, UpdateBranchInput, UpdateCompanyInput } from "./contracts/workspace.ts";
+import type { BranchRecord, CompanyOperatingMode, CompanyRecord, CreateBranchInput, CreateCompanyInput, InsuranceCompanyRecord, PartnerApiKeyRecord, PartnerApiKeyStatus, UpdateBranchInput, UpdateCompanyInput } from "./contracts/workspace.ts";
 import type { CompanyMembershipRecord, CompanyRoleRecord, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, EmployeeInvitationRecord, UpdateCompanyMembershipInput, UpdateCompanyRoleInput } from "./contracts/team.ts";
 import type { CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CreateNetworkInvitationInput, CreateNetworkLinkInput, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord } from "./contracts/network.ts";
 import type { CreateFleetPriceListInput, CreateFleetVehicleInput, CreateRentalInclusionInput, CreateVehicleBodyStyleInput, CreateVehicleColorInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, DriverRecord, FleetPriceListRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, RentalInclusionRecord, UpdateFleetPriceListInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, VehicleBodyStyleRecord, VehicleCategory, VehicleColorRecord, VehicleInspectionRecord, VehicleInsurancePolicyRecord, VehicleLifecycleProfile, VehicleMaintenanceLogRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord } from "./contracts/fleet.ts";
@@ -500,6 +500,9 @@ export interface AuthDataStore {
     address?: string | null;
     workAddress?: string | null;
     notes?: string | null;
+    source?: string;
+    partnerKeyId?: string | null;
+    partnerName?: string | null;
   }): Promise<CustomerRecord>;
   updateCustomer(
     companyId: string,
@@ -614,6 +617,8 @@ export interface AuthDataStore {
     variantId: string;
     allowSimilar: boolean;
     source: ReservationSource;
+    partnerKeyId?: string | null;
+    partnerName?: string | null;
     externalBookingRef?: string | null;
     externalMetadata?: Record<string, unknown> | null;
     status: ReservationStatus;
@@ -715,6 +720,26 @@ export interface AuthDataStore {
     },
   ): Promise<VehicleMovementRecord | null>;
   cancelVehicleMovement(companyId: string, movementId: string): Promise<VehicleMovementRecord | null>;
+
+  ensureCompanyPartnerSlug(companyId: string): Promise<string>;
+  findCompanyByPartnerSlug(slug: string): Promise<CompanyRecord | null>;
+  listPartnerApiKeys(companyId: string): Promise<PartnerApiKeyRecord[]>;
+  createPartnerApiKey(input: {
+    companyId: string;
+    partnerName: string;
+    partnerWebsiteUrl: string;
+    keyPrefix: string;
+    keyHash: string;
+    scopes?: string[];
+    createdByUserId?: string | null;
+  }): Promise<PartnerApiKeyRecord>;
+  findPartnerApiKeyByHash(keyHash: string): Promise<PartnerApiKeyRecord | null>;
+  updatePartnerApiKeyStatus(
+    companyId: string,
+    keyId: string,
+    status: PartnerApiKeyStatus,
+  ): Promise<PartnerApiKeyRecord | null>;
+  recordPartnerApiKeyUsage(keyId: string): Promise<void>;
 }
 
 export type * from "./contracts/auth.ts";

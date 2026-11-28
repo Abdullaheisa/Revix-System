@@ -24,8 +24,28 @@ export interface CompanyRecord {
   taxRegNumber: string;
   operatingMode: CompanyOperatingMode;
   parentCompanyId: string | null;
+  partnerSlug?: string | null;
   contractTermsAr?: string | null;
   contractTermsEn?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type PartnerApiKeyStatus = "active" | "suspended" | "revoked";
+
+export interface PartnerApiKeyRecord {
+  id: string;
+  companyId: string;
+  partnerName: string;
+  partnerWebsiteUrl: string;
+  environment: "production";
+  keyPrefix: string;
+  keyHash: string;
+  scopes: string[];
+  status: PartnerApiKeyStatus;
+  lastUsedAt: Date | null;
+  requestCount: number;
+  createdByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

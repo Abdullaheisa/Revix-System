@@ -2,7 +2,7 @@ import { mapCompanyRoleRow, mapCompanyMembershipRow, mapEmployeeInvitationRow, m
 import crypto from "node:crypto";
 import pg from "pg";
 import type { ContractVoucherRecord, ContractVoucherType, ReservationRecord, ReservationSource, ReservationStatus, VoucherPaymentMethod } from "./contracts/rentals.ts";
-import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, AuthDataStore, BranchRecord, CompanyMembershipRecord, CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CompanyOperatingMode, CompanyRecord, CompanyRoleRecord, CreateBranchInput, CreateCompanyInput, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, CreateFleetPriceListInput, CreateFleetVehicleInput, CreateNetworkInvitationInput, CreateNetworkLinkInput, CreatePurchaseOrderInput, CreateRentalInclusionInput, CreateVehicleBodyStyleInput, CreateVehicleColorInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, CreateVendorInput, CustomerRecord, DriverRecord, EmployeeInvitationRecord, FleetPriceListRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord, PurchaseOrderItemRecord, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, RentalContractRecord, RentalContractStatus, RentalInclusionRecord, SessionRecord, UpdateBranchInput, UpdateCompanyInput, UpdateCompanyMembershipInput, UpdateCompanyRoleInput, UpdateFleetPriceListInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, UpdateVendorInput, UserRecord, UserStatus, VehicleBodyStyleRecord, VehicleCategory, VehicleColorRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord, VendorCategory, VendorRecord } from "./store.ts";
+import type { ActionTokenRecord, ActionTokenType, AuditLogInput, AuditLogRecord, AuthDataStore, BranchRecord, CompanyMembershipRecord, CompanyNetworkInvitationRecord, CompanyNetworkLinkRecord, CompanyOperatingMode, CompanyRecord, CompanyRoleRecord, CreateBranchInput, CreateCompanyInput, CreateCompanyMembershipInput, CreateCompanyRoleInput, CreateEmployeeInvitationInput, CreateFleetPriceListInput, CreateFleetVehicleInput, CreateNetworkInvitationInput, CreateNetworkLinkInput, CreatePurchaseOrderInput, CreateRentalInclusionInput, CreateVehicleBodyStyleInput, CreateVehicleColorInput, CreateVehiclePhotoInput, CreateVehicleVariantInput, CreateVendorInput, CustomerRecord, DriverRecord, EmployeeInvitationRecord, FleetPriceListRecord, FleetVehicleFilterOptions, FleetVehicleRecord, FleetVehicleStatus, NetworkInvitationStatus, NetworkLinkStatus, NetworkPermittedBranchRecord, PartnerApiKeyRecord, PartnerApiKeyStatus, PurchaseOrderItemRecord, PurchaseOrderRecord, PurchaseOrderStatus, ReceiveVehicleFromPoInput, RentalContractRecord, RentalContractStatus, RentalInclusionRecord, SessionRecord, UpdateBranchInput, UpdateCompanyInput, UpdateCompanyMembershipInput, UpdateCompanyRoleInput, UpdateFleetPriceListInput, UpdateFleetVehicleInput, UpdateRentalInclusionInput, UpdateVehicleVariantInput, UpdateVendorInput, UserRecord, UserStatus, VehicleBodyStyleRecord, VehicleCategory, VehicleColorRecord, VehicleMovementRecord, VehiclePhotoRecord, VehicleVariantRecord, VendorCategory, VendorRecord } from "./store.ts";
 
 
 
@@ -3412,6 +3412,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
       workAddress: (r.work_address as string | null) ?? null,
       notes: (r.notes as string | null) ?? null,
       signatureDataUrl: (r.signature_data_url as string | null) ?? null,
+      source: r.source ? String(r.source) : "direct",
+      partnerKeyId: (r.partner_key_id as string | null) ?? null,
+      partnerName: (r.partner_name as string | null) ?? null,
       createdAt: new Date(String(r.created_at)),
       updatedAt: new Date(String(r.updated_at)),
     };
@@ -3439,6 +3442,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
     address?: string | null;
     workAddress?: string | null;
     notes?: string | null;
+    source?: string;
+    partnerKeyId?: string | null;
+    partnerName?: string | null;
   }): Promise<CustomerRecord> {
     const seqRes = await this.pool.query<{ max_seq: number }>(
       `SELECT COALESCE(MAX((REGEXP_MATCH(customer_code, '^(?:CUS-)?(\\d+)$'))[1]::int), 0) AS max_seq
@@ -3450,8 +3456,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
 
     const res = await this.pool.query(
       `INSERT INTO customers
-        (company_id, customer_code, full_name, phone, secondary_phone, email, national_id, national_id_expiry, driver_license_no, license_expiry, nationality, address, work_address, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        (company_id, customer_code, full_name, phone, secondary_phone, email, national_id, national_id_expiry, driver_license_no, license_expiry, nationality, address, work_address, notes, source, partner_key_id, partner_name)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING *`,
       [
         input.companyId,
@@ -3468,6 +3474,9 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.address?.trim() || null,
         input.workAddress?.trim() || null,
         input.notes?.trim() || null,
+        input.source || "direct",
+        input.partnerKeyId || null,
+        input.partnerName?.trim() || null,
       ],
     );
     return this.mapCustomerRow(res.rows[0]!);
@@ -4791,6 +4800,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
       variantId: String(row.variant_id),
       allowSimilar: Boolean(row.allow_similar),
       source: (String(row.source || "phone") as ReservationSource),
+      partnerKeyId: row.partner_key_id ? String(row.partner_key_id) : null,
+      partnerName: row.partner_name ? String(row.partner_name) : null,
       externalBookingRef: row.external_booking_ref ? String(row.external_booking_ref) : null,
       externalMetadata: (row.external_metadata as Record<string, unknown> | null) ?? null,
       status: (String(row.status || "confirmed") as ReservationStatus),
@@ -4897,6 +4908,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
     variantId: string;
     allowSimilar: boolean;
     source: ReservationSource;
+    partnerKeyId?: string | null;
+    partnerName?: string | null;
     externalBookingRef?: string | null;
     externalMetadata?: Record<string, unknown> | null;
     status: ReservationStatus;
@@ -4921,10 +4934,10 @@ export class PostgresAuthDataStore implements AuthDataStore {
     const res = await this.pool.query(
       `INSERT INTO reservations
         (company_id, branch_id, return_branch_id, reservation_number, customer_id, variant_id,
-         allow_similar, source, external_booking_ref, external_metadata, status,
+         allow_similar, source, partner_key_id, partner_name, external_booking_ref, external_metadata, status,
          pickup_date, pickup_time, return_date, return_time, daily_rate, total_days, estimated_total,
          notes, created_by_user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12::date,$13,$14::date,$15,$16,$17,$18,$19,$20)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$21,$22,$9,$10::jsonb,$11,$12::date,$13,$14::date,$15,$16,$17,$18,$19,$20)
        RETURNING id`,
       [
         input.companyId,
@@ -4947,6 +4960,8 @@ export class PostgresAuthDataStore implements AuthDataStore {
         input.estimatedTotal,
         input.notes?.trim() || null,
         input.createdByUserId || null,
+        input.partnerKeyId || null,
+        input.partnerName?.trim() || null,
       ],
     );
     const created = await this.findReservationById(input.companyId, String(res.rows[0]!.id));
@@ -4992,6 +5007,133 @@ export class PostgresAuthDataStore implements AuthDataStore {
     );
     if (!res.rows[0]) return null;
     return this.findReservationById(companyId, reservationId);
+  }
+
+  private mapPartnerApiKeyRow(r: Record<string, unknown>): PartnerApiKeyRecord {
+    return {
+      id: String(r.id),
+      companyId: String(r.company_id),
+      partnerName: String(r.partner_name),
+      partnerWebsiteUrl: String(r.partner_website_url),
+      environment: "production",
+      keyPrefix: String(r.key_prefix),
+      keyHash: String(r.key_hash),
+      scopes: Array.isArray(r.scopes) ? r.scopes.map(String) : ["read", "book", "cancel"],
+      status: String(r.status) as PartnerApiKeyStatus,
+      lastUsedAt: r.last_used_at ? new Date(String(r.last_used_at)) : null,
+      requestCount: Number(r.request_count ?? 0),
+      createdByUserId: (r.created_by_user_id as string | null) ?? null,
+      createdAt: new Date(String(r.created_at)),
+      updatedAt: new Date(String(r.updated_at)),
+    };
+  }
+
+  async ensureCompanyPartnerSlug(companyId: string): Promise<string> {
+    const res = await this.pool.query<{ name: string; partner_slug: string | null }>(
+      `SELECT name, partner_slug FROM companies WHERE id = $1`,
+      [companyId],
+    );
+    const row = res.rows[0];
+    if (!row) return `company-${companyId.slice(0, 8)}`;
+    if (row.partner_slug) return row.partner_slug;
+
+    const base =
+      row.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || `company-${companyId.slice(0, 8)}`;
+
+    let candidate = base;
+    let suffix = 2;
+    while (true) {
+      const exists = await this.pool.query(
+        `SELECT 1 FROM companies WHERE partner_slug = $1 AND id <> $2 LIMIT 1`,
+        [candidate, companyId],
+      );
+      if (exists.rows.length === 0) break;
+      candidate = `${base}-${suffix++}`;
+    }
+
+    await this.pool.query(
+      `UPDATE companies SET partner_slug = $2, updated_at = NOW() WHERE id = $1`,
+      [companyId, candidate],
+    );
+    return candidate;
+  }
+
+  async findCompanyByPartnerSlug(slug: string): Promise<CompanyRecord | null> {
+    const res = await this.pool.query<DbCompanyRow>(
+      `SELECT * FROM companies WHERE partner_slug = $1 LIMIT 1`,
+      [slug.trim().toLowerCase()],
+    );
+    return res.rows[0] ? mapCompanyRow(res.rows[0]) : null;
+  }
+
+  async listPartnerApiKeys(companyId: string): Promise<PartnerApiKeyRecord[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM partner_api_keys WHERE company_id = $1 ORDER BY created_at DESC`,
+      [companyId],
+    );
+    return res.rows.map((r) => this.mapPartnerApiKeyRow(r));
+  }
+
+  async createPartnerApiKey(input: {
+    companyId: string;
+    partnerName: string;
+    partnerWebsiteUrl: string;
+    keyPrefix: string;
+    keyHash: string;
+    scopes?: string[];
+    createdByUserId?: string | null;
+  }): Promise<PartnerApiKeyRecord> {
+    const res = await this.pool.query(
+      `INSERT INTO partner_api_keys
+        (company_id, partner_name, partner_website_url, environment, key_prefix, key_hash, scopes, created_by_user_id)
+       VALUES ($1, $2, $3, 'production', $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        input.companyId,
+        input.partnerName.trim(),
+        input.partnerWebsiteUrl.trim(),
+        input.keyPrefix,
+        input.keyHash,
+        input.scopes ?? ["read", "book", "cancel"],
+        input.createdByUserId ?? null,
+      ],
+    );
+    return this.mapPartnerApiKeyRow(res.rows[0]!);
+  }
+
+  async findPartnerApiKeyByHash(keyHash: string): Promise<PartnerApiKeyRecord | null> {
+    const res = await this.pool.query(
+      `SELECT * FROM partner_api_keys WHERE key_hash = $1 LIMIT 1`,
+      [keyHash],
+    );
+    return res.rows[0] ? this.mapPartnerApiKeyRow(res.rows[0]) : null;
+  }
+
+  async updatePartnerApiKeyStatus(
+    companyId: string,
+    keyId: string,
+    status: PartnerApiKeyStatus,
+  ): Promise<PartnerApiKeyRecord | null> {
+    const res = await this.pool.query(
+      `UPDATE partner_api_keys
+       SET status = $3, updated_at = NOW()
+       WHERE id = $1 AND company_id = $2
+       RETURNING *`,
+      [keyId, companyId, status],
+    );
+    return res.rows[0] ? this.mapPartnerApiKeyRow(res.rows[0]) : null;
+  }
+
+  async recordPartnerApiKeyUsage(keyId: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE partner_api_keys
+       SET last_used_at = NOW(), request_count = request_count + 1, updated_at = NOW()
+       WHERE id = $1`,
+      [keyId],
+    );
   }
 }
 

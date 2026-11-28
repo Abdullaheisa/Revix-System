@@ -2784,4 +2784,100 @@ export class InMemoryAuthDataStore implements AuthDataStore {
     this.fleetPriceListsById.delete(priceListId);
     return true;
   }
+
+  private partnerApiKeysById = new Map<string, import("./contracts/workspace.ts").PartnerApiKeyRecord>();
+
+  async ensureCompanyPartnerSlug(companyId: string): Promise<string> {
+    const company = this.companiesById.get(companyId);
+    if (!company) return `company-${companyId.slice(0, 8)}`;
+    if (company.partnerSlug) return company.partnerSlug;
+    const base =
+      company.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || `company-${company.id.slice(0, 8)}`;
+    let candidate = base;
+    let i = 2;
+    while (
+      Array.from(this.companiesById.values()).some(
+        (c) => c.id !== companyId && c.partnerSlug === candidate,
+      )
+    ) {
+      candidate = `${base}-${i++}`;
+    }
+    company.partnerSlug = candidate;
+    return candidate;
+  }
+
+  async findCompanyByPartnerSlug(slug: string) {
+    const normalized = slug.trim().toLowerCase();
+    for (const c of this.companiesById.values()) {
+      if (c.partnerSlug === normalized) return c;
+    }
+    return null;
+  }
+
+  async listPartnerApiKeys(companyId: string) {
+    return Array.from(this.partnerApiKeysById.values())
+      .filter((k) => k.companyId === companyId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async createPartnerApiKey(input: {
+    companyId: string;
+    partnerName: string;
+    partnerWebsiteUrl: string;
+    keyPrefix: string;
+    keyHash: string;
+    scopes?: string[];
+    createdByUserId?: string | null;
+  }) {
+    const rec: import("./contracts/workspace.ts").PartnerApiKeyRecord = {
+      id: crypto.randomUUID(),
+      companyId: input.companyId,
+      partnerName: input.partnerName.trim(),
+      partnerWebsiteUrl: input.partnerWebsiteUrl.trim(),
+      environment: "production",
+      keyPrefix: input.keyPrefix,
+      keyHash: input.keyHash,
+      scopes: input.scopes ?? ["read", "book", "cancel"],
+      status: "active",
+      lastUsedAt: null,
+      requestCount: 0,
+      createdByUserId: input.createdByUserId ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.partnerApiKeysById.set(rec.id, rec);
+    return rec;
+  }
+
+  async findPartnerApiKeyByHash(keyHash: string) {
+    for (const k of this.partnerApiKeysById.values()) {
+      if (k.keyHash === keyHash) return k;
+    }
+    return null;
+  }
+
+  async updatePartnerApiKeyStatus(
+    companyId: string,
+    keyId: string,
+    status: import("./contracts/workspace.ts").PartnerApiKeyStatus,
+  ) {
+    const ex = this.partnerApiKeysById.get(keyId);
+    if (!ex || ex.companyId !== companyId) return null;
+    const updated = { ...ex, status, updatedAt: new Date() };
+    this.partnerApiKeysById.set(keyId, updated);
+    return updated;
+  }
+
+  async recordPartnerApiKeyUsage(keyId: string) {
+    const ex = this.partnerApiKeysById.get(keyId);
+    if (!ex) return;
+    this.partnerApiKeysById.set(keyId, {
+      ...ex,
+      lastUsedAt: new Date(),
+      requestCount: ex.requestCount + 1,
+    });
+  }
 }

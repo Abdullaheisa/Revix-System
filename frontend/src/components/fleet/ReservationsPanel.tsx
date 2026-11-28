@@ -231,9 +231,16 @@ export function ReservationsPanel({ isRtl }: ReservationsPanelProps) {
                       </div>
                     </td>
                     <td className="px-3 py-2.5">
-                      <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 text-[10.5px] font-medium text-revix-dark">
-                        {isRtl ? src.ar : src.en}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="rounded-md border border-revix-border bg-revix-surface px-2 py-0.5 text-[10.5px] font-medium text-revix-dark">
+                          {isRtl ? src.ar : src.en}
+                        </span>
+                        {r.partnerName && (
+                          <span className="rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10.5px] font-semibold text-sky-800">
+                            {r.partnerName}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-2.5">
                       <span

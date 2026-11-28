@@ -160,7 +160,14 @@ export function CustomersPanel({ isRtl }: CustomersPanelProps) {
                   </span>
                 </td>
                 <td className="py-2.5 px-3">
-                  <div className="font-bold text-revix-dark">{c.fullName}</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-bold text-revix-dark">{c.fullName}</span>
+                    {c.partnerName && (
+                      <span className="rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800">
+                        {isRtl ? `موقع: ${c.partnerName}` : `Web: ${c.partnerName}`}
+                      </span>
+                    )}
+                  </div>
                   {c.email && <div className="text-[11px] text-revix-secondary">{c.email}</div>}
                 </td>
                 <td className="py-2.5 px-3 font-mono text-revix-dark whitespace-nowrap">

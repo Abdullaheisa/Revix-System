@@ -52,6 +52,7 @@ export interface DbCompanyRow {
   tax_reg_number: string;
   operating_mode: CompanyOperatingMode;
   parent_company_id: string | null;
+  partner_slug?: string | null;
   contract_terms_ar?: string | null;
   contract_terms_en?: string | null;
   created_at: Date;
@@ -701,6 +702,7 @@ export function mapCompanyRow(row: DbCompanyRow): CompanyRecord {
     taxRegNumber: row.tax_reg_number,
     operatingMode: row.operating_mode,
     parentCompanyId: row.parent_company_id,
+    partnerSlug: row.partner_slug ?? null,
     contractTermsAr: row.contract_terms_ar ?? null,
     contractTermsEn: row.contract_terms_en ?? null,
     createdAt: new Date(row.created_at),

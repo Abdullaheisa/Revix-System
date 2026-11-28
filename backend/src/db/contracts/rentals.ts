@@ -17,6 +17,9 @@ export interface CustomerRecord {
   workAddress: string | null;
   notes: string | null;
   signatureDataUrl?: string | null;
+  source?: string;
+  partnerKeyId?: string | null;
+  partnerName?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +45,8 @@ export interface ReservationRecord {
   variantId: string;
   allowSimilar: boolean;
   source: ReservationSource;
+  partnerKeyId?: string | null;
+  partnerName?: string | null;
   externalBookingRef: string | null;
   externalMetadata: Record<string, unknown> | null;
   status: ReservationStatus;
