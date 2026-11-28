@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import type { AuthUserDto } from "@/store/api/authApi";
 import type { BranchDto, CompanyDto, WorkspaceMembershipDto } from "@/store/api/workspaceApi";
+import { isDepartmentId } from "@/lib/workspace/departmentsCatalog";
 import type { WorkspaceSubPageItem } from "@/lib/workspace/navigationCatalog";
 import { useAppDispatch } from "@/store/hooks";
 import { navigateToWorkspacePage, setSelectedBranchId, setCommandPaletteOpen, type WorkspaceSectionId } from "@/store/slices/workspaceSlice";
@@ -16,6 +17,7 @@ const RolesMatrixPanel = dynamic(() => import("@/components/workspace/RolesMatri
 const TeamMembersPanel = dynamic(() => import("@/components/workspace/TeamMembersPanel").then((module) => module.TeamMembersPanel), { loading: PanelLoading });
 const UpcomingModuleBlueprint = dynamic(() => import("@/components/workspace/UpcomingModuleBlueprint").then((module) => module.UpcomingModuleBlueprint), { loading: PanelLoading });
 const WorkspaceWelcomePanel = dynamic(() => import("@/components/workspace/WorkspaceWelcomePanel").then((module) => module.WorkspaceWelcomePanel), { loading: PanelLoading });
+const DepartmentHubPanel = dynamic(() => import("@/components/workspace/DepartmentHubPanel").then((module) => module.DepartmentHubPanel), { loading: PanelLoading });
 const FleetVehiclesPanel = dynamic(() => import("@/components/fleet/FleetVehiclesPanel").then((module) => module.FleetVehiclesPanel), { loading: PanelLoading });
 const AddFleetVehiclePage = dynamic(() => import("@/components/fleet/AddFleetVehiclePage").then((module) => module.AddFleetVehiclePage), { loading: PanelLoading });
 const VehiclePhotosPage = dynamic(() => import("@/components/fleet/VehiclePhotosPage").then((module) => module.VehiclePhotosPage), { loading: PanelLoading });
@@ -156,6 +158,24 @@ export function WorkspacePageContent({ isRtl, activeSection, activeSubPage, canA
               membership={membership}
               onNavigate={(section, subPage) =>
                 dispatch(navigateToWorkspacePage({ section, subPage }))
+              }
+            />
+          ) : activeSection === "overview" && isDepartmentId(activeSubPage) ? (
+            <DepartmentHubPanel
+              isRtl={isRtl}
+              departmentId={activeSubPage}
+              company={company}
+              membership={membership}
+              onNavigate={(section, subPage) =>
+                dispatch(navigateToWorkspacePage({ section, subPage }))
+              }
+              onBack={() =>
+                dispatch(
+                  navigateToWorkspacePage({
+                    section: "overview",
+                    subPage: "summary",
+                  }),
+                )
               }
             />
           ) : (

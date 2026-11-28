@@ -438,7 +438,7 @@ export const ConvertPoVehiclePage: React.FC<ConvertPoVehiclePageProps> = ({ lang
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
                   <label className="block text-[13px] font-medium text-revix-dark mb-1.5">
-                    {isAr ? "المبلغ المدفوع" : "Premium Paid"}
+                    {isAr ? "قيمة التأمين" : "Insurance Amount"}
                   </label>
                   <input
                     type="number"

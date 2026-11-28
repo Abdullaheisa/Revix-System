@@ -542,7 +542,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                 { label: isRtl ? "رقم المفتاح" : "Key #", value: vh.keyNumber || "—" },
                 { label: isRtl ? "اللون" : "Color", value: colorLabel },
                 {
-                  label: isRtl ? "قراءة العداد" : "Odometer",
+                  label: isRtl ? "آخر قراءة للعداد" : "Last KM Reading",
                   value: `${vh.mileageOdometer.toLocaleString()} ${isRtl ? "كم" : "km"}`,
                 },
                 { label: isRtl ? "الفرع" : "Branch", value: locationLabel },
@@ -670,7 +670,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                           <th className="px-4 py-2.5 text-start">{isRtl ? "النوع" : "Type"}</th>
                           <th className="px-3 py-2.5 text-start">{isRtl ? "الشركة" : "Provider"}</th>
                           <th className="px-3 py-2.5 text-start">{isRtl ? "رقم البوليصة" : "Policy #"}</th>
-                          <th className="px-3 py-2.5 text-start">{isRtl ? "المدفوع" : "Paid"}</th>
+                          <th className="px-3 py-2.5 text-start">{isRtl ? "القيمة" : "Amount"}</th>
                           <th className="px-3 py-2.5 text-start">{isRtl ? "التحمل" : "Deductible"}</th>
                           <th className="px-3 py-2.5 text-start">{isRtl ? "البدء" : "Start"}</th>
                           <th className="px-4 py-2.5 text-start">{isRtl ? "الانتهاء" : "Expiry"}</th>
@@ -833,7 +833,7 @@ export function VehicleProfilePage({ vehicle, isRtl, company, activeVehicleTab, 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold text-revix-dark mb-1">
-                            {isRtl ? "المبلغ المدفوع *" : "Premium Paid *"}
+                            {isRtl ? "قيمة التأمين *" : "Insurance Amount *"}
                           </label>
                           <input
                             type="number"

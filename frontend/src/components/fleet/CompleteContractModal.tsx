@@ -58,7 +58,7 @@ function CompleteContractForm({
   const [returnTime, setReturnTime] = useState(() =>
     now.toTimeString().slice(0, 5),
   );
-  const [returnOdometer, setReturnOdometer] = useState(contract.pickupOdometer);
+  const [returnOdometer, setReturnOdometer] = useState<string>("");
   const [extraCharges, setExtraCharges] = useState(contract.extraCharges || 0);
   const [returnCondition, setReturnCondition] = useState(
     contract.returnCondition || "good",
@@ -93,7 +93,10 @@ function CompleteContractForm({
   const effectivePaidNow = paidNowTouched ? paidNow : remainingDue;
   const finalPaidTotal = alreadyPaid + Math.max(0, Number(effectivePaidNow) || 0);
   const balanceAfter = finalTotal - finalPaidTotal;
-  const drivenKm = Math.max(0, (Number(returnOdometer) || 0) - contract.pickupOdometer);
+  const drivenKm =
+    returnOdometer !== ""
+      ? Math.max(0, (Number(returnOdometer) || 0) - contract.pickupOdometer)
+      : 0;
 
   function handleScanUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -119,11 +122,16 @@ function CompleteContractForm({
     e.preventDefault();
     setErrorMsg(null);
 
-    if (Number(returnOdometer) < contract.pickupOdometer) {
+    const parsedOdometer = Number(returnOdometer);
+    if (
+      returnOdometer.trim() === "" ||
+      Number.isNaN(parsedOdometer) ||
+      parsedOdometer <= contract.pickupOdometer
+    ) {
       setErrorMsg(
         isRtl
-          ? "عداد العودة لا يمكن أن يكون أقل من عداد الخروج."
-          : "Return odometer cannot be less than pickup odometer.",
+          ? "عداد العودة يجب أن يكون أكبر من عداد الخروج ولا يمكن إرجاع السيارة بنفس عداد الخروج."
+          : "Return odometer must be greater than the pickup odometer.",
       );
       return;
     }
@@ -131,7 +139,7 @@ function CompleteContractForm({
     try {
       await completeContract({
         id: contract.id,
-        returnOdometer: Number(returnOdometer) || contract.pickupOdometer,
+        returnOdometer: parsedOdometer,
         returnedAt: `${returnDate}T${returnTime}:00`,
         actualDays,
         extraCharges: Number(extraCharges) || 0,
@@ -218,10 +226,11 @@ function CompleteContractForm({
             <FormInput
               type="number"
               required
-              min={contract.pickupOdometer}
+              min={contract.pickupOdometer + 1}
+              placeholder={String(contract.pickupOdometer + 1)}
               label={isRtl ? "العداد عند العودة (كم) *" : "Return Odometer (km) *"}
               value={returnOdometer}
-              onChange={(e) => setReturnOdometer(Number(e.target.value))}
+              onChange={(e) => setReturnOdometer(e.target.value)}
               className="font-mono font-bold"
             />
             <div className="mt-1 text-[10.5px] text-revix-secondary font-mono">

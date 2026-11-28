@@ -138,12 +138,12 @@ export function InsuranceCompanyDetailPage({
               ]}
             />
 
-            {/* Policies & Payments Summary */}
+            {/* Policies & Amounts Summary */}
             <DetailTileCard
-              title={isRtl ? "ملخص التأمين والمدفوعات" : "Policies & Payments Summary"}
+              title={isRtl ? "ملخص التأمين والمبالغ" : "Policies & Amounts Summary"}
               items={[
                 {
-                  label: isRtl ? "إجمالي الأقساط المدفوعة" : "Total premiums paid",
+                  label: isRtl ? "إجمالي قيمة التأمين" : "Total insurance amount",
                   value: isLoading ? "…" : `${summary.totalPaid.toLocaleString()} ${currency}`,
                   valueClassName: "text-emerald-700",
                 },
@@ -222,7 +222,7 @@ export function InsuranceCompanyDetailPage({
                     <th className="px-3 py-2.5 text-start">{isRtl ? "اللوحة" : "Plate"}</th>
                     <th className="px-3 py-2.5 text-start">{isRtl ? "النوع" : "Coverage"}</th>
                     <th className="px-3 py-2.5 text-start">{isRtl ? "رقم البوليصة" : "Policy #"}</th>
-                    <th className="px-3 py-2.5 text-start">{isRtl ? "المدفوع" : "Premium"}</th>
+                    <th className="px-3 py-2.5 text-start">{isRtl ? "القيمة" : "Amount"}</th>
                     <th className="px-3 py-2.5 text-start">{isRtl ? "البدء" : "Start"}</th>
                     <th className="px-3 py-2.5 text-start">{isRtl ? "الانتهاء" : "Expiry"}</th>
                     <th className="px-4 py-2.5 text-end">{isRtl ? "الحالة" : "Status"}</th>

@@ -352,7 +352,7 @@ export function VendorDetailPage({
 
             {/* Financial Summary */}
             <DetailTileCard
-              title={isRtl ? "ملخص التعاملات والمدفوعات" : "Purchases & Payments Summary"}
+              title={isRtl ? "ملخص التعاملات والمبالغ" : "Purchases & Amounts Summary"}
               items={[
                 {
                   label: isRtl ? "إجمالي المشتريات" : "Total purchased",
@@ -361,7 +361,7 @@ export function VendorDetailPage({
                     : `${financials.totalAmount.toLocaleString()} ${financials.currency}`,
                 },
                 {
-                  label: isRtl ? "إجمالي المدفوع" : "Total paid",
+                  label: isRtl ? "المبلغ" : "Amount",
                   value: isLoadingPos
                     ? "…"
                     : `${financials.totalPaid.toLocaleString()} ${financials.currency}`,
@@ -540,7 +540,7 @@ export function VendorDetailPage({
                       <th className="px-4 py-2.5 text-start">{isRtl ? "رقم الطلب" : "PO #"}</th>
                       <th className="px-3 py-2.5 text-start">{isRtl ? "التاريخ" : "Date"}</th>
                       <th className="px-3 py-2.5 text-start">{isRtl ? "الإجمالي" : "Total"}</th>
-                      <th className="px-3 py-2.5 text-start">{isRtl ? "المدفوع" : "Paid"}</th>
+                      <th className="px-3 py-2.5 text-start">{isRtl ? "المبلغ" : "Amount"}</th>
                       <th className="px-3 py-2.5 text-start">{isRtl ? "المتبقي" : "Remaining"}</th>
                       <th className="px-4 py-2.5 text-end">{isRtl ? "الحالة" : "Status"}</th>
                     </tr>

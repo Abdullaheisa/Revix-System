@@ -414,7 +414,7 @@ export function BookableFleetPanel({ isRtl }: BookableFleetPanelProps) {
                       <th className="px-4 py-3 text-start">{isRtl ? "الفريانت" : "Variant"}</th>
                       <th className="px-3 py-3 text-start">{isRtl ? "المالك / الموقع" : "Owner / Location"}</th>
                       <th className="px-3 py-3 text-start">{isRtl ? "اللوحة" : "Plate"}</th>
-                      <th className="px-3 py-3 text-start">{isRtl ? "العداد" : "Odometer"}</th>
+                      <th className="px-3 py-3 text-start">{isRtl ? "آخر قراءة للعداد" : "Last KM Reading"}</th>
                       <th className="px-3 py-3 text-start">{isRtl ? "السعر اليومي" : "Daily Rate"}</th>
                       <th className="px-3 py-3 text-start">{isRtl ? "الحالة" : "Status"}</th>
                       <th className="px-4 py-3 text-end">{isRtl ? "إجراءات" : "Actions"}</th>

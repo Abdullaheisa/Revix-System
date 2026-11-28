@@ -1830,11 +1830,11 @@ export class FleetService {
     if (existing.status !== "active") {
       throw new FleetServiceError(409, "CONTRACT_NOT_ACTIVE", "Only active contracts can be completed.");
     }
-    if (input.returnOdometer < existing.pickupOdometer) {
+    if (input.returnOdometer <= existing.pickupOdometer) {
       throw new FleetServiceError(
         400,
         "INVALID_ODOMETER",
-        "Return odometer cannot be less than pickup odometer.",
+        "Return odometer must be greater than pickup odometer.",
       );
     }
     const updated = await this.store.completeRentalContract(actor.company.id, contractId, {

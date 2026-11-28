@@ -18,6 +18,7 @@ import {
   isOwnerOrCeo,
   parseWorkspacePathname,
 } from "@/lib/workspace/navigationCatalog";
+import { isDepartmentId } from "@/lib/workspace/departmentsCatalog";
 import { useLogoutMutation } from "@/store/api/authApi";
 import { extractApiErrorCode } from "@/store/api/baseApi";
 import { useGetWorkspaceContextQuery } from "@/store/api/workspaceApi";
@@ -263,6 +264,10 @@ export function WorkspaceStudioShell({
   // Guard: if current activeSection/activeSubPage is not in available sections, redirect to first ready page
   useEffect(() => {
     if (!company || !user || pendingUrlPush) return;
+    if (activeSection === "overview" && isDepartmentId(activeSubPage)) {
+      lastRedirectPathnameRef.current = null;
+      return;
+    }
     const matchedSection = availableSections.find((s) => s.id === activeSection);
     const hasSubPage = Boolean(
       matchedSection?.groups.some((g) =>

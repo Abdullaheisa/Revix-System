@@ -815,17 +815,43 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             </button>
 
             <div>
-              <h1 className="font-mono text-lg font-bold tracking-tight text-revix-dark">
-                {po.poNumber}
-              </h1>
-              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-revix-secondary">
-                <RevixIcon name="calendar" size={12} className="text-revix-muted" />
-                <span>
-                  {formatCompanyDate(po.orderDate, {
-                    timezone: po.companyTimezone || activeBranch?.timezone,
-                    locale: isRtl ? "ar-EG" : "en-GB",
-                  })}
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-mono text-lg font-bold tracking-tight text-revix-dark">
+                  {po.poNumber}
+                </h1>
+                {(() => {
+                  const st = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
+                  return (
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.badgeClass}`}
+                    >
+                      {isRtl ? st.ar : st.en}
+                    </span>
+                  );
+                })()}
+              </div>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-revix-secondary">
+                <span className="inline-flex items-center gap-1.5">
+                  <RevixIcon name="calendar" size={12} className="text-revix-muted" />
+                  <span>
+                    {formatCompanyDate(po.orderDate, {
+                      timezone: po.companyTimezone || activeBranch?.timezone,
+                      locale: isRtl ? "ar-EG" : "en-GB",
+                    })}
+                  </span>
                 </span>
+                {po.vendorName && (
+                  <span className="inline-flex items-center gap-1.5 font-medium text-revix-dark">
+                    <RevixIcon name="building-2" size={12} className="text-revix-primary" />
+                    <span>{po.vendorName}</span>
+                  </span>
+                )}
+                {po.branchName && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <RevixIcon name="map-pin" size={12} className="text-revix-muted" />
+                    <span>{po.branchName}</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -992,42 +1018,154 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
         </div>
 
         )}
-        {detailSection === "terms" && (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="grid items-start gap-5 md:grid-cols-2">
-              <DetailTileCard
-                title={isRtl ? "حساب الطلب" : "Payment summary"}
-                items={[
-                  {
-                    label: isRtl ? "قيمة الطلب" : "Order value",
-                    value: `${Number(po.totalAmount).toLocaleString()} ${po.currency}`,
-                  },
-                  {
-                    label: isRtl ? "المدفوع" : "Paid",
-                    value: `${Number(po.upfrontPaid).toLocaleString()} ${po.currency}`,
-                    valueClassName: "text-emerald-700",
-                  },
-                  {
-                    label: isRtl ? "المتبقي" : "Balance due",
-                    value: `${Number(po.remainingAmount).toLocaleString()} ${po.currency}`,
-                    valueClassName: Number(po.remainingAmount) > 0 ? "text-amber-700" : "text-revix-dark",
-                  },
-                  ...(po.installmentsCount > 1
-                    ? [{ label: isRtl ? "عدد الأقساط" : "Installments", value: po.installmentsCount }]
-                    : []),
-                ]}
-              />
-              <section className="overflow-hidden rounded-lg border border-revix-border">
-                <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold">{isRtl ? "شروط المورد" : "Vendor terms"}</h3>
-                <ol className="list-decimal space-y-2 py-3 ps-9 pe-4 text-sm">
-                  {(po.notes || "").split(/\r?\n/).map(line => line.trim()).filter(line => line && !/^\[(Payment Terms & Schedule|شروط الدفع والجدولة):/.test(line)).map((line, index) => (
-                    <li key={index} className="whitespace-pre-wrap break-words ps-1">{line}</li>
-                  ))}
-                </ol>
-              </section>
+        {detailSection === "terms" && (() => {
+          const allNotesLines = (po.notes || "")
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean);
+          const scheduleMatch = allNotesLines.find((line) =>
+            /^\[(Payment Terms & Schedule|شروط الدفع والجدولة):/.test(line),
+          );
+          const paymentScheduleText = scheduleMatch
+            ? scheduleMatch
+                .replace(/^\[(Payment Terms & Schedule|شروط الدفع والجدولة):\s*/, "")
+                .replace(/\]$/, "")
+            : null;
+          const vendorTermsLines = allNotesLines.filter(
+            (line) => !/^\[(Payment Terms & Schedule|شروط الدفع والجدولة):/.test(line),
+          );
+          const totalOrdered = po.items?.reduce((acc, it) => acc + it.quantity, 0) ?? 0;
+          const totalReceived = po.items?.reduce((acc, it) => acc + it.receivedCount, 0) ?? 0;
+          const statusInfo = PO_STATUS_LABELS[po.status] || PO_STATUS_LABELS.draft;
+
+          return (
+            <div className="min-h-0 flex-1 overflow-y-auto space-y-5">
+              <div className="grid items-start gap-5 md:grid-cols-2">
+                <DetailTileCard
+                  title={isRtl ? "بيانات أمر الشراء" : "Order details"}
+                  items={[
+                    { label: isRtl ? "رقم الطلب" : "PO Number", value: po.poNumber },
+                    {
+                      label: isRtl ? "الحالة" : "Status",
+                      value: isRtl ? statusInfo.ar : statusInfo.en,
+                    },
+                    { label: isRtl ? "المورد" : "Vendor", value: po.vendorName || "—" },
+                    { label: isRtl ? "الفرع" : "Branch", value: po.branchName || "—" },
+                    {
+                      label: isRtl ? "تاريخ الطلب" : "Order date",
+                      value: formatCompanyDate(po.orderDate, {
+                        timezone: po.companyTimezone || activeBranch?.timezone,
+                        locale: isRtl ? "ar-EG" : "en-GB",
+                      }),
+                    },
+                    {
+                      label: isRtl ? "تاريخ التسليم المتوقع" : "Expected delivery",
+                      value: po.expectedDeliveryDate
+                        ? formatCompanyDate(po.expectedDeliveryDate, {
+                            timezone: po.companyTimezone || activeBranch?.timezone,
+                            locale: isRtl ? "ar-EG" : "en-GB",
+                          })
+                        : "—",
+                    },
+                    {
+                      label: isRtl ? "السيارات المستلمة" : "Vehicles received",
+                      value: `${totalReceived} / ${totalOrdered}`,
+                    },
+                    {
+                      label: isRtl ? "أنشأ الطلب" : "Created by",
+                      value: po.createdByUserName || "—",
+                    },
+                    {
+                      label: isRtl ? "اعتمد الطلب" : "Approved by",
+                      value: po.approvedByUserName || "—",
+                    },
+                    {
+                      label: isRtl ? "وقّع الطلب" : "Signed by",
+                      value: po.signedByName?.split("|")[0] || "—",
+                    },
+                  ]}
+                />
+
+                <div className="space-y-5">
+                  <DetailTileCard
+                    title={isRtl ? "حساب الطلب" : "Payment summary"}
+                    items={[
+                      {
+                        label: isRtl ? "المورد" : "Vendor",
+                        value: po.vendorName || "—",
+                      },
+                      {
+                        label: isRtl ? "قيمة الطلب" : "Order value",
+                        value: `${Number(po.totalAmount).toLocaleString()} ${po.currency}`,
+                      },
+                      {
+                        label: isRtl ? "المبلغ" : "Amount",
+                        value: `${Number(po.upfrontPaid).toLocaleString()} ${po.currency}`,
+                        valueClassName: "text-emerald-700",
+                      },
+                      {
+                        label: isRtl ? "المتبقي" : "Balance due",
+                        value: `${Number(po.remainingAmount).toLocaleString()} ${po.currency}`,
+                        valueClassName: Number(po.remainingAmount) > 0 ? "text-amber-700" : "text-revix-dark",
+                      },
+                      ...(po.installmentsCount > 1
+                        ? [{ label: isRtl ? "عدد الأقساط" : "Installments", value: po.installmentsCount }]
+                        : []),
+                      ...(paymentScheduleText
+                        ? [{ label: isRtl ? "جدولة الدفع" : "Payment schedule", value: paymentScheduleText }]
+                        : []),
+                    ]}
+                  />
+
+                  <section className="overflow-hidden rounded-lg border border-revix-border">
+                    <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold">
+                      {isRtl ? "شروط المورد" : "Vendor terms"}
+                    </h3>
+                    {vendorTermsLines.length === 0 ? (
+                      <div className="px-4 py-4 text-xs text-revix-muted">
+                        {isRtl ? "لا توجد شروط مسجلة للمورد." : "No vendor terms recorded."}
+                      </div>
+                    ) : (
+                      <ol className="list-decimal space-y-2 py-3 ps-9 pe-4 text-sm">
+                        {vendorTermsLines.map((line, index) => (
+                          <li key={index} className="whitespace-pre-wrap break-words ps-1">
+                            {line}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </section>
+
+                  {po.signatureDataUrl && (
+                    <section className="overflow-hidden rounded-lg border border-revix-border">
+                      <h3 className="border-b border-revix-border bg-revix-surface px-4 py-3 text-sm font-semibold">
+                        {isRtl ? "التوقيع الإلكتروني" : "Authorized signature"}
+                      </h3>
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={po.signatureDataUrl}
+                          alt="Authorized Signature"
+                          className="h-14 object-contain"
+                        />
+                        <div className="text-xs text-revix-secondary">
+                          <div className="font-semibold text-revix-dark">
+                            {po.signedByName?.split("|")[0] || "—"}
+                          </div>
+                          {po.signedAt && (
+                            <div className="font-mono text-[11px] text-revix-muted">
+                              {new Date(po.signedAt).toLocaleString(isRtl ? "ar-EG" : "en-GB")}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </section>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
         {detailSection === "activity" && (
           <section className="min-h-0 flex-1 overflow-y-auto">
             <ActivityTimeline
@@ -1162,7 +1300,7 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
           },
           {
             key: "upfrontPaid",
-            header: isRtl ? "المدفوع" : "Paid",
+            header: isRtl ? "المبلغ" : "Amount",
             minWidth: 16,
             align: "center",
             value: (p) => Number(p.upfrontPaid) || 0,
