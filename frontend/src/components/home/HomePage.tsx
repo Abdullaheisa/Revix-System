@@ -9,6 +9,7 @@ import { HomeNetworkSection } from "@/components/home/HomeNetworkSection";
 import { HomeIntegrationsSection } from "@/components/home/HomeIntegrationsSection";
 import { HomePricingSection } from "@/components/home/HomePricingSection";
 import { HomeFaqSection } from "@/components/home/HomeFaqSection";
+import { WebMcpRegistrar } from "@/components/agent/WebMcpRegistrar";
 import type {
   HomeCtaBannerCopy,
   HomeFaqCopy,
@@ -285,6 +286,7 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen bg-revix-white text-revix-dark">
+      <WebMcpRegistrar />
       {/* Sticky Navigation Wrapper floating cleanly inside the hero top edge at scroll=0 */}
       <div className="sticky top-2 z-40 pointer-events-none px-5 pt-3 sm:top-3 sm:px-8 sm:pt-4">
         <HomeNavbar nav={nav} />

@@ -211,8 +211,28 @@ export function HomeFaqSection({
             </div>
           </div>
 
-          <div className="mt-6 border-t border-revix-border/75 pt-5 text-[12.5px] text-revix-secondary">
-            © {currentYear} {footer.copyrightName}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-revix-border/75 pt-5 text-[12.5px] text-revix-secondary">
+            <span>© {currentYear} {footer.copyrightName}</span>
+            <nav aria-label={isRtl ? "روابط الشركة والقانونية" : "Company and legal links"} className="flex flex-wrap items-center gap-4 sm:gap-5">
+              <Link href="/about" className="transition-colors hover:text-revix-primary">
+                {isRtl ? "عن الشركة" : "About"}
+              </Link>
+              <Link href="/contact" className="transition-colors hover:text-revix-primary">
+                {isRtl ? "تواصل معنا" : "Contact"}
+              </Link>
+              <Link href="/terms" className="transition-colors hover:text-revix-primary">
+                {isRtl ? "الشروط والأحكام" : "Terms"}
+              </Link>
+              <Link href="/privacy" className="transition-colors hover:text-revix-primary">
+                {isRtl ? "سياسة الخصوصية" : "Privacy"}
+              </Link>
+              <a
+                href="mailto:support@revixmobility.com"
+                className="font-mono text-[12px] transition-colors hover:text-revix-primary"
+              >
+                support@revixmobility.com
+              </a>
+            </nav>
           </div>
         </ResponsiveContainer>
       </footer>

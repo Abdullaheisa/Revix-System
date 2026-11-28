@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /workspace/
+Disallow: /account/
+Disallow: /auth/
+Disallow: /invite/
+
+Content-Signal: search=yes, ai-train=no
+
+Sitemap: https://system.revixmobility.com/sitemap.xml

@@ -1,0 +1,25 @@
+# Revix System
+
+> Multi-branch car rental & fleet operations ERP platform by Revix Mobility.
+
+Revix System helps car rental companies and fleet operators manage their entire lifecycle in one unified workspace: vehicle assets, purchase orders, rental contracts, booking calendars, pricing, customers (CRM), inter-branch movements, drivers, insurance policies, and multi-currency branch finance.
+
+## Key Public Pages
+
+- [Home](https://system.revixmobility.com/): Platform overview, capabilities, integrations, plans, and FAQ.
+- [About Revix](https://system.revixmobility.com/about): Company background, mission, and supported operating models.
+- [Contact](https://system.revixmobility.com/contact): Support and sales contact details (`support@revixmobility.com`).
+- [Terms of Service](https://system.revixmobility.com/terms): Service terms and conditions.
+- [Privacy Policy](https://system.revixmobility.com/privacy): Data handling and privacy commitments.
+
+## Agent & Machine-Readable Endpoints
+
+- [Sitemap](https://system.revixmobility.com/sitemap.xml)
+- [Robots & Content Signals](https://system.revixmobility.com/robots.txt)
+- [MCP Server Card (SEP-1649)](https://system.revixmobility.com/.well-known/mcp/server-card.json)
+- Markdown content negotiation: send `Accept: text/markdown` to `/` or public pages.
+
+## Contact
+
+- Email: support@revixmobility.com
+- Website: https://system.revixmobility.com

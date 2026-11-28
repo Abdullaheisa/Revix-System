@@ -32,6 +32,7 @@ export async function generateMetadata({
 
   const t = await getTranslations({ locale, namespace: "metadata" });
   return {
+    metadataBase: new URL("https://system.revixmobility.com"),
     title: t("title"),
     description: t("description"),
   };

@@ -885,9 +885,16 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             {(po.status === "draft" || po.status === "pending_approval") && canApprovePo && (
               <button
                 type="button"
-                disabled={isUpdatingStatus}
+                disabled={isUpdatingStatus || (!po.signedAt && !po.signatureDataUrl)}
+                title={
+                  !po.signedAt && !po.signatureDataUrl
+                    ? isRtl
+                      ? "يجب توقيع الطلب أولاً قبل الاعتماد"
+                      : "Sign PO before approving"
+                    : undefined
+                }
                 onClick={() => updateStatus({ id: po.id, status: "approved" })}
-                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:opacity-50"
+                className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-revix-primary px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-revix-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RevixIcon name="shield-check" size={14} />
                 <span>{isRtl ? "اعتماد" : "Approve"}</span>
@@ -905,6 +912,14 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
             )}
           </div>
         </div>
+
+        {!po.signedAt && !po.signatureDataUrl && po.status !== "cancelled" && po.status !== "completed" && (
+          <div className="shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-medium text-amber-800">
+            {isRtl
+              ? "تنبيه: يجب توقيع أمر الشراء إلكترونياً قبل الاعتماد أو استلام السيارات."
+              : "Notice: This purchase order must be signed before approval or receiving vehicles."}
+          </div>
+        )}
 
         <nav aria-label={isRtl ? "أقسام الطلب" : "Order sections"} className="flex shrink-0 gap-1 overflow-x-auto border-b border-revix-border">
           {(["vehicles", "terms", "activity"] as const).map((section, index) => (
@@ -999,9 +1014,17 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                           </button>
                         ) : !isConverted && po.status !== "cancelled" && po.status !== "draft" ? (
                           <button type="button"
+                            disabled={!po.signedAt && !po.signatureDataUrl}
+                            title={
+                              !po.signedAt && !po.signatureDataUrl
+                                ? isRtl
+                                  ? "وقّع الطلب أولاً قبل الاستلام"
+                                  : "Sign PO before receiving"
+                                : undefined
+                            }
                             onClick={() => handleOpenReceiveModal(po, item.id)}
                             aria-label={(isRtl ? "استلام السيارة " : "Receive vehicle ") + displayVin}
-                            className="inline-flex h-8 items-center rounded-md border border-revix-primary/30 px-2 font-semibold text-revix-primary hover:bg-revix-primary/10">
+                            className="inline-flex h-8 items-center rounded-md border border-revix-primary/30 px-2 font-semibold text-revix-primary hover:bg-revix-primary/10 disabled:cursor-not-allowed disabled:opacity-45">
                             {isRtl ? "استلام" : "Receive"}
                           </button>
                         ) : "—"}
@@ -1468,10 +1491,18 @@ export function PurchaseOrdersPanel({ isRtl, branches, activeBranch }: PurchaseO
                               <button
                                 type="button"
                                 aria-label={isRtl ? "اعتماد أمر الشراء" : "Approve purchase order"}
-                                title={isRtl ? "اعتماد" : "Approve"}
-                                disabled={isUpdatingStatus}
+                                title={
+                                  !po.signedAt && !po.signatureDataUrl
+                                    ? isRtl
+                                      ? "يجب توقيع الطلب أولاً"
+                                      : "Sign PO first"
+                                    : isRtl
+                                      ? "اعتماد"
+                                      : "Approve"
+                                }
+                                disabled={isUpdatingStatus || (!po.signedAt && !po.signatureDataUrl)}
                                 onClick={() => updateStatus({ id: po.id, status: "approved" })}
-                                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-revix-primary text-white hover:bg-revix-primary-hover disabled:opacity-50"
+                                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-revix-primary text-white hover:bg-revix-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 <RevixIcon name="check" size={14} />
                               </button>

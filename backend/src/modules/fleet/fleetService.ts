@@ -428,6 +428,13 @@ export class FleetService {
           "Only Owner, CEO, Finance Manager, or authorized approvers can approve or cancel purchase orders.",
         );
       }
+      if (status === "approved" && !po.signedAt && !po.signatureDataUrl) {
+        throw new FleetServiceError(
+          400,
+          "PO_SIGNATURE_REQUIRED",
+          "Purchase order must be signed before approval.",
+        );
+      }
     }
 
     const updated = await this.store.updatePurchaseOrderStatus(
@@ -461,6 +468,13 @@ export class FleetService {
     input: ReceiveVehicleFromPoInput,
   ): Promise<{ vehicle: FleetVehicleRecord; po: PurchaseOrderRecord }> {
     const po = await this.getPurchaseOrder(actor, input.purchaseOrderId);
+    if (!po.signedAt && !po.signatureDataUrl) {
+      throw new FleetServiceError(
+        400,
+        "PO_SIGNATURE_REQUIRED",
+        "Purchase order must be signed before receiving vehicles.",
+      );
+    }
     if (po.status !== "approved" && po.status !== "partially_received") {
       throw new FleetServiceError(
         400,
